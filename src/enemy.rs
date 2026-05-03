@@ -277,5 +277,6 @@ pub fn tick_enemies(
     }
 
     // Remove dead enemies.
+    // Count newly dead enemies for loot drops (tracked externally).
     enemies.list.retain(|e| e.alive);
 }

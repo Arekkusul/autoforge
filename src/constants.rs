@@ -7,7 +7,8 @@
 pub const TILE_SIZE: f32 = 48.0;
 
 /// Sprite resolution in pixels (sprites are authored at this size, scaled to [`TILE_SIZE`]).
-pub const SPRITE_SIZE: u16 = 16;
+/// Production quality: 32×32 gives enough detail for proper shading and anti-aliasing.
+pub const SPRITE_SIZE: u16 = 32;
 
 /// Item sprite resolution in pixels.
 pub const ITEM_SPRITE_SIZE: u16 = 8;
