@@ -1,0 +1,5 @@
+/target
+autoforge_save.json
+*.swp
+*.swo
+.DS_Store

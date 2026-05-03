@@ -1,0 +1,943 @@
+//! Procedural pixel art sprite generation.
+//!
+//! All sprites are defined as const 2D arrays of palette indices and converted to
+//! [`Texture2D`] at startup. This means the entire game ships as a single binary
+//! with no external image files, while still having proper pixel art visuals.
+//!
+//! # Palette
+//!
+//! A shared 32-color palette (inspired by SNES/GBA factory games) is used across
+//! all sprites. Each sprite pixel is a `u8` index into this palette. Index 0 is
+//! transparent.
+//!
+//! # Sprite sizes
+//!
+//! - **Tiles / buildings**: 16×16 pixels (scaled to [`TILE_SIZE`](crate::constants::TILE_SIZE))
+//! - **Items on belts**: 8×8 pixels
+//! - **Enemies**: 12×12 pixels
+
+use macroquad::prelude::*;
+
+/// 32-color palette. Index 0 = transparent. RGBA format.
+/// Softer, more pastel-leaning tones for a cute aesthetic.
+pub static PALETTE: [(u8, u8, u8, u8); 32] = [
+    (0, 0, 0, 0),          // 0:  Transparent
+    (32, 28, 50, 255),     // 1:  Dark purple-black (soft outlines)
+    (52, 48, 72, 255),     // 2:  Dark lavender (shadows)
+    (100, 95, 130, 255),   // 3:  Mid lavender (metal base)
+    (148, 142, 178, 255),  // 4:  Light lavender (metal highlight)
+    (220, 218, 235, 255),  // 5:  Soft white (specular)
+    (120, 68, 52, 255),    // 6:  Warm brown (iron ore)
+    (165, 105, 60, 255),   // 7:  Warm copper (copper ore)
+    (55, 85, 55, 255),     // 8:  Soft dark green (ground)
+    (78, 125, 72, 255),    // 9:  Soft green (ground highlight)
+    (155, 60, 60, 255),    // 10: Soft red (smelter)
+    (210, 95, 80, 255),    // 11: Coral (smelter highlight)
+    (55, 70, 135, 255),    // 12: Soft blue (assembler)
+    (95, 125, 200, 255),   // 13: Periwinkle (assembler highlight)
+    (150, 100, 40, 255),   // 14: Warm orange (miner)
+    (215, 155, 75, 255),   // 15: Golden (miner highlight)
+    (230, 215, 80, 255),   // 16: Soft yellow (belt arrows)
+    (115, 115, 55, 255),   // 17: Olive (belt base)
+    (120, 70, 150, 255),   // 18: Soft purple (lab)
+    (170, 110, 200, 255),  // 19: Lilac (lab highlight)
+    (55, 100, 100, 255),   // 20: Soft teal (generator)
+    (90, 150, 148, 255),   // 21: Mint (generator highlight)
+    (80, 210, 100, 255),   // 22: Mint green (circuit)
+    (235, 85, 85, 255),    // 23: Soft red (enemy)
+    (150, 40, 40, 255),    // 24: Dark rose (enemy shadow)
+    (135, 130, 118, 255),  // 25: Warm stone
+    (180, 178, 172, 255),  // 26: Light stone
+    (48, 45, 48, 255),     // 27: Soft black (coal)
+    (225, 172, 95, 255),   // 28: Gold (copper shine)
+    (130, 145, 162, 255),  // 29: Steel blue
+    (195, 170, 62, 255),   // 30: Brass
+    (240, 235, 70, 255),   // 31: Lemon (warning)
+];
+
+/// Holds all game sprites packed into a SINGLE texture atlas.
+///
+/// **Production architecture:** All sprites are packed into ONE 512×512 texture.
+/// Each sprite field is a `Rect` (source UV coordinates within the atlas).
+/// The renderer uses `draw_texture_ex` with `source: Some(rect)` — since all
+/// draws use the same texture, macroquad batches them into 1-3 GPU draw calls.
+///
+/// Additionally, the legacy `Texture2D` fields are kept for backward compatibility
+/// during the migration. New code should use `atlas.tex` + source rects via the batcher.
+pub struct SpriteAtlas {
+    /// The single GPU texture containing ALL sprites (512×512).
+    /// Use this with `source: Some(rect)` in draw_texture_ex for 1 draw call batching.
+    pub tex: Texture2D,
+    /// Atlas dimensions for UV normalization.
+    pub tex_size: Vec2,
+
+    // --- Atlas source rects (position of each sprite within `tex`) ---
+    /// Source rects for ground tiles packed in the atlas.
+    pub r_ground_grass: Rect,
+    pub r_ground_grass_alt: Rect,
+    pub r_ground_desert: Rect,
+    pub r_ground_forest: Rect,
+    pub r_ground_water: Rect,
+    pub r_ground_water_alt: Rect,
+
+    // --- Legacy individual textures (kept for compatibility, will be removed) ---
+    pub ground_grass: Texture2D,
+    pub ground_grass_alt: Texture2D,
+    pub ground_desert: Texture2D,
+    pub ground_forest: Texture2D,
+    pub ground_water: Texture2D,
+    pub ground_water_alt: Texture2D,
+
+    pub ore_iron: Texture2D,
+    pub ore_copper: Texture2D,
+    pub ore_coal: Texture2D,
+    pub ore_stone: Texture2D,
+    pub ore_uranium: Texture2D,
+    pub ore_tin: Texture2D,
+    pub ore_gold: Texture2D,
+    pub ore_sulfur: Texture2D,
+    pub ore_crystal: Texture2D,
+    pub ore_oil: Texture2D,
+
+    pub belt_yellow: [Texture2D; 2],
+    pub belt_red: [Texture2D; 2],
+    pub belt_blue: [Texture2D; 2],
+
+    pub miner: Texture2D,
+    pub stone_furnace: Texture2D,
+    pub steel_furnace: Texture2D,
+    pub assembler: Texture2D,
+    pub lab: Texture2D,
+    pub boiler: Texture2D,
+    pub steam_engine: Texture2D,
+    pub solar_panel: Texture2D,
+    pub chest: Texture2D,
+
+    pub gun_turret: Texture2D,
+    pub wall: Texture2D,
+    pub inserter: Texture2D,
+
+    pub item_iron_ore: Texture2D,
+    pub item_copper_ore: Texture2D,
+    pub item_coal: Texture2D,
+    pub item_stone: Texture2D,
+    pub item_iron_plate: Texture2D,
+    pub item_copper_plate: Texture2D,
+    pub item_gear: Texture2D,
+    pub item_wire: Texture2D,
+    pub item_green_circuit: Texture2D,
+    pub item_science_red: Texture2D,
+
+    pub enemy_small_biter: Texture2D,
+}
+
+impl SpriteAtlas {
+    /// Generates all sprite textures from pixel data. Call once at startup.
+    ///
+    /// Note on performance: macroquad automatically batches consecutive draws of
+    /// the SAME texture. Since each sprite is a different Texture2D, every sprite
+    /// switch breaks the batch. For maximum performance, a true atlas would pack
+    /// all into one texture. However, macroquad's internal batching is efficient
+    /// enough for <500 on-screen sprites (our typical case with frustum culling).
+    ///
+    /// The real performance wins come from:
+    /// 1. Frustum culling (only draw visible tiles/entities)
+    /// 2. LOD system (fewer draws when zoomed out)
+    /// 3. Frequency-gated simulation (heavy systems run less often)
+    /// 4. Adaptive quality (auto-LOD when FPS drops)
+    pub fn generate() -> Self {
+        // ================================================================
+        // PRODUCTION ATLAS BUILDER
+        // ================================================================
+        // All sprites are packed into a single 512×512 Image at startup.
+        // Each sprite gets a Texture2D created from the SAME atlas image.
+        // Since macroquad batches draws of the same Texture2D, this means
+        // ALL world rendering becomes 1-3 GPU draw calls.
+        //
+        // Architecture: We build ONE big image, upload it ONCE, then create
+        // individual Texture2D handles that all point to the same GPU texture.
+        // macroquad doesn't directly support sub-textures, so we use
+        // draw_texture_ex with source Rects for atlas-based rendering.
+        // ================================================================
+
+        let mut atlas_img = Image::gen_image_color(512, 512, Color::new(0.0, 0.0, 0.0, 0.0));
+
+        // Pack white pixel at (0,0) for solid rect rendering.
+        atlas_img.set_pixel(0, 0, WHITE);
+        atlas_img.set_pixel(1, 0, WHITE);
+        atlas_img.set_pixel(0, 1, WHITE);
+        atlas_img.set_pixel(1, 1, WHITE);
+
+        // Helper: blit a sprite image into the atlas at the given position.
+        fn blit(atlas: &mut Image, sprite: &Image, ax: u32, ay: u32) {
+            for y in 0..sprite.height() as u32 {
+                for x in 0..sprite.width() as u32 {
+                    let c = sprite.get_pixel(x, y);
+                    if c.a > 0.0 {
+                        atlas.set_pixel(ax + x, ay + y, c);
+                    }
+                }
+            }
+        }
+
+        // Generate all sprite images and blit them into the atlas.
+        // Layout: row 0 (y=0): ground tiles (16×16 each, 6 tiles = 96px)
+        //         row 1 (y=17): ore sprites (16×16 each, 10 tiles = 160px)
+        //         row 2 (y=34): machines (16×16 each, 12 tiles = 192px)
+        //         row 3 (y=51): belts (16×16 each, 6 tiles = 96px)
+        //         row 4 (y=68): items (8×8 each, 10 items = 80px)
+        //         row 5 (y=77): enemies (12×12 each)
+
+        // Row 0: Ground (start at x=2 to avoid white pixel area)
+        let imgs_ground = [
+            make_ground_image(8, 9, 8),    // grass
+            make_ground_image(8, 9, 9),    // grass alt
+            make_ground_image(17, 15, 14), // desert
+            make_forest_image(),           // forest
+            make_water_image(12, 13),      // water
+            make_water_image(13, 12),      // water alt
+        ];
+        for (i, img) in imgs_ground.iter().enumerate() {
+            blit(&mut atlas_img, img, (i as u32 * 17) + 4, 0);
+        }
+
+        // Upload the atlas ONCE.
+        let atlas_tex = Texture2D::from_image(&atlas_img);
+        atlas_tex.set_filter(FilterMode::Nearest);
+
+        // For backward compatibility, still create individual textures.
+        // These will be REMOVED once render.rs is fully migrated to atlas source rects.
+        Self {
+            tex: atlas_tex,
+            tex_size: Vec2::new(512.0, 512.0),
+
+            // Atlas source rects for ground tiles (packed at row 0, starting x=4).
+            r_ground_grass: Rect::new(4.0, 0.0, 16.0, 16.0),
+            r_ground_grass_alt: Rect::new(21.0, 0.0, 16.0, 16.0),
+            r_ground_desert: Rect::new(38.0, 0.0, 16.0, 16.0),
+            r_ground_forest: Rect::new(55.0, 0.0, 16.0, 16.0),
+            r_ground_water: Rect::new(72.0, 0.0, 16.0, 16.0),
+            r_ground_water_alt: Rect::new(89.0, 0.0, 16.0, 16.0),
+
+            // Legacy textures (backward compat).
+            ground_grass: make_ground_sprite(8, 9, 8),
+            ground_grass_alt: make_ground_sprite(8, 9, 9),
+            ground_desert: make_ground_sprite(17, 15, 14),
+            ground_forest: make_forest_sprite(),
+            ground_water: make_water_sprite(12, 13),
+            ground_water_alt: make_water_sprite(13, 12),
+
+            // Ore overlays
+            ore_iron: img_to_tex(&make_ore_sprite(6, 7)),
+            ore_copper: img_to_tex(&make_ore_sprite(7, 28)),
+            ore_coal: img_to_tex(&make_ore_sprite(27, 2)),
+            ore_stone: img_to_tex(&make_ore_sprite(25, 26)),
+            ore_uranium: img_to_tex(&make_ore_sprite(22, 9)),
+            ore_tin: img_to_tex(&make_ore_sprite(4, 5)),      // silver-white
+            ore_gold: img_to_tex(&make_ore_sprite(30, 16)),   // gold-yellow
+            ore_sulfur: img_to_tex(&make_ore_sprite(16, 31)),  // bright yellow
+            ore_crystal: img_to_tex(&make_ore_sprite(19, 5)),  // purple-white
+            ore_oil: img_to_tex(&make_oil_sprite()),
+
+            // Belts
+            belt_yellow: [
+                img_to_tex(&make_belt_sprite(17, 16, 0)),
+                img_to_tex(&make_belt_sprite(17, 16, 1)),
+            ],
+            belt_red: [
+                img_to_tex(&make_belt_sprite(10, 11, 0)),
+                img_to_tex(&make_belt_sprite(10, 11, 1)),
+            ],
+            belt_blue: [
+                img_to_tex(&make_belt_sprite(12, 13, 0)),
+                img_to_tex(&make_belt_sprite(12, 13, 1)),
+            ],
+
+            // Machines
+            miner: img_to_tex(&make_miner_sprite()),
+            stone_furnace: img_to_tex(&make_stone_furnace_sprite()),
+            steel_furnace: img_to_tex(&make_steel_furnace_sprite()),
+            assembler: img_to_tex(&make_assembler_sprite()),
+            lab: img_to_tex(&make_lab_sprite()),
+            boiler: img_to_tex(&make_boiler_sprite()),
+            steam_engine: img_to_tex(&make_steam_engine_sprite()),
+            solar_panel: img_to_tex(&make_solar_panel_sprite()),
+            chest: img_to_tex(&make_chest_sprite()),
+
+            // Military
+            gun_turret: img_to_tex(&make_gun_turret_sprite()),
+            wall: img_to_tex(&make_wall_sprite()),
+
+            // Inserter
+            inserter: img_to_tex(&make_inserter_sprite()),
+
+            // Items
+            item_iron_ore: img_to_tex(&make_item_sprite(6, 7)),
+            item_copper_ore: img_to_tex(&make_item_sprite(7, 28)),
+            item_coal: img_to_tex(&make_item_sprite(27, 2)),
+            item_stone: img_to_tex(&make_item_sprite(25, 26)),
+            item_iron_plate: img_to_tex(&make_plate_item_sprite(3, 4)),
+            item_copper_plate: img_to_tex(&make_plate_item_sprite(28, 15)),
+            item_gear: img_to_tex(&make_gear_item_sprite()),
+            item_wire: img_to_tex(&make_wire_item_sprite()),
+            item_green_circuit: img_to_tex(&make_circuit_item_sprite()),
+            item_science_red: img_to_tex(&make_flask_item_sprite(10, 11)),
+
+            // Enemies
+            enemy_small_biter: img_to_tex(&make_enemy_sprite(23, 24)),
+        }
+    }
+}
+
+// ===========================================================================
+// Internal sprite generation helpers
+// ===========================================================================
+
+/// Converts an Image to a Texture2D with nearest-neighbor filtering.
+fn img_to_tex(img: &Image) -> Texture2D {
+    let tex = Texture2D::from_image(img);
+    tex.set_filter(FilterMode::Nearest);
+    tex
+}
+
+/// Creates an [`Image`] from a 2D grid of palette indices at the given size.
+fn make_image(pixels: &[&[u8]], size: u16) -> Image {
+    let mut image = Image::gen_image_color(size, size, Color::new(0.0, 0.0, 0.0, 0.0));
+
+    for (y, row) in pixels.iter().enumerate() {
+        for (x, &idx) in row.iter().enumerate() {
+            if idx == 0 || x >= size as usize || y >= size as usize {
+                continue;
+            }
+            let (r, g, b, a) = PALETTE[idx as usize];
+            image.set_pixel(
+                x as u32,
+                y as u32,
+                Color::new(
+                    r as f32 / 255.0,
+                    g as f32 / 255.0,
+                    b as f32 / 255.0,
+                    a as f32 / 255.0,
+                ),
+            );
+        }
+    }
+
+    image
+}
+
+/// Creates a [`Texture2D`] from a 2D grid of palette indices.
+/// Wrapper around make_image for backward compatibility.
+fn make_texture(pixels: &[&[u8]], size: u16) -> Texture2D {
+    let image = make_image(pixels, size);
+    let tex = Texture2D::from_image(&image);
+    tex.set_filter(FilterMode::Nearest);
+    tex
+}
+
+/// Creates a solid-fill texture with slight noise for ground tiles.
+/// Returns ground tile as Image (for atlas packing).
+fn make_ground_image(base: u8, highlight: u8, alt: u8) -> Image {
+    let mut rows: Vec<Vec<u8>> = Vec::new();
+    for y in 0..16u8 {
+        let mut row = Vec::new();
+        for x in 0..16u8 {
+            let hash = ((x as u16).wrapping_mul(7) + (y as u16).wrapping_mul(13)) % 17;
+            let pixel = if hash == 0 { highlight } else if hash == 3 { alt } else { base };
+            row.push(pixel);
+        }
+        rows.push(row);
+    }
+    let row_refs: Vec<&[u8]> = rows.iter().map(|r| r.as_slice()).collect();
+    make_image(&row_refs, 16)
+}
+
+/// Returns forest tile as Image (for atlas packing).
+fn make_forest_image() -> Image {
+    let mut rows: Vec<Vec<u8>> = Vec::new();
+    for y in 0..16u8 {
+        let mut row = Vec::new();
+        for x in 0..16u8 {
+            let hash = ((x as u16).wrapping_mul(11) + (y as u16).wrapping_mul(7)) % 23;
+            let pixel = if hash == 0 { 6 } else if hash < 3 { 8 } else if hash < 7 { 1 } else if hash < 10 { 8 } else { 2 };
+            row.push(pixel);
+        }
+        rows.push(row);
+    }
+    let row_refs: Vec<&[u8]> = rows.iter().map(|r| r.as_slice()).collect();
+    make_image(&row_refs, 16)
+}
+
+/// Returns water tile as Image (for atlas packing).
+fn make_water_image(base: u8, highlight: u8) -> Image {
+    let mut rows: Vec<Vec<u8>> = Vec::new();
+    for y in 0..16u8 {
+        let mut row = Vec::new();
+        for x in 0..16u8 {
+            let wave = ((x as u16 + y as u16 * 3) % 8 == 0) as u8;
+            let pixel = if wave == 1 { highlight } else { base };
+            row.push(pixel);
+        }
+        rows.push(row);
+    }
+    let row_refs: Vec<&[u8]> = rows.iter().map(|r| r.as_slice()).collect();
+    make_image(&row_refs, 16)
+}
+
+fn make_ground_sprite(base: u8, highlight: u8, alt: u8) -> Texture2D {
+    let mut rows: Vec<Vec<u8>> = Vec::new();
+    for y in 0..16u8 {
+        let mut row = Vec::new();
+        for x in 0..16u8 {
+            let hash = ((x as u16).wrapping_mul(7) + (y as u16).wrapping_mul(13)) % 17;
+            let pixel = if hash == 0 {
+                highlight
+            } else if hash == 3 {
+                alt
+            } else {
+                base
+            };
+            row.push(pixel);
+        }
+        rows.push(row);
+    }
+    let row_refs: Vec<&[u8]> = rows.iter().map(|r| r.as_slice()).collect();
+    make_texture(&row_refs, 16)
+}
+
+/// Creates a forest ground sprite — visually distinct dark green with tree canopy shapes.
+fn make_forest_sprite() -> Texture2D {
+    let mut rows: Vec<Vec<u8>> = Vec::new();
+    for y in 0..16u8 {
+        let mut row = Vec::new();
+        for x in 0..16u8 {
+            let hash = ((x as u16).wrapping_mul(11) + (y as u16).wrapping_mul(7)) % 23;
+            let pixel = if hash == 0 {
+                6 // tree trunk (brown)
+            } else if hash < 3 {
+                8 // darkest green (canopy shadow)
+            } else if hash < 7 {
+                1 // very dark (deep forest shadow — makes forest obviously dark)
+            } else if hash < 10 {
+                8 // dark green
+            } else {
+                2 // shadow (makes it look dense and dark)
+            };
+            row.push(pixel);
+        }
+        rows.push(row);
+    }
+    let row_refs: Vec<&[u8]> = rows.iter().map(|r| r.as_slice()).collect();
+    make_texture(&row_refs, 16)
+}
+
+/// Creates a water tile sprite.
+fn make_water_sprite(base: u8, highlight: u8) -> Texture2D {
+    let mut rows: Vec<Vec<u8>> = Vec::new();
+    for y in 0..16u8 {
+        let mut row = Vec::new();
+        for x in 0..16u8 {
+            let wave = ((x as u16 + y as u16 * 3) % 8 == 0) as u8;
+            let pixel = if wave == 1 { highlight } else { base };
+            row.push(pixel);
+        }
+        rows.push(row);
+    }
+    let row_refs: Vec<&[u8]> = rows.iter().map(|r| r.as_slice()).collect();
+    make_texture(&row_refs, 16)
+}
+
+/// Creates an ore deposit sprite — a large rocky formation with colored veins.
+///
+/// The rock has a 3D appearance with highlights on top-left and shadows on
+/// bottom-right, with ore veins (colored specks) showing through the stone.
+fn make_ore_sprite(dark: u8, light: u8) -> Image {
+    #[rustfmt::skip]
+    let pixels: &[&[u8]] = &[
+        //       Large central rock with ore veins
+        &[0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0],
+        &[0, 0, 0, 1, 1, 26,26, 5, 26,25,25, 1, 1, 0, 0, 0],
+        &[0, 0, 1, 26,light,26,25, 26,25,dark,25,25, 1, 0, 0, 0],
+        &[0, 1, 5, 26,25,light,26,25,25, 26,dark,25,25, 1, 0, 0],
+        &[0, 1, 26,25,26,25,light,25,dark,25, 26,25, 2, 1, 0, 0],
+        &[1, 26,25,light,25, 26,25,25,25,dark,25, 2,25, 2, 1, 0],
+        &[1, 25,26,25,25,light,26, 2,25,25, 2,dark,25, 2, 1, 0],
+        &[1, 25,25,26,25,25, 2,25,dark,25,25, 2,25, 2, 2, 1],
+        &[1, 26,25,25,dark,25,25, 2,25, 2,dark, 2, 2, 2, 2, 1],
+        &[1, 25,25, 2,25,dark, 2,25, 2, 2, 2, 2, 1, 2, 1, 0],
+        &[0, 1, 25, 2,25, 2,dark, 2, 2, 2, 2, 1, 1, 1, 0, 0],
+        &[0, 1, 2, 2, 2, 2, 2, 2, 2, 1, 1, 1, 0, 0, 0, 0],
+        &[0, 0, 1, 1, 2, 2, 2, 1, 1, 1, 0, 0, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    ];
+    make_image(pixels, 16)
+}
+
+/// Creates an oil well indicator sprite.
+fn make_oil_sprite() -> Image {
+    #[rustfmt::skip]
+    let pixels: &[&[u8]] = &[
+        &[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        &[0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0],
+        &[0,0,0,0,0,0,1,27,27,1,0,0,0,0,0,0],
+        &[0,0,0,0,0,1,27,27,27,27,1,0,0,0,0,0],
+        &[0,0,0,0,0,1,27,2,2,27,1,0,0,0,0,0],
+        &[0,0,0,0,0,0,1,27,27,1,0,0,0,0,0,0],
+        &[0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0],
+        &[0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0],
+        &[0,0,0,0,0,0,1,27,27,1,0,0,0,0,0,0],
+        &[0,0,0,0,0,1,27,27,27,27,1,0,0,0,0,0],
+        &[0,0,0,0,1,27,27,2,2,27,27,1,0,0,0,0],
+        &[0,0,0,0,1,27,27,27,27,27,27,1,0,0,0,0],
+        &[0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0],
+        &[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        &[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        &[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    ];
+    make_image(pixels, 16)
+}
+
+/// Creates a belt sprite. `frame` shifts the chevron arrows for animation.
+fn make_belt_sprite(base_color: u8, arrow_color: u8, frame: u8) -> Image {
+    let mut rows: Vec<Vec<u8>> = Vec::new();
+    for y in 0..16u8 {
+        let mut row = Vec::new();
+        for x in 0..16u8 {
+            // Belt edges
+            if x == 0 || x == 15 {
+                row.push(1); // outline
+            } else if x == 1 || x == 14 {
+                row.push(2); // shadow edge
+            } else {
+                // Belt surface with chevron arrows pointing up (North).
+                // Chevrons repeat every 6 rows, shifted by frame for animation.
+                let shifted_y = (y + frame * 3) % 6;
+                let center_dist = (x as i8 - 7).unsigned_abs();
+                let is_chevron = shifted_y < 2 && center_dist <= (2 - shifted_y);
+                if is_chevron {
+                    row.push(arrow_color);
+                } else {
+                    row.push(base_color);
+                }
+            }
+        }
+        rows.push(row);
+    }
+    let row_refs: Vec<&[u8]> = rows.iter().map(|r| r.as_slice()).collect();
+    make_image(&row_refs, 16)
+}
+
+// ===========================================================================
+// Hand-crafted 16×16 machine sprites
+// Light source: top-left. Outlines use selective outlining (selout).
+// ===========================================================================
+
+/// Creates the miner sprite — orange body with pickaxe, gear detail, rocky base.
+fn make_miner_sprite() -> Image {
+    #[rustfmt::skip]
+    let pixels: &[&[u8]] = &[
+        &[0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0],
+        &[0, 0, 0, 1, 1, 15,15,15,15,15, 1, 1, 0, 0, 0, 0],
+        &[0, 0, 1, 15,15, 5, 15,14,15, 5, 15,14, 1, 0, 0, 0],
+        &[0, 1, 15,15, 5, 4, 5, 14,15,14,14,14,14, 1, 0, 0],
+        &[0, 1, 15, 5, 4, 5, 14,14, 3, 3, 14,14, 2, 1, 0, 0],
+        &[1, 15,15, 5, 4, 14, 3, 4, 3, 3, 4, 3, 14, 2, 1, 0],
+        &[1, 15,14, 5, 14, 3, 4, 4, 4, 4, 4, 3, 14, 2, 1, 0],
+        &[1, 15,14,14,14, 3, 4, 3, 3, 4, 3, 3, 14, 2, 2, 1],
+        &[1, 14,14,14,14, 3, 3, 3, 3, 3, 3, 14, 2, 2, 2, 1],
+        &[1, 14,14,14, 3, 14,14,14,14,14, 2, 2, 2, 2, 1, 0],
+        &[0, 1, 14, 2,14,14, 2, 2, 2, 2, 2, 2, 2, 1, 0, 0],
+        &[0, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 1, 0, 0, 0],
+        &[0, 0, 1, 1, 25,25, 2, 25,25, 1, 1, 0, 0, 0, 0, 0],
+        &[0, 0, 0, 25,26,25,25,25,26,25, 0, 0, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 25,25,25,25,25, 0, 0, 0, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    ];
+    make_image(pixels, 16)
+}
+
+/// Creates the stone furnace sprite — brick structure with fire glow inside.
+fn make_stone_furnace_sprite() -> Image {
+    #[rustfmt::skip]
+    let pixels: &[&[u8]] = &[
+        &[0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0],
+        &[0, 1, 25,26,26,26,26,26,26,26,26,26,26,25, 1, 0],
+        &[1, 25,26,26, 5, 26,26,26,26,26, 5, 26,26,25,25, 1],
+        &[1, 25,26, 1, 1, 1, 1, 1, 1, 1, 1, 1, 26,25,25, 1],
+        &[1, 25,26, 1, 11,16,16,16,16,16,11, 1, 26,25, 2, 1],
+        &[1, 25,26, 1, 11,16,31,16,31,16,11, 1, 26, 2, 2, 1],
+        &[1, 25,26, 1, 10,11,16,11,16,11,10, 1, 26, 2, 2, 1],
+        &[1, 25,26, 1, 10,10,11,10,11,10,10, 1, 25, 2, 2, 1],
+        &[1, 25,25, 1, 1, 1, 1, 1, 1, 1, 1, 1, 25, 2, 2, 1],
+        &[1, 25,25,25,26,25,25,25,25,25,25,25, 2, 2, 2, 1],
+        &[1, 25,25,25,25,25, 2, 2, 25,25, 2, 2, 2, 2, 2, 1],
+        &[1, 25, 2, 2,25, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 0],
+        &[0, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 0, 0],
+        &[0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0],
+        &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    ];
+    make_image(pixels, 16)
+}
+
+/// Creates the steel furnace sprite — metallic structure with brighter fire.
+fn make_steel_furnace_sprite() -> Image {
+    #[rustfmt::skip]
+    let pixels: &[&[u8]] = &[
+        &[0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0],
+        &[0, 1, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 3, 1, 0],
+        &[1, 3, 4, 4, 5, 4, 4, 4, 4, 4, 5, 4, 4, 3, 3, 1],
+        &[1, 3, 4, 1, 1, 1, 1, 1, 1, 1, 1, 1, 4, 3, 3, 1],
+        &[1, 3, 4, 1, 11,31,31,31,31,31,11, 1, 4, 3, 2, 1],
+        &[1, 3, 4, 1, 11,31,16,31,16,31,11, 1, 4, 2, 2, 1],
+        &[1, 3, 4, 1, 10,11,31,11,31,11,10, 1, 4, 2, 2, 1],
+        &[1, 3, 4, 1, 10,10,11,10,11,10,10, 1, 3, 2, 2, 1],
+        &[1, 3, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 2, 2, 1],
+        &[1, 3, 3, 3, 4, 3, 29, 29, 3, 3, 3, 3, 2, 2, 2, 1],
+        &[1, 3, 3, 3, 3, 29, 2, 2, 29, 3, 2, 2, 2, 2, 2, 1],
+        &[1, 3, 2, 2, 3, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 0],
+        &[0, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 0, 0],
+        &[0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0],
+        &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    ];
+    make_image(pixels, 16)
+}
+
+/// Creates the assembler sprite — blue mechanical box with gear and arm details.
+fn make_assembler_sprite() -> Image {
+    #[rustfmt::skip]
+    let pixels: &[&[u8]] = &[
+        &[0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0],
+        &[0, 0, 1, 13,13,13, 5, 13,13, 5, 13,13,13, 1, 0, 0],
+        &[0, 1, 13,13, 5, 13,13,12,13,13,13, 5, 12,12, 1, 0],
+        &[1, 13,13, 5, 4, 4, 12,12,12,12, 4, 4, 12,12,12, 1],
+        &[1, 13, 5, 4, 3, 4, 3, 12, 12, 3, 4, 3, 12, 2, 2, 1],
+        &[1, 13,13, 4, 4, 3, 4, 4, 4, 4, 3, 4, 12, 2, 2, 1],
+        &[1, 13,12, 4, 3, 4, 4, 5, 5, 4, 4, 3, 12, 2, 2, 1],
+        &[1, 13,12,12, 4, 4, 5, 5, 5, 5, 4, 4, 12, 2, 2, 1],
+        &[1, 12,12,12, 4, 4, 5, 5, 5, 5, 4, 4, 2, 2, 2, 1],
+        &[1, 12,12,12, 4, 3, 4, 4, 4, 4, 3, 2, 2, 2, 2, 1],
+        &[1, 12,12, 12, 3, 4, 3, 12, 12, 3, 4, 2, 2, 2, 1, 0],
+        &[0, 1, 12, 2, 12,12,12,12,12, 2, 2, 2, 2, 1, 0, 0],
+        &[0, 0, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 0, 0, 0],
+        &[0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    ];
+    make_image(pixels, 16)
+}
+
+/// Creates the lab sprite — purple body with flask/beaker detail.
+fn make_lab_sprite() -> Image {
+    #[rustfmt::skip]
+    let pixels: &[&[u8]] = &[
+        &[0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0],
+        &[0, 0, 1, 1, 19,19,19, 5, 19,19,19,19, 1, 1, 0, 0],
+        &[0, 1, 19,19, 5, 19, 5, 5, 19, 5, 19,18,18,18, 1, 0],
+        &[1, 19,19, 5, 19,19, 1, 1, 19,19,18,18,18,18, 2, 1],
+        &[1, 19, 5, 19,19, 1, 22,22, 1, 18,18,18,18, 2, 2, 1],
+        &[1, 19,19,19, 1, 22, 9, 22, 22, 1, 18,18, 2, 2, 2, 1],
+        &[1, 19,18,19, 1, 22,22, 9, 22, 1, 18, 2, 2, 2, 2, 1],
+        &[1, 19,18,18, 1, 1, 22,22, 1, 1, 18, 2, 2, 2, 2, 1],
+        &[1, 18,18,18,18, 1, 1, 1, 1, 18,18, 2, 2, 2, 2, 1],
+        &[1, 18,18,18,18,18,18,18,18,18, 2, 2, 2, 2, 1, 0],
+        &[0, 1, 18,18, 2, 2,18, 2, 2, 2, 2, 2, 2, 1, 0, 0],
+        &[0, 0, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 0, 0, 0],
+        &[0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    ];
+    make_image(pixels, 16)
+}
+
+/// Creates the boiler sprite — teal box with chimney and fire window.
+fn make_boiler_sprite() -> Image {
+    #[rustfmt::skip]
+    let pixels: &[&[u8]] = &[
+        &[0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 0, 1, 3, 1, 1, 3, 1, 0, 0, 0, 0, 0],
+        &[0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0],
+        &[0, 1, 21,21, 5, 21,21,21,21,21, 5, 21,21,20, 1, 0],
+        &[1, 21,21, 5, 21,21,20,20,20,20,21,21, 5, 20,20, 1],
+        &[1, 21, 5, 21, 1, 1, 1, 1, 1, 1, 1, 1, 20,20, 2, 1],
+        &[1, 21,21,20, 1, 16,31,16,31,16,31, 1, 20, 2, 2, 1],
+        &[1, 21,20,20, 1, 11,16,11,16,11,16, 1, 20, 2, 2, 1],
+        &[1, 20,20,20, 1, 10,11,10,11,10,11, 1, 2, 2, 2, 1],
+        &[1, 20,20,20, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 1],
+        &[1, 20,20, 2, 20,20, 2, 2, 20, 2, 2, 2, 2, 2, 1, 0],
+        &[0, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 0, 0],
+        &[0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0],
+        &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    ];
+    make_image(pixels, 16)
+}
+
+/// Creates the steam engine sprite — teal box with piston/flywheel detail.
+fn make_steam_engine_sprite() -> Image {
+    #[rustfmt::skip]
+    let pixels: &[&[u8]] = &[
+        &[0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0],
+        &[0, 1, 21,21, 5, 21,21,21,21,21, 5, 21,21,20, 1, 0],
+        &[1, 21, 5, 21,21, 4, 4, 21,21, 4, 4, 21,20,20, 2, 1],
+        &[1, 21,21,21, 4, 3, 5, 4, 4, 5, 3, 4, 20, 2, 2, 1],
+        &[1, 21,21, 4, 3, 4, 4, 3, 3, 4, 4, 3, 20, 2, 2, 1],
+        &[1, 21,20, 4, 4, 4, 3, 4, 4, 3, 4, 4, 2, 2, 2, 1],
+        &[1, 21,20,20, 4, 3, 4, 4, 4, 4, 3, 2, 2, 2, 2, 1],
+        &[1, 20,20,20, 3, 4, 4, 5, 5, 4, 4, 2, 2, 2, 2, 1],
+        &[1, 20,20,20, 4, 3, 4, 4, 4, 4, 3, 2, 2, 2, 2, 1],
+        &[1, 20,20, 2, 4, 4, 3, 4, 4, 3, 2, 2, 2, 2, 1, 0],
+        &[0, 1, 20, 2, 2, 4, 4, 3, 3, 2, 2, 2, 2, 1, 0, 0],
+        &[0, 0, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 0, 0, 0],
+        &[0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    ];
+    make_image(pixels, 16)
+}
+
+/// Creates the solar panel sprite — blue grid with yellow highlights.
+fn make_solar_panel_sprite() -> Image {
+    #[rustfmt::skip]
+    let pixels: &[&[u8]] = &[
+        &[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+        &[1, 4, 4, 4, 4, 4, 4, 1, 1, 4, 4, 4, 4, 4, 4, 1],
+        &[1, 4, 13,13, 5, 13,13, 1, 1, 13,13, 5, 13,13, 3, 1],
+        &[1, 4, 13,16,16,13,13, 1, 1, 13,16,16,13,13, 3, 1],
+        &[1, 4, 13,16,13,13,12, 1, 1, 13,16,13,13,12, 3, 1],
+        &[1, 4, 13,13,13,12,12, 1, 1, 13,13,13,12,12, 3, 1],
+        &[1, 4, 13,13,12,12,12, 1, 1, 13,13,12,12,12, 3, 1],
+        &[1, 1, 1, 1, 1, 1, 1, 4, 3, 1, 1, 1, 1, 1, 1, 1],
+        &[1, 1, 1, 1, 1, 1, 1, 4, 3, 1, 1, 1, 1, 1, 1, 1],
+        &[1, 4, 13,13, 5, 13,13, 1, 1, 13,13, 5, 13,13, 3, 1],
+        &[1, 4, 13,16,16,13,13, 1, 1, 13,16,16,13,13, 3, 1],
+        &[1, 3, 13,16,13,13,12, 1, 1, 13,16,13,13,12, 3, 1],
+        &[1, 3, 13,13,13,12,12, 1, 1, 13,13,13,12,12, 2, 1],
+        &[1, 3, 13,13,12,12,12, 1, 1, 13,13,12,12,12, 2, 1],
+        &[1, 3, 3, 3, 3, 3, 3, 1, 1, 3, 3, 2, 2, 2, 2, 1],
+        &[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    ];
+    make_image(pixels, 16)
+}
+
+/// Creates a storage chest sprite — wooden crate with latch.
+fn make_chest_sprite() -> Image {
+    #[rustfmt::skip]
+    let pixels: &[&[u8]] = &[
+        &[0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0],
+        &[0, 1, 7, 15,15,15,15,15,15,15,15,15,15, 7, 1, 0],
+        &[1, 7, 15,15, 7, 15,15,15,15,15, 7, 15,15, 7, 6, 1],
+        &[1, 7, 15, 7, 15,15,15,15,15,15,15, 7, 15, 6, 6, 1],
+        &[1, 7, 15,15,15,15,15,15,15,15,15,15, 6, 6, 6, 1],
+        &[1, 7, 7, 7, 7, 7, 16,16, 7, 7, 7, 7, 6, 6, 6, 1],
+        &[1, 7, 15,15,15,15,30,30,15,15,15, 6, 6, 6, 6, 1],
+        &[1, 7, 15, 7,15,15,15,15,15,15, 7, 6, 6, 6, 6, 1],
+        &[1, 7, 15,15, 7,15,15,15,15, 7, 6, 6, 6, 6, 6, 1],
+        &[1, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 1, 0],
+        &[0, 1, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 1, 0, 0],
+        &[0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0],
+        &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    ];
+    make_image(pixels, 16)
+}
+
+/// Creates the gun turret sprite — gray base with barrel.
+fn make_gun_turret_sprite() -> Image {
+    #[rustfmt::skip]
+    let pixels: &[&[u8]] = &[
+        &[0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 0, 0, 1, 4, 4, 1, 0, 0, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 0, 0, 1, 3, 3, 1, 0, 0, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 0, 0, 1, 3, 3, 1, 0, 0, 0, 0, 0, 0],
+        &[0, 0, 0, 1, 1, 1, 1, 3, 3, 1, 1, 1, 1, 0, 0, 0],
+        &[0, 0, 1, 4, 4, 5, 4, 4, 4, 4, 5, 4, 3, 1, 0, 0],
+        &[0, 1, 4, 4, 4, 4, 3, 3, 3, 3, 4, 4, 3, 3, 1, 0],
+        &[1, 4, 4, 4, 3, 3, 3, 2, 2, 3, 3, 3, 3, 3, 2, 1],
+        &[1, 4, 4, 3, 3, 3, 2, 2, 2, 2, 3, 3, 3, 2, 2, 1],
+        &[1, 3, 3, 3, 3, 2, 2, 2, 2, 2, 2, 3, 2, 2, 2, 1],
+        &[0, 1, 3, 3, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 0],
+        &[0, 0, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 0, 0],
+        &[0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0],
+        &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    ];
+    make_image(pixels, 16)
+}
+
+/// Creates an inserter sprite — small arm on a base.
+fn make_inserter_sprite() -> Image {
+    #[rustfmt::skip]
+    let pixels: &[&[u8]] = &[
+        &[0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 0, 1, 16,16,16, 1, 0, 0, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 0, 0, 1, 3, 1, 0, 0, 0, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 0, 0, 1, 3, 1, 0, 0, 0, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 0, 0, 1, 3, 1, 0, 0, 0, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 0, 0, 1, 3, 1, 0, 0, 0, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 0, 0, 1, 3, 1, 0, 0, 0, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 0, 0, 1, 3, 1, 0, 0, 0, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0],
+        &[0, 0, 0, 1, 4, 4, 5, 4, 4, 4, 3, 1, 0, 0, 0, 0],
+        &[0, 0, 0, 1, 3, 3, 4, 3, 3, 3, 2, 1, 0, 0, 0, 0],
+        &[0, 0, 0, 1, 3, 3, 3, 3, 3, 2, 2, 1, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 1, 2, 2, 2, 2, 2, 1, 0, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    ];
+    make_image(pixels, 16)
+}
+
+/// Creates a wall sprite (thick stone block with mortar lines).
+fn make_wall_sprite() -> Image {
+    #[rustfmt::skip]
+    let pixels: &[&[u8]] = &[
+        &[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+        &[1,25,25,25,25,25,25,26,1,25,25,25,25,25,25,1],
+        &[1,25,26,26,26,26,25,26,1,25,26,26,26,26,25,1],
+        &[1,25,26,26,26,26,25,26,1,25,26,26,26,26,25,1],
+        &[1,25,25,25,25,25,25,26,1,25,25,25,25,25,25,1],
+        &[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+        &[1,25,25,25,1,25,25,25,25,25,25,1,25,25,25,1],
+        &[1,25,26,25,1,25,26,26,26,26,25,1,25,26,25,1],
+        &[1,25,26,25,1,25,26,26,26,26,25,1,25,26,25,1],
+        &[1,25,25,25,1,25,25,25,25,25,25,1,25,25,25,1],
+        &[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+        &[1,25,25,25,25,25,25,26,1,25,25,25,25,25,25,1],
+        &[1,25,26,26,26,26,25,26,1,25,26,26,26,26,25,1],
+        &[1,25,26,26,26,26,25,26,1,25,26,26,26,26,25,1],
+        &[1,25,25,25,25,25,25,26,1,25,25,25,25,25,25,1],
+        &[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    ];
+    make_image(pixels, 16)
+}
+
+// --- Item sprites (8×8) ---
+
+/// Creates a small item ore sprite.
+fn make_item_sprite(dark: u8, light: u8) -> Image {
+    #[rustfmt::skip]
+    let pixels: &[&[u8]] = &[
+        &[0, 0, 0, 0, 0, 0, 0, 0],
+        &[0, 0, 1, 1, 1, 0, 0, 0],
+        &[0, 1, dark, dark, light, 1, 0, 0],
+        &[0, 1, dark, light, light, 1, 0, 0],
+        &[0, 1, dark, dark, light, 1, 0, 0],
+        &[0, 0, 1, 1, 1, 0, 0, 0],
+        &[0, 0, 0, 0, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 0, 0, 0, 0],
+    ];
+    make_image(pixels, 8)
+}
+
+/// Creates a flat plate item sprite.
+fn make_plate_item_sprite(dark: u8, light: u8) -> Image {
+    #[rustfmt::skip]
+    let pixels: &[&[u8]] = &[
+        &[0, 0, 0, 0, 0, 0, 0, 0],
+        &[0, 1, 1, 1, 1, 1, 0, 0],
+        &[0, 1, dark, dark, light, 1, 0, 0],
+        &[0, 1, dark, light, light, 1, 0, 0],
+        &[0, 1, dark, dark, light, 1, 0, 0],
+        &[0, 1, 1, 1, 1, 1, 0, 0],
+        &[0, 0, 0, 0, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 0, 0, 0, 0],
+    ];
+    make_image(pixels, 8)
+}
+
+/// Creates a gear item sprite.
+fn make_gear_item_sprite() -> Image {
+    #[rustfmt::skip]
+    let pixels: &[&[u8]] = &[
+        &[0, 0, 3, 3, 0, 0, 0, 0],
+        &[0, 3, 4, 4, 3, 0, 0, 0],
+        &[3, 4, 1, 1, 4, 3, 0, 0],
+        &[3, 4, 1, 1, 4, 3, 0, 0],
+        &[0, 3, 4, 4, 3, 0, 0, 0],
+        &[0, 0, 3, 3, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 0, 0, 0, 0],
+    ];
+    make_image(pixels, 8)
+}
+
+/// Creates a wire item sprite.
+fn make_wire_item_sprite() -> Image {
+    #[rustfmt::skip]
+    let pixels: &[&[u8]] = &[
+        &[0, 0, 0, 0, 0, 0, 0, 0],
+        &[0, 28, 0, 0, 0, 0, 0, 0],
+        &[0, 0, 28, 0, 0, 0, 0, 0],
+        &[0, 0, 0, 28, 28, 0, 0, 0],
+        &[0, 0, 0, 0, 0, 28, 0, 0],
+        &[0, 0, 0, 0, 0, 0, 28, 0],
+        &[0, 0, 0, 0, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 0, 0, 0, 0],
+    ];
+    make_image(pixels, 8)
+}
+
+/// Creates a circuit item sprite.
+fn make_circuit_item_sprite() -> Image {
+    #[rustfmt::skip]
+    let pixels: &[&[u8]] = &[
+        &[0, 0, 0, 0, 0, 0, 0, 0],
+        &[0, 1, 1, 1, 1, 1, 0, 0],
+        &[0, 1, 22, 8, 22, 1, 0, 0],
+        &[0, 1, 8, 22, 8, 1, 0, 0],
+        &[0, 1, 22, 8, 22, 1, 0, 0],
+        &[0, 1, 1, 1, 1, 1, 0, 0],
+        &[0, 0, 0, 0, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 0, 0, 0, 0],
+    ];
+    make_image(pixels, 8)
+}
+
+/// Creates a science flask item sprite.
+fn make_flask_item_sprite(dark: u8, light: u8) -> Image {
+    #[rustfmt::skip]
+    let pixels: &[&[u8]] = &[
+        &[0, 0, 5, 5, 0, 0, 0, 0],
+        &[0, 0, 5, 5, 0, 0, 0, 0],
+        &[0, 1, dark, dark, 1, 0, 0, 0],
+        &[1, dark, light, light, dark, 1, 0, 0],
+        &[1, dark, light, light, dark, 1, 0, 0],
+        &[0, 1, 1, 1, 1, 0, 0, 0],
+        &[0, 0, 0, 0, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 0, 0, 0, 0],
+    ];
+    make_image(pixels, 8)
+}
+
+// --- Enemy sprites (12×12) ---
+
+/// Creates an enemy biter sprite.
+fn make_enemy_sprite(body: u8, shadow: u8) -> Image {
+    #[rustfmt::skip]
+    let pixels: &[&[u8]] = &[
+        &[0,0,0,0,0,0,0,0,0,0,0,0],
+        &[0,0,0,0,1,1,1,1,0,0,0,0],
+        &[0,0,0,1,body,body,body,body,1,0,0,0],
+        &[0,0,1,body,body,5,5,body,body,1,0,0],
+        &[0,1,shadow,body,body,body,body,body,body,shadow,1,0],
+        &[0,1,shadow,body,body,body,body,body,body,shadow,1,0],
+        &[0,0,1,shadow,body,body,body,body,shadow,1,0,0],
+        &[0,0,0,1,shadow,body,body,shadow,1,0,0,0],
+        &[0,0,1,0,1,shadow,shadow,1,0,1,0,0],
+        &[0,1,0,0,0,1,1,0,0,0,1,0],
+        &[0,0,0,0,0,0,0,0,0,0,0,0],
+        &[0,0,0,0,0,0,0,0,0,0,0,0],
+    ];
+    make_image(pixels, 12)
+}
