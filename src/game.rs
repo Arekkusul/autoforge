@@ -103,6 +103,8 @@ pub struct GameState {
     pub game_won: bool,
     /// Whether the help/keybinds overlay is showing (F1).
     pub show_help: bool,
+    /// Brief placement flash effect (position + remaining ticks).
+    pub placement_flash: Option<(GridPos, u32)>,
     /// Narrative/story progression state.
     pub story: StoryState,
     /// Seed used for map generation (stored for save/load).
@@ -164,6 +166,7 @@ impl GameState {
             toasts: Vec::new(),
             game_won: false,
             show_help: false,
+            placement_flash: None,
             story: StoryState::new(),
             seed: actual_seed,
         }

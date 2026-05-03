@@ -93,6 +93,8 @@ async fn main() {
 
     // --- Game initialization (after cutscene) ---
     let mut state = GameState::new(0);
+    state.toast("Welcome to AutoForge! Press F1 for help~".to_string(), 120);
+    state.toast("Click toolbar to select buildings. Press E for recipes!".to_string(), 150);
 
     // --- Main game loop ---
     let mut autosave_timer = 0.0f32;
@@ -158,6 +160,19 @@ async fn main() {
             state.placement_direction,
         );
         render::draw_night_overlay(state.daynight.darkness());
+
+        // Placement flash effect (brief white glow on last placed building).
+        if let Some((pos, ticks)) = state.placement_flash {
+            let alpha = ticks as f32 / 10.0 * 0.4;
+            let world = grid::Grid::grid_to_world(pos);
+            draw_rectangle(
+                world.x - 2.0,
+                world.y - 2.0,
+                TILE_SIZE + 4.0,
+                TILE_SIZE + 4.0,
+                Color::new(0.8, 0.9, 1.0, alpha),
+            );
+        }
 
         // Red vignette flash when enemies are actively attacking buildings.
         let enemies_attacking = state.enemies.list.iter()
@@ -594,6 +609,7 @@ fn handle_input(state: &mut GameState) {
                 // Deduct cost from inventory.
                 buildcost::pay_cost(&mut state.inventory, kind);
                 state.last_placed = Some(grid_pos);
+                state.placement_flash = Some((grid_pos, 10)); // 10 tick flash
                 if kind.is_belt() {
                     state.last_belt_pos = Some(grid_pos);
                 }
@@ -713,6 +729,15 @@ fn simulation_tick(state: &mut GameState) {
 
     // Tick toast notifications.
     state.tick_toasts();
+
+    // Tick placement flash.
+    if let Some((_, ref mut ticks)) = state.placement_flash {
+        if *ticks > 0 {
+            *ticks -= 1;
+        } else {
+            state.placement_flash = None;
+        }
+    }
 
     // --- EVERY TICK (20 Hz) --- Critical path for smooth gameplay ---
 
@@ -867,8 +892,8 @@ fn simulation_tick(state: &mut GameState) {
             for &(resource, count) in milestone.reward {
                 *state.inventory.entry(resource).or_insert(0) += count;
             }
-            state.toast(format!("Milestone: {}!", milestone.name), 100);
-            state.toast(format!("Reward: {} items added to inventory", milestone.reward.len()), 80);
+            state.toast(format!("*** MILESTONE: {} ***", milestone.name), 120);
+            state.toast(format!("+{} resource types rewarded!", milestone.reward.len()), 80);
         }
     }
 }

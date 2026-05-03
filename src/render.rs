@@ -309,6 +309,30 @@ pub fn draw_world(
                 draw_rectangle(bar_x, bar_y, bar_w * fill, bar_h, bar_color);
             }
 
+            // Recipe label above assemblers (LOD 0 only).
+            if lod == 0 && (building.kind == BuildingKind::AssemblerT1
+                || building.kind == BuildingKind::AssemblerT2
+                || building.kind == BuildingKind::AssemblerT3
+                || building.kind == BuildingKind::ChemicalPlant)
+            {
+                if let Some(ref ms) = building.machine_state {
+                    if let Some(rid) = ms.selected_recipe {
+                        if rid.0 < crate::recipe::RECIPES.len() {
+                            let name = crate::recipe::RECIPES[rid.0].name;
+                            // Short name (take first word after "Craft ")
+                            let short = name.strip_prefix("Craft ").unwrap_or(name);
+                            draw_text(
+                                short,
+                                world.x,
+                                world.y - 8.0,
+                                10.0,
+                                Color::new(0.8, 0.8, 0.9, 0.7),
+                            );
+                        }
+                    }
+                }
+            }
+
             // Belt direction indicator (LOD 0 only — saves 2 triangle draws per belt at LOD 1).
             if building.kind.is_belt() && lod == 0 {
                 let center = Vec2::new(world.x + TILE_SIZE * 0.5, world.y + TILE_SIZE * 0.5);
