@@ -18,41 +18,94 @@
 
 use macroquad::prelude::*;
 
-/// 32-color palette. Index 0 = transparent. RGBA format.
-/// Softer, more pastel-leaning tones for a cute aesthetic.
-pub static PALETTE: [(u8, u8, u8, u8); 32] = [
-    (0, 0, 0, 0),          // 0:  Transparent
-    (32, 28, 50, 255),     // 1:  Dark purple-black (soft outlines)
-    (52, 48, 72, 255),     // 2:  Dark lavender (shadows)
-    (100, 95, 130, 255),   // 3:  Mid lavender (metal base)
-    (148, 142, 178, 255),  // 4:  Light lavender (metal highlight)
-    (220, 218, 235, 255),  // 5:  Soft white (specular)
-    (120, 68, 52, 255),    // 6:  Warm brown (iron ore)
-    (165, 105, 60, 255),   // 7:  Warm copper (copper ore)
-    (55, 85, 55, 255),     // 8:  Soft dark green (ground)
-    (78, 125, 72, 255),    // 9:  Soft green (ground highlight)
-    (155, 60, 60, 255),    // 10: Soft red (smelter)
-    (210, 95, 80, 255),    // 11: Coral (smelter highlight)
-    (55, 70, 135, 255),    // 12: Soft blue (assembler)
-    (95, 125, 200, 255),   // 13: Periwinkle (assembler highlight)
-    (150, 100, 40, 255),   // 14: Warm orange (miner)
-    (215, 155, 75, 255),   // 15: Golden (miner highlight)
-    (230, 215, 80, 255),   // 16: Soft yellow (belt arrows)
-    (115, 115, 55, 255),   // 17: Olive (belt base)
-    (120, 70, 150, 255),   // 18: Soft purple (lab)
-    (170, 110, 200, 255),  // 19: Lilac (lab highlight)
-    (55, 100, 100, 255),   // 20: Soft teal (generator)
-    (90, 150, 148, 255),   // 21: Mint (generator highlight)
-    (80, 210, 100, 255),   // 22: Mint green (circuit)
-    (235, 85, 85, 255),    // 23: Soft red (enemy)
-    (150, 40, 40, 255),    // 24: Dark rose (enemy shadow)
-    (135, 130, 118, 255),  // 25: Warm stone
-    (180, 178, 172, 255),  // 26: Light stone
-    (48, 45, 48, 255),     // 27: Soft black (coal)
-    (225, 172, 95, 255),   // 28: Gold (copper shine)
-    (130, 145, 162, 255),  // 29: Steel blue
-    (195, 170, 62, 255),   // 30: Brass
-    (240, 235, 70, 255),   // 31: Lemon (warning)
+/// 64-color palette for production-quality sprites.
+/// Organized in color ramps (4 shades per hue) for smooth gradients.
+/// Index 0 = transparent. RGBA format.
+///
+/// Layout: Each color family has 4 entries (darkest → lightest).
+/// This allows smooth dithering and anti-aliasing between shades.
+pub static PALETTE: [(u8, u8, u8, u8); 64] = [
+    // 0: Transparent
+    (0, 0, 0, 0),
+    // 1-4: Neutral grays (outlines, shadows, metals)
+    (25, 22, 40, 255),     // 1: Deepest shadow (soft black-purple)
+    (48, 44, 65, 255),     // 2: Dark shadow
+    (85, 80, 110, 255),    // 3: Mid gray-purple
+    (130, 125, 155, 255),  // 4: Light gray-purple
+    // 5-8: Whites and highlights
+    (175, 172, 195, 255),  // 5: Silver
+    (210, 208, 225, 255),  // 6: Pale highlight
+    (238, 236, 245, 255),  // 7: Near-white
+    (255, 253, 250, 255),  // 8: Pure specular
+    // 9-12: Greens (ground, forest)
+    (35, 65, 40, 255),     // 9: Deep forest
+    (55, 95, 55, 255),     // 10: Dark grass
+    (78, 135, 72, 255),    // 11: Grass
+    (120, 180, 105, 255),  // 12: Light grass / highlight
+    // 13-16: Browns (ores, wood)
+    (65, 38, 28, 255),     // 13: Dark brown
+    (105, 62, 42, 255),    // 14: Mid brown (iron ore)
+    (148, 95, 58, 255),    // 15: Warm brown
+    (192, 138, 85, 255),   // 16: Light brown / tan
+    // 17-20: Oranges/Coral (miner, copper)
+    (135, 58, 35, 255),    // 17: Dark coral
+    (180, 88, 52, 255),    // 18: Coral
+    (220, 135, 72, 255),   // 19: Light coral / amber
+    (245, 185, 110, 255),  // 20: Peach highlight
+    // 21-24: Reds (furnace, enemies)
+    (95, 28, 28, 255),     // 21: Dark red
+    (148, 48, 45, 255),    // 22: Mid red
+    (205, 78, 65, 255),    // 23: Warm red
+    (240, 125, 105, 255),  // 24: Light salmon
+    // 25-28: Blues (assembler, water)
+    (30, 48, 105, 255),    // 25: Deep blue
+    (52, 78, 155, 255),    // 26: Mid blue
+    (88, 125, 205, 255),   // 27: Periwinkle
+    (135, 175, 235, 255),  // 28: Light sky blue
+    // 29-32: Purples (lab, FORGE)
+    (68, 35, 105, 255),    // 29: Deep purple
+    (108, 62, 155, 255),   // 30: Mid purple
+    (155, 98, 205, 255),   // 31: Lilac
+    (198, 148, 235, 255),  // 32: Light lavender
+    // 33-36: Teals (power, generators)
+    (28, 72, 72, 255),     // 33: Deep teal
+    (48, 115, 112, 255),   // 34: Mid teal
+    (82, 162, 155, 255),   // 35: Mint
+    (128, 205, 195, 255),  // 36: Light mint
+    // 37-40: Yellows (belts, warnings)
+    (105, 95, 28, 255),    // 37: Dark gold
+    (165, 152, 42, 255),   // 38: Gold
+    (225, 210, 68, 255),   // 39: Yellow
+    (248, 238, 125, 255),  // 40: Light lemon
+    // 41-44: Pinks (enemies, highlights)
+    (115, 35, 62, 255),    // 41: Dark rose
+    (172, 58, 88, 255),    // 42: Rose
+    (225, 95, 125, 255),   // 43: Pink
+    (248, 155, 175, 255),  // 44: Light pink
+    // 45-48: Stone/Earth (walls, stone)
+    (72, 68, 62, 255),     // 45: Dark stone
+    (112, 108, 98, 255),   // 46: Mid stone
+    (155, 150, 138, 255),  // 47: Light stone
+    (198, 195, 185, 255),  // 48: Pale stone
+    // 49-52: Copper/Gold metallic
+    (125, 72, 22, 255),    // 49: Dark copper
+    (178, 108, 38, 255),   // 50: Mid copper
+    (225, 155, 65, 255),   // 51: Bright copper
+    (248, 205, 115, 255),  // 52: Gold highlight
+    // 53-56: Cool metals (steel, inserters)
+    (62, 72, 85, 255),     // 53: Dark steel
+    (95, 108, 125, 255),   // 54: Mid steel
+    (135, 148, 168, 255),  // 55: Light steel
+    (178, 192, 208, 255),  // 56: Steel highlight
+    // 57-60: Greens bright (circuits, science)
+    (22, 95, 45, 255),     // 57: Dark circuit green
+    (48, 155, 72, 255),    // 58: Circuit green
+    (82, 210, 105, 255),   // 59: Bright green
+    (145, 238, 158, 255),  // 60: Light green glow
+    // 61-63: Special (fire glow, uranium, warning)
+    (255, 155, 32, 255),   // 61: Fire orange
+    (48, 225, 85, 255),    // 62: Uranium glow
+    (255, 68, 68, 255),    // 63: Alert red
 ];
 
 /// Holds all game sprites packed into a SINGLE texture atlas.
@@ -147,8 +200,23 @@ impl SpriteAtlas {
     /// 4. Adaptive quality (auto-LOD when FPS drops)
     pub fn generate() -> Self {
         // ================================================================
-        // PRODUCTION ATLAS BUILDER
+        // PRODUCTION ASSET PIPELINE
         // ================================================================
+        // Priority 1: Load from embedded PNG spritesheet (AI-generated art).
+        //   Place a `spritesheet.png` in assets/ and it auto-embeds at compile time.
+        // Priority 2: Fall back to procedural generation (current approach).
+        //
+        // To use AI-generated sprites:
+        //   1. Generate sprites following assets/SPRITESHEET_TEMPLATE.md
+        //   2. Save as assets/spritesheet.png (1024×1024, RGBA PNG)
+        //   3. Uncomment the include_bytes! line below
+        //   4. Rebuild — sprites are now embedded in the binary
+        //
+        // const SPRITESHEET: &[u8] = include_bytes!("../assets/spritesheet.png");
+        // let atlas_tex = Texture2D::from_file_with_format(SPRITESHEET, Some(ImageFormat::Png));
+        // ================================================================
+
+        // Currently using procedural generation (no PNG available yet).
         // All sprites are packed into a single 512×512 Image at startup.
         // Each sprite gets a Texture2D created from the SAME atlas image.
         // Since macroquad batches draws of the same Texture2D, this means
@@ -190,9 +258,9 @@ impl SpriteAtlas {
 
         // Row 0: Ground (start at x=2 to avoid white pixel area)
         let imgs_ground = [
-            make_ground_image(8, 9, 8),    // grass
-            make_ground_image(8, 9, 9),    // grass alt
-            make_ground_image(17, 15, 14), // desert
+            make_ground_image(10, 11, 12),  // grass (new green ramp)
+            make_ground_image(10, 12, 11),  // grass alt
+            make_ground_image(16, 15, 14),  // desert (brown ramp)
             make_forest_image(),           // forest
             make_water_image(12, 13),      // water
             make_water_image(13, 12),      // water alt
@@ -220,9 +288,9 @@ impl SpriteAtlas {
             r_ground_water_alt: Rect::new(89.0, 0.0, 16.0, 16.0),
 
             // Legacy textures (backward compat).
-            ground_grass: make_ground_sprite(8, 9, 8),
-            ground_grass_alt: make_ground_sprite(8, 9, 9),
-            ground_desert: make_ground_sprite(17, 15, 14),
+            ground_grass: make_ground_sprite(10, 11, 12),      // New green ramp
+            ground_grass_alt: make_ground_sprite(10, 12, 11),  // Variant
+            ground_desert: make_ground_sprite(16, 15, 14),     // Brown/tan ramp
             ground_forest: make_forest_sprite(),
             ground_water: make_water_sprite(12, 13),
             ground_water_alt: make_water_sprite(13, 12),
@@ -337,13 +405,29 @@ fn make_texture(pixels: &[&[u8]], size: u16) -> Texture2D {
 
 /// Creates a solid-fill texture with slight noise for ground tiles.
 /// Returns ground tile as Image (for atlas packing).
+/// Uses dithering pattern for smooth gradient feel between shades.
 fn make_ground_image(base: u8, highlight: u8, alt: u8) -> Image {
     let mut rows: Vec<Vec<u8>> = Vec::new();
     for y in 0..16u8 {
         let mut row = Vec::new();
         for x in 0..16u8 {
+            // Ordered dithering pattern (Bayer 4×4) for smooth gradients.
+            let bayer = [
+                [0, 8, 2, 10],
+                [12, 4, 14, 6],
+                [3, 11, 1, 9],
+                [15, 7, 13, 5],
+            ];
+            let threshold = bayer[(y % 4) as usize][(x % 4) as usize];
             let hash = ((x as u16).wrapping_mul(7) + (y as u16).wrapping_mul(13)) % 17;
-            let pixel = if hash == 0 { highlight } else if hash == 3 { alt } else { base };
+
+            let pixel = if hash == 0 || threshold > 12 {
+                highlight
+            } else if hash == 3 || threshold < 3 {
+                alt
+            } else {
+                base
+            };
             row.push(pixel);
         }
         rows.push(row);
@@ -536,44 +620,47 @@ fn make_belt_sprite(base_color: u8, arrow_color: u8, frame: u8) -> Image {
 
 /// Creates the miner sprite — orange body with pickaxe, gear detail, rocky base.
 fn make_miner_sprite() -> Image {
+    // Production quality miner: warm coral body (palette 17-20), metal details (53-56),
+    // proper top-left lighting, ambient occlusion at base, rounded shape.
     #[rustfmt::skip]
     let pixels: &[&[u8]] = &[
-        &[0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0],
-        &[0, 0, 0, 1, 1, 15,15,15,15,15, 1, 1, 0, 0, 0, 0],
-        &[0, 0, 1, 15,15, 5, 15,14,15, 5, 15,14, 1, 0, 0, 0],
-        &[0, 1, 15,15, 5, 4, 5, 14,15,14,14,14,14, 1, 0, 0],
-        &[0, 1, 15, 5, 4, 5, 14,14, 3, 3, 14,14, 2, 1, 0, 0],
-        &[1, 15,15, 5, 4, 14, 3, 4, 3, 3, 4, 3, 14, 2, 1, 0],
-        &[1, 15,14, 5, 14, 3, 4, 4, 4, 4, 4, 3, 14, 2, 1, 0],
-        &[1, 15,14,14,14, 3, 4, 3, 3, 4, 3, 3, 14, 2, 2, 1],
-        &[1, 14,14,14,14, 3, 3, 3, 3, 3, 3, 14, 2, 2, 2, 1],
-        &[1, 14,14,14, 3, 14,14,14,14,14, 2, 2, 2, 2, 1, 0],
-        &[0, 1, 14, 2,14,14, 2, 2, 2, 2, 2, 2, 2, 1, 0, 0],
-        &[0, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 1, 0, 0, 0],
-        &[0, 0, 1, 1, 25,25, 2, 25,25, 1, 1, 0, 0, 0, 0, 0],
-        &[0, 0, 0, 25,26,25,25,25,26,25, 0, 0, 0, 0, 0, 0],
-        &[0, 0, 0, 0, 25,25,25,25,25, 0, 0, 0, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 1, 1,20,20,19,19,19,18, 1, 0, 0, 0],
+        &[0, 0, 0, 1,20,20, 8,20,19,19, 8,18,17, 1, 0, 0],
+        &[0, 0, 1,20,20, 8,55,56,19,55,56,18,17,17, 1, 0],
+        &[0, 1,20,20,19,55, 4, 5,55, 4, 5,54,17,17, 2, 1],
+        &[0, 1,20,19,19,55,54,54,54,54,54,54,18,17, 2, 1],
+        &[1,19,19,19,55,54, 4, 4, 4, 4, 4,54,18,17, 2, 1],
+        &[1,19,19,18,55,54, 4, 3, 3, 4, 3,54,18, 2, 2, 1],
+        &[1,19,18,18,55, 3, 3, 3, 3, 3, 3,53,17, 2, 2, 1],
+        &[1,18,18,18,54, 3, 3,53,53, 3, 3,53,17, 2, 1, 0],
+        &[0, 1,18,17,53,53,53,53,53,53,53, 2, 2, 1, 0, 0],
+        &[0, 1,17,17, 2, 2, 2, 2, 2, 2, 2, 2, 1, 0, 0, 0],
+        &[0, 0, 1, 1,46,47,46, 2,46,47,46, 1, 0, 0, 0, 0],
+        &[0, 0, 0,45,46,47,46,45,46,47,46,45, 0, 0, 0, 0],
+        &[0, 0, 0, 0,45,46,45,45,45,46,45, 0, 0, 0, 0, 0],
         &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     ];
     make_image(pixels, 16)
 }
 
-/// Creates the stone furnace sprite — brick structure with fire glow inside.
+/// Creates the stone furnace sprite — warm brick oven with amber fire glow.
+/// Uses stone ramp (45-48) for bricks, fire ramp (61, 23, 39) for glow.
 fn make_stone_furnace_sprite() -> Image {
     #[rustfmt::skip]
     let pixels: &[&[u8]] = &[
         &[0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0],
-        &[0, 1, 25,26,26,26,26,26,26,26,26,26,26,25, 1, 0],
-        &[1, 25,26,26, 5, 26,26,26,26,26, 5, 26,26,25,25, 1],
-        &[1, 25,26, 1, 1, 1, 1, 1, 1, 1, 1, 1, 26,25,25, 1],
-        &[1, 25,26, 1, 11,16,16,16,16,16,11, 1, 26,25, 2, 1],
-        &[1, 25,26, 1, 11,16,31,16,31,16,11, 1, 26, 2, 2, 1],
-        &[1, 25,26, 1, 10,11,16,11,16,11,10, 1, 26, 2, 2, 1],
-        &[1, 25,26, 1, 10,10,11,10,11,10,10, 1, 25, 2, 2, 1],
-        &[1, 25,25, 1, 1, 1, 1, 1, 1, 1, 1, 1, 25, 2, 2, 1],
-        &[1, 25,25,25,26,25,25,25,25,25,25,25, 2, 2, 2, 1],
-        &[1, 25,25,25,25,25, 2, 2, 25,25, 2, 2, 2, 2, 2, 1],
-        &[1, 25, 2, 2,25, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 0],
+        &[0, 1,47,48,48,48,48,48,48,48,48,48,48,46, 1, 0],
+        &[1,47,48,48, 8,48,48,48,48,48, 8,48,47,46,46, 1],
+        &[1,47,48, 1, 1, 1, 1, 1, 1, 1, 1, 1,47,46,46, 1],
+        &[1,47,48, 1,61,39,39,39,39,39,61, 1,47,46, 2, 1],
+        &[1,47,47, 1,61,39,40,39,40,39,61, 1,46,45, 2, 1],
+        &[1,46,47, 1,23,61,39,61,39,61,23, 1,46,45, 2, 1],
+        &[1,46,47, 1,22,23,61,23,61,23,22, 1,46,45, 2, 1],
+        &[1,46,46, 1, 1, 1, 1, 1, 1, 1, 1, 1,45,45, 2, 1],
+        &[1,46,46,46,47,46,46,46,46,46,46,45,45, 2, 2, 1],
+        &[1,46,46,45,46,46,45, 2,46,45, 2, 2, 2, 2, 2, 1],
+        &[1,45,45, 2,45, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 0],
         &[0, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 0, 0],
         &[0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0],
         &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -606,23 +693,24 @@ fn make_steel_furnace_sprite() -> Image {
     make_image(pixels, 16)
 }
 
-/// Creates the assembler sprite — blue mechanical box with gear and arm details.
+/// Creates the assembler sprite — periwinkle-blue mechanical box with gear detail.
+/// Uses blue ramp (25-28) with steel accents (53-56).
 fn make_assembler_sprite() -> Image {
     #[rustfmt::skip]
     let pixels: &[&[u8]] = &[
         &[0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0],
-        &[0, 0, 1, 13,13,13, 5, 13,13, 5, 13,13,13, 1, 0, 0],
-        &[0, 1, 13,13, 5, 13,13,12,13,13,13, 5, 12,12, 1, 0],
-        &[1, 13,13, 5, 4, 4, 12,12,12,12, 4, 4, 12,12,12, 1],
-        &[1, 13, 5, 4, 3, 4, 3, 12, 12, 3, 4, 3, 12, 2, 2, 1],
-        &[1, 13,13, 4, 4, 3, 4, 4, 4, 4, 3, 4, 12, 2, 2, 1],
-        &[1, 13,12, 4, 3, 4, 4, 5, 5, 4, 4, 3, 12, 2, 2, 1],
-        &[1, 13,12,12, 4, 4, 5, 5, 5, 5, 4, 4, 12, 2, 2, 1],
-        &[1, 12,12,12, 4, 4, 5, 5, 5, 5, 4, 4, 2, 2, 2, 1],
-        &[1, 12,12,12, 4, 3, 4, 4, 4, 4, 3, 2, 2, 2, 2, 1],
-        &[1, 12,12, 12, 3, 4, 3, 12, 12, 3, 4, 2, 2, 2, 1, 0],
-        &[0, 1, 12, 2, 12,12,12,12,12, 2, 2, 2, 2, 1, 0, 0],
-        &[0, 0, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 0, 0, 0],
+        &[0, 0, 1,28,28,28, 8,28,28, 8,28,27,27, 1, 0, 0],
+        &[0, 1,28,28, 8,28,56,55,28,56,55, 8,27,26, 1, 0],
+        &[1,28,28, 8,55,56,55,26,26,55,56,55,27,26,26, 1],
+        &[1,28, 8,55, 4, 5,54,26,26,54, 5, 4,26,26,25, 1],
+        &[1,28,27,55, 5, 4, 5, 5, 5, 5, 4, 5,26,25,25, 1],
+        &[1,27,27,55, 4, 5, 7, 7, 7, 7, 5, 4,26,25,25, 1],
+        &[1,27,27,54, 5, 5, 7, 8, 8, 7, 5, 5,25,25, 2, 1],
+        &[1,27,26,54, 5, 5, 7, 8, 8, 7, 5, 5,25,25, 2, 1],
+        &[1,26,26,54, 4, 5, 7, 7, 7, 7, 5, 4,25, 2, 2, 1],
+        &[1,26,26,53, 5, 4, 5, 5, 5, 5, 4,53, 2, 2, 2, 1],
+        &[0, 1,26,53,53,53,53,26,26,53,53,53, 2, 1, 0, 0],
+        &[0, 0, 1,25, 2, 2, 2, 2, 2, 2, 2, 2, 1, 0, 0, 0],
         &[0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0],
         &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],

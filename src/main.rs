@@ -159,6 +159,15 @@ async fn main() {
         );
         render::draw_night_overlay(state.daynight.darkness());
 
+        // Red vignette flash when enemies are actively attacking buildings.
+        let enemies_attacking = state.enemies.list.iter()
+            .any(|e| e.alive && e.attack_cooldown > 15);
+        if enemies_attacking {
+            let flash = (state.stats.total_ticks as f32 * 0.2).sin() * 0.08 + 0.05;
+            draw_rectangle(-100000.0, -100000.0, 200000.0, 200000.0,
+                Color::new(0.8, 0.0, 0.0, flash));
+        }
+
         // Screen-space UI overlay.
         set_default_camera();
         draw_ui(&state, &atlas);
@@ -192,6 +201,11 @@ fn handle_input(state: &mut GameState) {
     // Toggle tutorial
     if is_key_pressed(KeyCode::H) {
         state.show_tutorial = !state.show_tutorial;
+    }
+
+    // Toggle full help overlay
+    if is_key_pressed(KeyCode::F1) {
+        state.show_help = !state.show_help;
     }
 
     // Undo last placement (Ctrl+Z or Cmd+Z).
@@ -386,8 +400,23 @@ fn handle_input(state: &mut GameState) {
     let mouse_world = state.camera.screen_to_world(mouse_screen);
     let grid_pos = grid::Grid::world_to_grid(mouse_world);
 
-    // Left click with no selection: interact with existing building (cycle recipe).
+    // Left click with no selection: interact with existing building (cycle recipe)
+    // or interact with the crashed ship at map center.
     if state.selected_building.is_none() && is_mouse_button_pressed(MouseButton::Left) {
+        // Check if clicking on the crashed ship (within 3 tiles of map center).
+        let center = types::GridPos::new(state.grid.width / 2, state.grid.height / 2);
+        if grid_pos.distance(center) < 4.0 {
+            let lore_messages = [
+                "The hull is cold. Scorched from atmospheric entry.",
+                "You can see cryo pod fragments inside... empty.",
+                "The ship's name: 'Horizon's Promise'. Your ship.",
+                "Data core intact but encrypted. You need more processing power.",
+                "A photo is stuck to the console: Dr. Vasquez and her team, smiling.",
+            ];
+            let idx = (state.stats.total_ticks / 100) as usize % lore_messages.len();
+            state.toast(lore_messages[idx].to_string(), 100);
+        }
+
         if let Some(tile) = state.grid.get_tile(grid_pos) {
             if let Some(bid) = tile.building {
                 if let Some(b) = state.buildings.get(bid) {
@@ -602,7 +631,8 @@ fn handle_input(state: &mut GameState) {
     }
 
     // Right click: remove building and refund resources.
-    if is_mouse_button_pressed(MouseButton::Right) {
+    // Hold right click to mass-delete (drag to demolish).
+    if is_mouse_button_pressed(MouseButton::Right) || is_mouse_button_down(MouseButton::Right) {
         if let Some(tile) = state.grid.get_tile(grid_pos) {
             if let Some(bid) = tile.building {
                 // Refund cost.
@@ -759,12 +789,31 @@ fn simulation_tick(state: &mut GameState) {
         train::tick_trains(&state.grid, &state.buildings, &mut state.trains);
 
         // 8. Combat: turrets shoot enemies.
+        let kills_before = state.stats.enemies_killed;
         combat::tick_combat(
             &state.grid,
             &mut state.buildings,
             &mut state.enemies,
             &mut state.stats.enemies_killed,
         );
+        // Loot drops: enemies killed give small resource bonus.
+        let new_kills = state.stats.enemies_killed - kills_before;
+        if new_kills > 0 {
+            *state.inventory.entry(types::Resource::IronPlate).or_insert(0) += new_kills as u32;
+            *state.inventory.entry(types::Resource::Coal).or_insert(0) += new_kills as u32;
+        }
+    }
+
+    // --- EVERY 10 TICKS: Passive building regeneration (walls/turrets heal 1 HP) ---
+    if tick % 10 == 0 {
+        let ids = state.buildings.alive_ids();
+        for bid in ids {
+            if let Some(b) = state.buildings.get_mut(bid) {
+                if b.hp < b.max_hp && b.hp > 0.0 {
+                    b.hp = (b.hp + 0.5).min(b.max_hp);
+                }
+            }
+        }
     }
 
     // --- EVERY 5 TICKS (4 Hz) --- Medium frequency systems ---
@@ -793,6 +842,13 @@ fn simulation_tick(state: &mut GameState) {
         for (text, subtext) in new_beats {
             state.toast(text, 120);
             state.toast(subtext, 160);
+        }
+
+        // Check win condition (final story beat = consciousness restored).
+        if state.stats.items_crafted >= 50000 && !state.game_won {
+            state.game_won = true;
+            state.toast("CONSCIOUSNESS RESTORED! You found your crew!".to_string(), 300);
+            state.toast("Thank you for playing AutoForge <3".to_string(), 300);
         }
 
         // Check milestones.
@@ -839,7 +895,10 @@ fn draw_ui(state: &GameState, atlas: &SpriteAtlas) {
     draw_rectangle_lines(5.0, 5.0, 400.0, 85.0, 1.0, panel_border);
     draw_text("AUTOFORGE", 15.0, 28.0, 28.0, text_accent);
     draw_text(
-        &format!("Tick: {}  |  FPS: {}", state.stats.total_ticks, get_fps()),
+        &format!("Time: {}:{:02}  |  FPS: {}",
+            state.stats.total_ticks / 1200, // minutes
+            (state.stats.total_ticks / 20) % 60, // seconds
+            get_fps()),
         15.0,
         48.0,
         16.0,
@@ -891,13 +950,41 @@ fn draw_ui(state: &GameState, atlas: &SpriteAtlas) {
     let speed_str = if state.game_speed > 1 { format!(" [{}x]", state.game_speed) } else { String::new() };
     draw_text(&format!("{}{}", state.daynight.display(), speed_str), 15.0, 82.0, 14.0, dn_color);
 
-    // Pause overlay
+    // Pause menu overlay
     if state.paused {
-        let text = "PAUSED";
-        let w = measure_text(text, None, 48, 1.0).width;
         let cx = screen_width() * 0.5;
-        draw_rectangle(cx - w * 0.5 - 20.0, 5.0, w + 40.0, 50.0, panel_bg);
-        draw_text(text, cx - w * 0.5, 40.0, 48.0, YELLOW);
+        let cy = screen_height() * 0.5;
+        let pw = 300.0;
+        let ph = 220.0;
+
+        // Dark overlay behind everything.
+        draw_rectangle(0.0, 0.0, screen_width(), screen_height(), Color::new(0.0, 0.0, 0.05, 0.5));
+
+        // Menu panel.
+        draw_rectangle(cx - pw * 0.5, cy - ph * 0.5, pw, ph, Color::new(0.08, 0.06, 0.14, 0.95));
+        draw_rectangle_lines(cx - pw * 0.5, cy - ph * 0.5, pw, ph, 2.0, Color::new(0.4, 0.3, 0.7, 0.8));
+
+        draw_text("PAUSED", cx - 55.0, cy - ph * 0.5 + 40.0, 36.0, Color::new(0.9, 0.85, 0.4, 1.0));
+
+        // Menu items.
+        let items = [
+            "Space — Resume",
+            "F5 — Save Game",
+            "F9 — Load Game",
+            "E — Recipe Book",
+            "Tab — Research",
+            "+/- — Game Speed",
+            "H — Toggle Tutorial",
+        ];
+        for (i, item) in items.iter().enumerate() {
+            draw_text(
+                item,
+                cx - pw * 0.5 + 30.0,
+                cy - ph * 0.5 + 70.0 + i as f32 * 22.0,
+                17.0,
+                Color::new(0.8, 0.8, 0.85, 0.9),
+            );
+        }
     }
 
     // --- Top-right: hovered tile info panel ---
@@ -954,6 +1041,19 @@ fn draw_ui(state: &GameState, atlas: &SpriteAtlas) {
                     if ms.fuel_ticks > 0 {
                         lines.push((format!("Fuel: {} ticks", ms.fuel_ticks), text_dim));
                     }
+                }
+            }
+        }
+
+        // Show items on this tile (on belts).
+        let items_here = state.grid.items_at(grid_pos);
+        if !items_here.is_empty() {
+            for &item_id in items_here.iter().take(3) {
+                if let Some(item) = state.items.get(item_id) {
+                    lines.push((
+                        format!("Item: {}", item.resource.display_name()),
+                        Color::new(0.9, 0.85, 0.5, 1.0),
+                    ));
                 }
             }
         }
@@ -1084,12 +1184,14 @@ fn draw_ui(state: &GameState, atlas: &SpriteAtlas) {
 
     // --- Minimap (top-right corner, below info panel) ---
     {
-        let mm_size = 120.0;
+        let mm_size = 140.0;
         let mm_x = screen_width() - mm_size - 10.0;
-        let mm_y = screen_height() - 200.0 - mm_size; // above toolbar area
-        let panel_bg = Color::new(0.06, 0.06, 0.08, 0.85);
+        let mm_y = screen_height() - 210.0 - mm_size; // above toolbar area
+        let panel_bg = Color::new(0.06, 0.06, 0.08, 0.9);
 
-        draw_rectangle(mm_x - 2.0, mm_y - 2.0, mm_size + 4.0, mm_size + 4.0, panel_bg);
+        draw_rectangle(mm_x - 4.0, mm_y - 18.0, mm_size + 8.0, mm_size + 22.0, panel_bg);
+        draw_rectangle_lines(mm_x - 4.0, mm_y - 18.0, mm_size + 8.0, mm_size + 22.0, 1.0, Color::new(0.3, 0.25, 0.5, 0.7));
+        draw_text("MAP", mm_x + mm_size * 0.5 - 15.0, mm_y - 4.0, 14.0, Color::new(0.6, 0.55, 0.8, 0.8));
 
         // Draw a simplified view of the map (each pixel = 4 tiles).
         let tiles_per_pixel = 4;
@@ -1181,10 +1283,12 @@ fn draw_ui(state: &GameState, atlas: &SpriteAtlas) {
     let help_y = toolbar_y - 80.0;
     let hint_color = Color::new(0.5, 0.5, 0.5, 0.6);
     let hints = [
-        "WASD: Pan  |  Scroll: Zoom",
-        "LClick: Place  |  RClick: Remove",
-        "R: Rotate  |  Q: Eyedropper",
-        "Space: Pause  |  Esc: Deselect",
+        "WASD: Pan | Scroll: Zoom | Edge: Scroll",
+        "LClick: Place | RClick: Remove (hold=drag)",
+        "R: Rotate | Q: Copy | Ctrl+Z: Undo",
+        "E: Recipes | Tab: Research | H: Tutorial",
+        "Space: Pause | +/-: Speed | F5/F9: Save/Load",
+        "Middle-Click: Hand-insert item into machine",
     ];
     for (i, line) in hints.iter().enumerate() {
         draw_text(line, help_x, help_y + i as f32 * 18.0, 15.0, hint_color);
@@ -1324,6 +1428,62 @@ fn draw_ui(state: &GameState, atlas: &SpriteAtlas) {
             10.0,
             Color::new(0.4, 0.4, 0.6, 0.6),
         );
+    }
+
+    // --- Help overlay (F1) ---
+    if state.show_help {
+        let sw = screen_width();
+        let sh = screen_height();
+        let pw = (sw * 0.6).min(600.0);
+        let ph = (sh * 0.75).min(500.0);
+        let px = (sw - pw) * 0.5;
+        let py = (sh - ph) * 0.5;
+
+        draw_rectangle(px, py, pw, ph, Color::new(0.05, 0.04, 0.08, 0.95));
+        draw_rectangle_lines(px, py, pw, ph, 2.0, Color::new(0.4, 0.3, 0.7, 0.8));
+        draw_text("AUTOFORGE — HELP (F1 to close)", px + 20.0, py + 30.0, 24.0, Color::new(0.9, 0.8, 0.4, 1.0));
+
+        let help = [
+            ("BUILDING", ""),
+            ("1-9, 0", "Select building from toolbar"),
+            ("Click toolbar", "Select building"),
+            ("Left Click", "Place building (costs resources)"),
+            ("Right Click", "Remove building (hold to mass-delete)"),
+            ("R", "Rotate direction before placing"),
+            ("Q", "Copy building type from world (eyedropper)"),
+            ("Ctrl+Z", "Undo last placement"),
+            ("", ""),
+            ("INTERACTION", ""),
+            ("Left Click (no selection)", "Click assembler to cycle recipe"),
+            ("Middle Click", "Hand-insert item from inventory into machine"),
+            ("", ""),
+            ("NAVIGATION", ""),
+            ("WASD / Arrows", "Pan camera"),
+            ("Scroll wheel", "Zoom (toward cursor)"),
+            ("Edge of screen", "Auto-scroll camera"),
+            ("", ""),
+            ("MENUS", ""),
+            ("E", "Recipe book (all crafting recipes)"),
+            ("Tab", "Research tree (unlock technologies)"),
+            ("H", "Toggle tutorial"),
+            ("Space", "Pause (shows pause menu)"),
+            ("+/-", "Game speed (1x to 5x)"),
+            ("F1", "This help screen"),
+            ("F5 / F9", "Save / Load game"),
+        ];
+
+        for (i, (key, desc)) in help.iter().enumerate() {
+            let y = py + 55.0 + i as f32 * 17.0;
+            if y > py + ph - 15.0 { break; }
+            if key.is_empty() { continue; }
+            if desc.is_empty() {
+                // Section header
+                draw_text(key, px + 20.0, y, 16.0, Color::new(0.7, 0.6, 0.9, 1.0));
+            } else {
+                draw_text(key, px + 20.0, y, 14.0, Color::new(0.9, 0.85, 0.4, 0.9));
+                draw_text(desc, px + 200.0, y, 14.0, Color::new(0.75, 0.75, 0.8, 0.8));
+            }
+        }
     }
 
     // --- Recipe Browser (E key) ---

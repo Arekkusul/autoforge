@@ -340,13 +340,21 @@ pub static RECIPES: &[Recipe] = &[
         name: "Process Uranium",
     },
     // ===== MORE ASSEMBLY FOR DIVERSITY =====
-    // ID 38: Repair Pack (for repairing damaged buildings)
+    // ID 38: Advanced Ammo (stronger turret ammo)
     Recipe {
         machine: BuildingKind::AssemblerT1,
-        inputs: &[(Resource::Gear, 2), (Resource::GreenCircuit, 2)],
-        outputs: &[(Resource::Gear, 1)], // placeholder output - would be RepairPack
-        base_ticks: 30,
-        name: "Craft Repair Pack",
+        inputs: &[(Resource::PiercingAmmo, 2), (Resource::SteelPlate, 1), (Resource::RedCircuit, 1)],
+        outputs: &[(Resource::PiercingAmmo, 5)],
+        base_ticks: 60,
+        name: "Craft Advanced Ammo",
+    },
+    // ID 39: Uranium Fuel Cell (for nuclear reactor)
+    Recipe {
+        machine: BuildingKind::AssemblerT1,
+        inputs: &[(Resource::Uranium235, 1), (Resource::Uranium238, 19), (Resource::IronPlate, 10)],
+        outputs: &[(Resource::NuclearFuelCell, 1)],
+        base_ticks: 150,
+        name: "Craft Uranium Fuel Cell",
     },
 ];
 

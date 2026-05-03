@@ -99,6 +99,10 @@ pub struct GameState {
     pub show_research: bool,
     /// Toast notification messages (text, remaining display ticks).
     pub toasts: Vec<(String, u32)>,
+    /// Whether the game has been won (all story complete).
+    pub game_won: bool,
+    /// Whether the help/keybinds overlay is showing (F1).
+    pub show_help: bool,
     /// Narrative/story progression state.
     pub story: StoryState,
     /// Seed used for map generation (stored for save/load).
@@ -158,6 +162,8 @@ impl GameState {
             game_speed: 1,
             show_research: false,
             toasts: Vec::new(),
+            game_won: false,
+            show_help: false,
             story: StoryState::new(),
             seed: actual_seed,
         }

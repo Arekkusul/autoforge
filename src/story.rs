@@ -133,6 +133,24 @@ pub static STORY_BEATS: &[StoryBeat] = &[
         subtext: "I remember everything now. FORGE = Friends-Oriented Resource Generation Engine. I was made to take care of people. MY people. And I will find them!",
     },
     StoryBeat {
+        id: "five_min",
+        trigger: StoryTrigger::TickReached(6000), // ~5 minutes
+        text: "This is fun! Look at everything we've built!",
+        subtext: "I wonder what's out there beyond the hills... Maybe more resources? Or friends? Or dangers?",
+    },
+    StoryBeat {
+        id: "fifteen_min",
+        trigger: StoryTrigger::TickReached(18000), // ~15 minutes
+        text: "You know what? I think I like this planet.",
+        subtext: "The sunsets are pretty. The ore sparkles. Even the grumpy bugs have a certain... charm? No wait, they're attacking again. Nevermind!",
+    },
+    StoryBeat {
+        id: "thirty_min",
+        trigger: StoryTrigger::TickReached(36000), // ~30 minutes
+        text: "Half an hour already? Time flies when you're forging!",
+        subtext: "My memory is coming back in bits. There were 4,000 people counting on me. I won't let them down.",
+    },
+    StoryBeat {
         id: "late_game",
         trigger: StoryTrigger::TickReached(72000), // ~1 hour
         text: "Something's waking up beneath us...",
