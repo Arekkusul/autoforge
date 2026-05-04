@@ -54,15 +54,15 @@ pub fn tick_machines(
 
         // STEP 1: If currently processing, count down.
         if ms.progress_ticks > 0 {
-            // Fuel-based machines (stone/steel furnace) need fuel to operate.
+            // Fuel-based machines: consume fuel each tick. If out, try to refuel.
+            // If no coal available, PAUSE (don't lose progress) — resume when coal arrives.
             if kind.needs_fuel() {
                 if ms.fuel_ticks == 0 {
-                    // Try to burn coal from input buffer.
                     if let Some(coal_idx) = ms.input_buffer.iter().position(|&r| r == Resource::Coal) {
                         ms.input_buffer.remove(coal_idx);
                         ms.fuel_ticks = COAL_FUEL_TICKS;
                     } else {
-                        continue; // no fuel, machine stalls
+                        continue; // Paused — waiting for coal. Progress preserved.
                     }
                 }
                 ms.fuel_ticks -= 1;
@@ -96,6 +96,17 @@ pub fn tick_machines(
         // STEP 2: Idle — try to start a new recipe.
         if ms.output_buffer.len() >= MACHINE_BUFFER_CAP {
             continue; // output full, can't start
+        }
+
+        // Fuel-based machines: pre-load fuel BEFORE starting a recipe.
+        // This prevents the stall where a recipe starts without enough fuel to complete.
+        if kind.needs_fuel() && ms.fuel_ticks == 0 {
+            if let Some(coal_idx) = ms.input_buffer.iter().position(|&r| r == Resource::Coal) {
+                ms.input_buffer.remove(coal_idx);
+                ms.fuel_ticks = COAL_FUEL_TICKS;
+            } else {
+                continue; // No fuel available — wait for coal to arrive (don't start recipe)
+            }
         }
 
         if let Some(rid) = recipe::find_matching_recipe(kind, &ms.input_buffer, ms.selected_recipe) {
