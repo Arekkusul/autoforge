@@ -1038,16 +1038,16 @@ fn make_wire_item_sprite() -> Image {
     make_image(pixels, 8)
 }
 
-/// Creates a circuit item sprite.
+/// Creates a circuit item sprite — green board with trace pattern (57-60).
 fn make_circuit_item_sprite() -> Image {
     #[rustfmt::skip]
     let pixels: &[&[u8]] = &[
         &[0, 0, 0, 0, 0, 0, 0, 0],
-        &[0, 1, 1, 1, 1, 1, 0, 0],
-        &[0, 1, 22, 8, 22, 1, 0, 0],
-        &[0, 1, 8, 22, 8, 1, 0, 0],
-        &[0, 1, 22, 8, 22, 1, 0, 0],
-        &[0, 1, 1, 1, 1, 1, 0, 0],
+        &[0,57,57,57,57,57, 0, 0],
+        &[0,57,59, 8,59,57, 0, 0],
+        &[0,57, 8,58, 8,57, 0, 0],
+        &[0,57,59, 8,59,57, 0, 0],
+        &[0,57,57,57,57,57, 0, 0],
         &[0, 0, 0, 0, 0, 0, 0, 0],
         &[0, 0, 0, 0, 0, 0, 0, 0],
     ];
@@ -1072,21 +1072,22 @@ fn make_flask_item_sprite(dark: u8, light: u8) -> Image {
 
 // --- Enemy sprites (12×12) ---
 
-/// Creates an enemy biter sprite.
+/// Creates a cute enemy biter sprite — rounded body with angry eyebrow dots.
+/// Uses pink ramp (41-44) for cute enemies, red ramp (21-24) for scary ones.
 fn make_enemy_sprite(body: u8, shadow: u8) -> Image {
     #[rustfmt::skip]
     let pixels: &[&[u8]] = &[
         &[0,0,0,0,0,0,0,0,0,0,0,0],
-        &[0,0,0,0,1,1,1,1,0,0,0,0],
-        &[0,0,0,1,body,body,body,body,1,0,0,0],
-        &[0,0,1,body,body,5,5,body,body,1,0,0],
-        &[0,1,shadow,body,body,body,body,body,body,shadow,1,0],
-        &[0,1,shadow,body,body,body,body,body,body,shadow,1,0],
-        &[0,0,1,shadow,body,body,body,body,shadow,1,0,0],
-        &[0,0,0,1,shadow,body,body,shadow,1,0,0,0],
-        &[0,0,1,0,1,shadow,shadow,1,0,1,0,0],
-        &[0,1,0,0,0,1,1,0,0,0,1,0],
-        &[0,0,0,0,0,0,0,0,0,0,0,0],
+        &[0,0,0,0,shadow,shadow,shadow,shadow,0,0,0,0],
+        &[0,0,0,shadow,body,body,body,body,shadow,0,0,0],
+        &[0,0,shadow,body,body,body,body,body,body,shadow,0,0],
+        &[0,shadow,body, 1,body,body,body,body, 1,body,shadow,0],
+        &[0,shadow,body, 8, 1,body,body, 1, 8,body,shadow,0],
+        &[0,shadow,body,body,body,body,body,body,body,body,shadow,0],
+        &[0,0,shadow,body,body, 1, 1,body,body,shadow,0,0],
+        &[0,0,0,shadow,body,body,body,body,shadow,0,0,0],
+        &[0,0,shadow,0,shadow,shadow,shadow,shadow,0,shadow,0,0],
+        &[0,shadow,0,0,0,shadow,shadow,0,0,0,shadow,0],
         &[0,0,0,0,0,0,0,0,0,0,0,0],
     ];
     make_image(pixels, 12)
