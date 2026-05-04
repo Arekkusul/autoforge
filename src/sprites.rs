@@ -972,123 +972,123 @@ fn make_wall_sprite() -> Image {
     make_image(pixels, 16)
 }
 
-// --- Item sprites (8×8) ---
+// --- Item sprites (8×8) — detailed, fill the full space ---
 
-/// Creates a small item ore sprite.
+/// Ore chunk — rough angular rock with colored facets and highlight.
 fn make_item_sprite(dark: u8, light: u8) -> Image {
     #[rustfmt::skip]
     let pixels: &[&[u8]] = &[
-        &[0, 0, 0, 0, 0, 0, 0, 0],
-        &[0, 0, 1, 1, 1, 0, 0, 0],
-        &[0, 1, dark, dark, light, 1, 0, 0],
-        &[0, 1, dark, light, light, 1, 0, 0],
-        &[0, 1, dark, dark, light, 1, 0, 0],
-        &[0, 0, 1, 1, 1, 0, 0, 0],
-        &[0, 0, 0, 0, 0, 0, 0, 0],
+        &[0, 0, 0, 1, 1, 0, 0, 0],
+        &[0, 0, 1,light, 8,light, 1, 0],
+        &[0, 1,light,dark,light,dark, 1, 0],
+        &[1,light,dark,light,dark,light,dark, 1],
+        &[1,dark,light,dark,light,dark, 1, 0],
+        &[0, 1,dark,dark,dark, 1, 0, 0],
+        &[0, 0, 1, 1, 1, 1, 0, 0],
         &[0, 0, 0, 0, 0, 0, 0, 0],
     ];
     make_image(pixels, 8)
 }
 
-/// Creates a flat plate item sprite.
+/// Metal plate — flat shiny rectangle with beveled edges and specular corner.
 fn make_plate_item_sprite(dark: u8, light: u8) -> Image {
     #[rustfmt::skip]
     let pixels: &[&[u8]] = &[
-        &[0, 0, 0, 0, 0, 0, 0, 0],
-        &[0, 1, 1, 1, 1, 1, 0, 0],
-        &[0, 1, dark, dark, light, 1, 0, 0],
-        &[0, 1, dark, light, light, 1, 0, 0],
-        &[0, 1, dark, dark, light, 1, 0, 0],
-        &[0, 1, 1, 1, 1, 1, 0, 0],
-        &[0, 0, 0, 0, 0, 0, 0, 0],
+        &[0, 1, 1, 1, 1, 1, 1, 0],
+        &[1, 8,light,light,light,light,dark, 1],
+        &[1,light,light,light,light,dark,dark, 1],
+        &[1,light,light,dark,dark,dark,dark, 1],
+        &[1,light,dark,dark,dark,dark,dark, 1],
+        &[1,dark,dark,dark,dark,dark, 1, 1],
+        &[0, 1, 1, 1, 1, 1, 1, 0],
         &[0, 0, 0, 0, 0, 0, 0, 0],
     ];
     make_image(pixels, 8)
 }
 
-/// Creates a gear item sprite.
+/// Gear — cogwheel with visible teeth around a central hole.
 fn make_gear_item_sprite() -> Image {
     #[rustfmt::skip]
     let pixels: &[&[u8]] = &[
-        &[0, 0, 3, 3, 0, 0, 0, 0],
-        &[0, 3, 4, 4, 3, 0, 0, 0],
-        &[3, 4, 1, 1, 4, 3, 0, 0],
-        &[3, 4, 1, 1, 4, 3, 0, 0],
-        &[0, 3, 4, 4, 3, 0, 0, 0],
-        &[0, 0, 3, 3, 0, 0, 0, 0],
-        &[0, 0, 0, 0, 0, 0, 0, 0],
-        &[0, 0, 0, 0, 0, 0, 0, 0],
+        &[0, 55, 0,55,55, 0,55, 0],
+        &[55,56,55,55,55,55,54, 55],
+        &[0, 55,55, 1, 1,55,54, 0],
+        &[55,55, 1, 0, 0, 1,54,55],
+        &[55,54, 1, 0, 0, 1,53,55],
+        &[0, 54,53, 1, 1,53,53, 0],
+        &[55,53,54,53,53,54,53,55],
+        &[0, 55, 0,55,55, 0,55, 0],
     ];
     make_image(pixels, 8)
 }
 
-/// Creates a wire item sprite.
+/// Wire — copper coil with multiple visible loops and shine.
 fn make_wire_item_sprite() -> Image {
     #[rustfmt::skip]
     let pixels: &[&[u8]] = &[
-        &[0, 0, 0, 0, 0, 0, 0, 0],
-        &[0, 28, 0, 0, 0, 0, 0, 0],
-        &[0, 0, 28, 0, 0, 0, 0, 0],
-        &[0, 0, 0, 28, 28, 0, 0, 0],
-        &[0, 0, 0, 0, 0, 28, 0, 0],
-        &[0, 0, 0, 0, 0, 0, 28, 0],
-        &[0, 0, 0, 0, 0, 0, 0, 0],
-        &[0, 0, 0, 0, 0, 0, 0, 0],
+        &[0, 0,51, 0, 0, 0, 0, 0],
+        &[0,51,52,51, 0, 0, 0, 0],
+        &[0, 0,50,51,50, 0, 0, 0],
+        &[0, 0, 0,49,51,49, 0, 0],
+        &[0, 0,49,51,52,51, 0, 0],
+        &[0,49,51,49, 0,49,51, 0],
+        &[49,51,49, 0, 0, 0,49,51],
+        &[0,49, 0, 0, 0, 0, 0,49],
     ];
     make_image(pixels, 8)
 }
 
-/// Creates a circuit item sprite — green board with trace pattern (57-60).
+/// Circuit board — green PCB with visible traces, components, and solder points.
 fn make_circuit_item_sprite() -> Image {
     #[rustfmt::skip]
     let pixels: &[&[u8]] = &[
-        &[0, 0, 0, 0, 0, 0, 0, 0],
-        &[0,57,57,57,57,57, 0, 0],
-        &[0,57,59, 8,59,57, 0, 0],
-        &[0,57, 8,58, 8,57, 0, 0],
-        &[0,57,59, 8,59,57, 0, 0],
-        &[0,57,57,57,57,57, 0, 0],
-        &[0, 0, 0, 0, 0, 0, 0, 0],
-        &[0, 0, 0, 0, 0, 0, 0, 0],
+        &[57,57,57,57,57,57,57,57],
+        &[57, 8,58,58,58,58, 8,57],
+        &[57,59, 1,58,58, 1,59,57],
+        &[57,58,58,60,59,58,58,57],
+        &[57,58,58,59,60,58,58,57],
+        &[57,59, 1,58,58, 1,59,57],
+        &[57, 8,58,58,58,58, 8,57],
+        &[57,57,57,57,57,57,57,57],
     ];
     make_image(pixels, 8)
 }
 
-/// Creates a science flask item sprite.
+/// Science flask — rounded glass bottle with colored liquid and cork top.
 fn make_flask_item_sprite(dark: u8, light: u8) -> Image {
     #[rustfmt::skip]
     let pixels: &[&[u8]] = &[
-        &[0, 0, 5, 5, 0, 0, 0, 0],
-        &[0, 0, 5, 5, 0, 0, 0, 0],
-        &[0, 1, dark, dark, 1, 0, 0, 0],
-        &[1, dark, light, light, dark, 1, 0, 0],
-        &[1, dark, light, light, dark, 1, 0, 0],
-        &[0, 1, 1, 1, 1, 0, 0, 0],
-        &[0, 0, 0, 0, 0, 0, 0, 0],
-        &[0, 0, 0, 0, 0, 0, 0, 0],
+        &[0, 0, 0,16,16, 0, 0, 0],
+        &[0, 0, 7, 7, 7, 7, 0, 0],
+        &[0, 0, 1,light, 1, 0, 0, 0],
+        &[0, 1,light, 8,light, 1, 0, 0],
+        &[1,dark,light,light,light,dark, 1, 0],
+        &[1,dark,dark,light,dark,dark, 1, 0],
+        &[0, 1,dark,dark,dark, 1, 0, 0],
+        &[0, 0, 1, 1, 1, 0, 0, 0],
     ];
     make_image(pixels, 8)
 }
 
 // --- Enemy sprites (12×12) ---
 
-/// Creates a cute enemy biter sprite — rounded body with angry eyebrow dots.
-/// Uses pink ramp (41-44) for cute enemies, red ramp (21-24) for scary ones.
+/// Alien guardian — menacing insectoid with sharp mandibles, glowing red eyes,
+/// spiky carapace, and segmented legs. NOT cute — these guard ancient ruins.
 fn make_enemy_sprite(body: u8, shadow: u8) -> Image {
     #[rustfmt::skip]
     let pixels: &[&[u8]] = &[
-        &[0,0,0,0,0,0,0,0,0,0,0,0],
-        &[0,0,0,0,shadow,shadow,shadow,shadow,0,0,0,0],
-        &[0,0,0,shadow,body,body,body,body,shadow,0,0,0],
-        &[0,0,shadow,body,body,body,body,body,body,shadow,0,0],
-        &[0,shadow,body, 1,body,body,body,body, 1,body,shadow,0],
-        &[0,shadow,body, 8, 1,body,body, 1, 8,body,shadow,0],
-        &[0,shadow,body,body,body,body,body,body,body,body,shadow,0],
-        &[0,0,shadow,body,body, 1, 1,body,body,shadow,0,0],
-        &[0,0,0,shadow,body,body,body,body,shadow,0,0,0],
-        &[0,0,shadow,0,shadow,shadow,shadow,shadow,0,shadow,0,0],
-        &[0,shadow,0,0,0,shadow,shadow,0,0,0,shadow,0],
-        &[0,0,0,0,0,0,0,0,0,0,0,0],
+        &[0,shadow, 0, 0, 0, 0, 0, 0, 0, 0,shadow, 0],
+        &[shadow, 0, 0, 0,shadow,shadow,shadow,shadow, 0, 0, 0,shadow],
+        &[0, 0, 0,shadow,body,body,body,body,shadow, 0, 0, 0],
+        &[0, 0,shadow,body,body,body,body,body,body,shadow, 0, 0],
+        &[0,shadow,body,63, 8,body,body, 8,63,body,shadow, 0],
+        &[0,shadow,body,body,body,shadow,shadow,body,body,body,shadow, 0],
+        &[shadow,body,shadow,body,body,body,body,body,body,shadow,body,shadow],
+        &[0,shadow,body,body,shadow,body,body,shadow,body,body,shadow, 0],
+        &[0, 0,shadow,body,body,body,body,body,body,shadow, 0, 0],
+        &[0,shadow, 0,shadow, 0,shadow,shadow, 0,shadow, 0,shadow, 0],
+        &[shadow, 0,shadow, 0, 0, 0, 0, 0, 0,shadow, 0,shadow],
+        &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     ];
     make_image(pixels, 12)
 }
