@@ -1051,6 +1051,27 @@ fn simulation_tick(state: &mut GameState) {
 /// - **Top-right**: Hovered tile info panel (dark background)
 /// - **Bottom**: Categorized toolbar with sprite icons + labels
 /// - **Bottom-right**: Controls hint (fades out at low zoom)
+/// Unified panel helper — consistent background, border, title, close button.
+/// Returns content origin (x, y) with 8px internal padding.
+fn draw_panel(x: f32, y: f32, w: f32, h: f32, title: Option<&str>, closeable: bool) -> (f32, f32) {
+    let bg = Color::new(0.08, 0.08, 0.12, 0.92);
+    let border = Color::new(0.25, 0.30, 0.40, 0.50);
+    let title_color = Color::new(0.95, 0.82, 0.35, 1.0);
+
+    draw_rectangle(x, y, w, h, bg);
+    draw_rectangle_lines(x, y, w, h, 1.0, border);
+
+    let mut content_y = y + 8.0;
+    if let Some(t) = title {
+        draw_text(t, x + 12.0, y + 22.0, 16.0, title_color);
+        content_y = y + 30.0;
+    }
+    if closeable {
+        draw_close_button(x, y, w);
+    }
+    (x + 8.0, content_y)
+}
+
 /// Draws a clickable X close button at the top-right of a panel.
 fn draw_close_button(px: f32, py: f32, pw: f32) {
     let bx = px + pw - 28.0;
@@ -1111,100 +1132,65 @@ fn draw_ui(state: &GameState, atlas: &SpriteAtlas) {
     let selected_bg = Color::new(0.15, 0.35, 0.55, 0.8);
     let selected_border = Color::new(0.45, 0.75, 1.0, 1.0);
 
-    // --- Top-left: game info ---
-    draw_rectangle(5.0, 5.0, 400.0, 85.0, panel_bg);
-    draw_rectangle_lines(5.0, 5.0, 400.0, 85.0, 1.0, panel_border);
-    draw_text("AUTOFORGE", 15.0, 28.0, 28.0, text_accent);
-    draw_text(
-        &format!("Time: {}:{:02}  |  FPS: {}",
-            state.stats.total_ticks / 1200, // minutes
-            (state.stats.total_ticks / 20) % 60, // seconds
-            get_fps()),
-        15.0,
-        48.0,
-        16.0,
-        text_dim,
-    );
+    // --- Top-left: Status Panel (compact, 4 lines) ---
+    let (cx, mut cy) = draw_panel(8.0, 8.0, 240.0, 96.0, Some("FORGE"), false);
 
-    // Power status
-    let power_color = if state.power.satisfaction >= 0.99 {
-        Color::new(0.3, 0.9, 0.3, 1.0)
-    } else if state.power.satisfaction >= 0.5 {
-        Color::new(0.9, 0.9, 0.2, 1.0)
-    } else {
-        Color::new(0.9, 0.2, 0.2, 1.0)
-    };
+    // Line 1: Time + FPS + Speed
+    let speed_str = if state.game_speed > 1 { format!(" {}x", state.game_speed) } else { String::new() };
     draw_text(
-        &format!(
-            "Power: {:.0}/{:.0} kW ({:.0}%)",
-            state.power.supply,
-            state.power.demand,
-            state.power.satisfaction * 100.0,
-        ),
-        15.0,
-        66.0,
-        16.0,
-        power_color,
+        &format!("{}:{:02} | FPS:{}{}", state.stats.total_ticks / 1200, (state.stats.total_ticks / 20) % 60, get_fps(), speed_str),
+        cx, cy + 4.0, 13.0, text_dim,
     );
+    cy += 18.0;
 
-    // Direction indicator + enemies killed
+    // Line 2: Power bar (visual, not just text)
+    let bar_w = 140.0;
+    let bar_h = 10.0;
+    let power_fill = state.power.satisfaction;
+    let power_color = if power_fill >= 0.9 { Color::new(0.3, 0.85, 0.3, 1.0) }
+        else if power_fill >= 0.5 { Color::new(0.9, 0.8, 0.2, 1.0) }
+        else { Color::new(0.9, 0.2, 0.2, 1.0) };
+    draw_rectangle(cx, cy, bar_w, bar_h, Color::new(0.15, 0.15, 0.2, 0.8));
+    draw_rectangle(cx, cy, bar_w * power_fill, bar_h, power_color);
+    draw_text(&format!("{:.0}%", power_fill * 100.0), cx + bar_w + 4.0, cy + 9.0, 12.0, power_color);
+    draw_text("Power", cx + bar_w + 30.0, cy + 9.0, 11.0, text_dim);
+    cy += 16.0;
+
+    // Line 3: Day/Night + Direction
+    let dn_color = if state.daynight.is_day() { Color::new(0.9, 0.82, 0.3, 1.0) } else { Color::new(0.4, 0.4, 0.7, 1.0) };
     let dir_text = match state.placement_direction {
-        types::Direction::North => "N",
-        types::Direction::East => "E",
-        types::Direction::South => "S",
-        types::Direction::West => "W",
+        types::Direction::North => "N", types::Direction::East => "E",
+        types::Direction::South => "S", types::Direction::West => "W",
     };
-    draw_text(&format!("Dir: {} [R]", dir_text), 300.0, 28.0, 20.0, text_bright);
-    draw_text(
-        &format!("Kills: {}", state.stats.enemies_killed),
-        300.0,
-        48.0,
-        14.0,
-        text_dim,
-    );
-    // Day/night time
-    let dn_color = if state.daynight.is_day() {
-        Color::new(0.9, 0.85, 0.3, 1.0)
-    } else {
-        Color::new(0.4, 0.4, 0.7, 1.0)
-    };
-    let speed_str = if state.game_speed > 1 { format!(" [{}x]", state.game_speed) } else { String::new() };
-    draw_text(&format!("{}{}", state.daynight.display(), speed_str), 15.0, 82.0, 14.0, dn_color);
+    draw_text(&state.daynight.display(), cx, cy + 4.0, 12.0, dn_color);
+    draw_text(&format!("Dir:{} | Kills:{}", dir_text, state.stats.enemies_killed), cx + 80.0, cy + 4.0, 12.0, text_dim);
 
-    // Pause menu overlay
+    // Pause menu overlay (uses unified panel)
     if state.paused {
-        let cx = screen_width() * 0.5;
-        let cy = screen_height() * 0.5;
-        let pw = 300.0;
-        let ph = 220.0;
+        let sw = screen_width();
+        let sh = screen_height();
+        let pw = 320.0;
+        let ph = 240.0;
+        let px = (sw - pw) * 0.5;
+        let py = (sh - ph) * 0.5;
 
-        // Dark overlay behind everything.
-        draw_rectangle(0.0, 0.0, screen_width(), screen_height(), Color::new(0.0, 0.0, 0.05, 0.5));
+        draw_rectangle(0.0, 0.0, sw, sh, Color::new(0.0, 0.0, 0.05, 0.5));
+        let (cx, mut cy) = draw_panel(px, py, pw, ph, Some("PAUSED"), false);
 
-        // Menu panel.
-        draw_rectangle(cx - pw * 0.5, cy - ph * 0.5, pw, ph, Color::new(0.08, 0.06, 0.14, 0.95));
-        draw_rectangle_lines(cx - pw * 0.5, cy - ph * 0.5, pw, ph, 2.0, Color::new(0.4, 0.3, 0.7, 0.8));
-
-        draw_text("PAUSED", cx - 55.0, cy - ph * 0.5 + 40.0, 36.0, Color::new(0.9, 0.85, 0.4, 1.0));
-
-        // Menu items.
         let items = [
-            "Space — Resume",
-            "F5 — Save Game",
-            "F9 — Load Game",
-            "E — Recipe Book",
-            "Tab — Research",
-            "+/- — Game Speed",
-            "H — Toggle Tutorial",
+            ("Space", "Resume"),
+            ("F5", "Save Game"),
+            ("F9", "Load Game"),
+            ("E", "Recipe Book"),
+            ("Tab", "Research"),
+            ("+/-", "Game Speed"),
+            ("F1", "Help / Controls"),
         ];
-        for (i, item) in items.iter().enumerate() {
-            draw_text(
-                item,
-                cx - pw * 0.5 + 30.0,
-                cy - ph * 0.5 + 70.0 + i as f32 * 22.0,
-                17.0,
-                Color::new(0.8, 0.8, 0.85, 0.9),
-            );
+        cy += 4.0;
+        for (key, desc) in &items {
+            draw_text(key, cx, cy, 14.0, Color::new(0.95, 0.82, 0.35, 0.9));
+            draw_text(desc, cx + 50.0, cy, 14.0, Color::new(0.8, 0.8, 0.85, 0.9));
+            cy += 24.0;
         }
     }
 
