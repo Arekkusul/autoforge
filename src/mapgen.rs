@@ -118,11 +118,12 @@ pub fn generate_map(grid: &mut Grid, seed: u64) -> Vec<GridPos> {
     }
 
     // --- Generate ore deposits (2×2 nodes) ---
-    // Starter patches near center — guaranteed resources for early game.
-    place_ore_cluster_2x2(grid, &mut rng, OreDeposit::Iron, cx - 15, cy - 10, 3, 8000);
-    place_ore_cluster_2x2(grid, &mut rng, OreDeposit::Copper, cx + 12, cy - 8, 3, 6000);
-    place_ore_cluster_2x2(grid, &mut rng, OreDeposit::Coal, cx - 8, cy + 14, 2, 6000);
-    place_ore_cluster_2x2(grid, &mut rng, OreDeposit::Stone, cx + 10, cy + 12, 2, 4000);
+    // Starter patches: ALL within 8 tiles of center so player can reach everything easily.
+    // Arranged in a diamond pattern around the spawn point.
+    place_ore_cluster_2x2(grid, &mut rng, OreDeposit::Iron, cx - 7, cy - 5, 4, 10000);  // NW
+    place_ore_cluster_2x2(grid, &mut rng, OreDeposit::Copper, cx + 6, cy - 4, 3, 8000); // NE
+    place_ore_cluster_2x2(grid, &mut rng, OreDeposit::Coal, cx - 5, cy + 5, 3, 8000);   // SW
+    place_ore_cluster_2x2(grid, &mut rng, OreDeposit::Stone, cx + 5, cy + 6, 3, 6000);  // SE
 
     // Common ores — scattered around the map (fewer, but each is 2×2).
     let common_ores = [
