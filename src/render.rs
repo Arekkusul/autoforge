@@ -200,6 +200,18 @@ pub fn draw_world(
                 Color::new(1.0, flash * 0.3, flash * 0.3, 1.0)
             } else if hp_ratio < 0.5 {
                 Color::new(1.0, 0.6, 0.6, 1.0)
+            } else if !building.kind.is_belt() {
+                // Active machine pulse: subtle brightness when processing.
+                if let Some(ref ms) = building.machine_state {
+                    if ms.progress_ticks > 0 {
+                        let pulse = (tick as f32 * 0.15).sin() * 0.08 + 1.05;
+                        Color::new(pulse, pulse, pulse, 1.0)
+                    } else {
+                        WHITE
+                    }
+                } else {
+                    WHITE
+                }
             } else {
                 WHITE
             };
@@ -321,6 +333,21 @@ pub fn draw_world(
                 draw_rectangle(bar_x, bar_y, bar_w * fill, bar_h, bar_color);
             }
 
+            // Nuclear reactor glow when fueled.
+            if building.kind == BuildingKind::NuclearReactor {
+                if let Some(ref ms) = building.machine_state {
+                    if ms.fuel_ticks > 0 {
+                        let glow = (tick as f32 * 0.1).sin() * 0.1 + 0.3;
+                        draw_circle(
+                            world.x + TILE_SIZE * 0.5,
+                            world.y + TILE_SIZE * 0.5,
+                            TILE_SIZE * 0.8,
+                            Color::new(0.2, 0.8, 0.3, glow),
+                        );
+                    }
+                }
+            }
+
             // Recipe label above assemblers (LOD 0 only).
             if lod == 0 && (building.kind == BuildingKind::AssemblerT1
                 || building.kind == BuildingKind::AssemblerT2
@@ -351,9 +378,14 @@ pub fn draw_world(
                 let (dx, dy) = building.direction.delta();
                 let dir_vec = Vec2::new(dx as f32, dy as f32);
 
-                // Animated chevron that moves in belt direction.
+                // Animated chevron — green if items present, dim yellow if empty.
                 let anim_offset = (tick as f32 * 0.15) % TILE_SIZE;
-                let chevron_color = Color::new(1.0, 0.95, 0.3, 0.7);
+                let has_items = !grid.items_at(bpos).is_empty();
+                let chevron_color = if has_items {
+                    Color::new(0.3, 1.0, 0.4, 0.7) // green = flowing
+                } else {
+                    Color::new(0.8, 0.75, 0.3, 0.4) // dim yellow = idle
+                };
 
                 // Draw 2 chevron arrows along the belt.
                 for i in 0..2 {
