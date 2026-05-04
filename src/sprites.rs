@@ -1072,22 +1072,26 @@ fn make_flask_item_sprite(dark: u8, light: u8) -> Image {
 
 // --- Enemy sprites (12×12) ---
 
-/// Alien guardian — menacing insectoid with sharp mandibles, glowing red eyes,
-/// spiky carapace, and segmented legs. NOT cute — these guard ancient ruins.
+/// Alien guardian — 3-segment insectoid: head with mandibles, thorax, abdomen.
+/// 6 jointed legs, glowing eyes, jagged carapace outline.
+/// Professional pixel art anatomy: distinct body segments, sharp silhouette.
 fn make_enemy_sprite(body: u8, shadow: u8) -> Image {
     #[rustfmt::skip]
     let pixels: &[&[u8]] = &[
-        &[0,shadow, 0, 0, 0, 0, 0, 0, 0, 0,shadow, 0],
-        &[shadow, 0, 0, 0,shadow,shadow,shadow,shadow, 0, 0, 0,shadow],
-        &[0, 0, 0,shadow,body,body,body,body,shadow, 0, 0, 0],
-        &[0, 0,shadow,body,body,body,body,body,body,shadow, 0, 0],
-        &[0,shadow,body,63, 8,body,body, 8,63,body,shadow, 0],
-        &[0,shadow,body,body,body,shadow,shadow,body,body,body,shadow, 0],
-        &[shadow,body,shadow,body,body,body,body,body,body,shadow,body,shadow],
-        &[0,shadow,body,body,shadow,body,body,shadow,body,body,shadow, 0],
-        &[0, 0,shadow,body,body,body,body,body,body,shadow, 0, 0],
-        &[0,shadow, 0,shadow, 0,shadow,shadow, 0,shadow, 0,shadow, 0],
-        &[shadow, 0,shadow, 0, 0, 0, 0, 0, 0,shadow, 0,shadow],
+        //     mandibles    head     mandibles
+        &[shadow, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,shadow],
+        &[0,shadow, 0, 0,shadow,shadow,shadow,shadow, 0, 0,shadow, 0],
+        &[0, 0, 0,shadow,body,63, 8,63,body,shadow, 0, 0],  // HEAD: glowing eyes (63=red, 8=white pupil)
+        &[0, 0,shadow,body,body,shadow,shadow,body,body,shadow, 0, 0],
+        //     legs  thorax(armored)  legs
+        &[shadow, 0,shadow,body,body,body,body,body,body,shadow, 0,shadow],
+        &[0,shadow,body,body,shadow,body,body,shadow,body,body,shadow, 0],  // THORAX: armored plates
+        &[shadow, 0,shadow,body,body,body,body,body,body,shadow, 0,shadow],
+        //     legs   abdomen    legs
+        &[0,shadow, 0,shadow,body,body,body,body,shadow, 0,shadow, 0],
+        &[shadow, 0, 0,shadow,shadow,body,body,shadow,shadow, 0, 0,shadow],  // ABDOMEN: tapered
+        &[0, 0, 0, 0,shadow,shadow,shadow,shadow, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 0,shadow,shadow, 0, 0, 0, 0, 0],  // tail spike
         &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     ];
     make_image(pixels, 12)
