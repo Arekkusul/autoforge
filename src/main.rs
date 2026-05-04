@@ -185,6 +185,26 @@ async fn main() {
             draw_circle(trail_pos.x, trail_pos.y, 2.0, Color::new(0.4, 0.6, 0.9, 0.4));
         }
 
+        // Render trains (rectangles moving along their routes).
+        for train in &state.trains.list {
+            if !train.alive { continue; }
+            let size = TILE_SIZE * 0.8;
+            let tx = train.x - size * 0.5;
+            let ty = train.y - size * 0.3;
+            // Train body (dark rectangle with colored top).
+            draw_rectangle(tx, ty, size, size * 0.6, Color::new(0.15, 0.15, 0.2, 0.9));
+            draw_rectangle(tx + 2.0, ty + 2.0, size - 4.0, size * 0.3, Color::new(0.3, 0.5, 0.8, 0.9));
+            // Headlight.
+            let (dx, dy) = train.direction.delta();
+            let hx = train.x + dx as f32 * size * 0.4;
+            let hy = train.y + dy as f32 * size * 0.3;
+            draw_circle(hx, hy, 3.0, Color::new(1.0, 0.9, 0.3, 0.8));
+            // Label.
+            if state.camera.zoom >= 0.8 {
+                draw_text("TRAIN", tx, ty - 4.0, 10.0, Color::new(0.6, 0.7, 0.9, 0.6));
+            }
+        }
+
         // Build zone indicator (faint circle around ship).
         if state.selected_building.is_some() {
             let center_world = Vec2::new(
@@ -616,6 +636,29 @@ fn handle_input(state: &mut GameState) {
         if let Some(tile) = state.grid.get_tile(grid_pos) {
             if let Some(bid) = tile.building {
                 if let Some(b) = state.buildings.get(bid) {
+                    // Click TrainStop → spawn/configure a train.
+                    if b.kind == types::BuildingKind::TrainStop {
+                        let stop_pos = b.pos;
+                        let stop_kind = b.kind; // copy to release borrow
+                        drop(b); // release immutable borrow on buildings
+
+                        let stops: Vec<types::GridPos> = state.buildings.iter()
+                            .filter(|(_, b2)| b2.kind == types::BuildingKind::TrainStop)
+                            .map(|(_, b2)| b2.pos)
+                            .collect();
+
+                        if stops.len() >= 2 {
+                            let stop_count = stops.len();
+                            state.trains.spawn_train(stop_pos);
+                            if let Some(t) = state.trains.list.last_mut() {
+                                t.schedule = stops;
+                            }
+                            state.toast(format!("Train spawned with {} stops!", stop_count), 60);
+                        } else {
+                            state.toast("Need 2+ train stops for a route!".to_string(), 50);
+                        }
+                    } else
+
                     // If it's an assembler or chemical plant, open recipe picker popup.
                     if b.kind == types::BuildingKind::AssemblerT1
                         || b.kind == types::BuildingKind::AssemblerT2
@@ -1067,6 +1110,67 @@ fn simulation_tick(state: &mut GameState) {
             if let Some(b) = state.buildings.get_mut(bid) {
                 if b.hp < b.max_hp && b.hp > 0.0 {
                     b.hp = (b.hp + 0.5).min(b.max_hp);
+                }
+            }
+        }
+    }
+
+    // --- EVERY 20 TICKS: Roboport logistics (auto-distribute items) ---
+    if tick % 20 == 0 {
+        // Find all roboports, then for each, scan nearby machines that need inputs.
+        let roboport_ids: Vec<(types::BuildingId, types::GridPos)> = state.buildings.alive_ids()
+            .iter()
+            .filter_map(|&bid| {
+                state.buildings.get(bid).and_then(|b| {
+                    if b.kind == types::BuildingKind::Roboport { Some((bid, b.pos)) } else { None }
+                })
+            })
+            .collect();
+
+        for (_rbid, rpos) in &roboport_ids {
+            let radius = 10i32;
+            // Find machines in range that have a recipe set and need inputs.
+            let nearby_ids: Vec<types::BuildingId> = state.buildings.alive_ids()
+                .iter()
+                .filter_map(|&bid| {
+                    state.buildings.get(bid).and_then(|b| {
+                        let d = b.pos.distance(*rpos);
+                        if d < radius as f32 && b.machine_state.is_some()
+                            && b.kind != types::BuildingKind::StorageChest
+                            && b.kind != types::BuildingKind::Roboport
+                        {
+                            let ms = b.machine_state.as_ref().unwrap();
+                            if ms.selected_recipe.is_some() && ms.input_buffer.len() < 4 {
+                                Some(bid)
+                            } else { None }
+                        } else { None }
+                    })
+                })
+                .collect();
+
+            // For each needy machine, try to supply from player inventory (simulating bot delivery).
+            for mid in nearby_ids {
+                if let Some(machine) = state.buildings.get(mid) {
+                    if let Some(ms) = &machine.machine_state {
+                        if let Some(rid) = ms.selected_recipe {
+                            if rid.0 < recipe::RECIPES.len() {
+                                let recipe_inputs = recipe::RECIPES[rid.0].inputs;
+                                // Deliver one unit of each needed input from inventory.
+                                for &(res, _count) in recipe_inputs {
+                                    let have = state.inventory.get(&res).copied().unwrap_or(0);
+                                    if have > 0 {
+                                        let m = state.buildings.get_mut(mid).unwrap();
+                                        let ms = m.machine_state.as_mut().unwrap();
+                                        if ms.input_buffer.len() < 8 {
+                                            ms.input_buffer.push(res);
+                                            *state.inventory.entry(res).or_insert(0) -= 1;
+                                        }
+                                        break; // one item per tick per machine
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
