@@ -522,49 +522,84 @@ pub fn draw_world(
         if ship_x >= min_world.x - ship_w && ship_x <= max_world.x + ship_w
             && ship_y >= min_world.y - ship_h && ship_y <= max_world.y + ship_h
         {
-            // Shadow beneath ship.
-            draw_rectangle(ship_x + 5.0, ship_y + ship_h - 4.0, ship_w - 10.0, 8.0,
-                Color::new(0.0, 0.0, 0.0, 0.3));
+            // Shadow beneath ship (oval).
+            draw_ellipse(ship_cx, ship_cy + ship_h * 0.5 + 5.0, ship_w * 0.4, 8.0, 0.0, Color::new(0.0, 0.0, 0.0, 0.25));
 
-            // Hull — rounded shape using overlapping rectangles.
-            let hull_color = Color::new(0.2, 0.2, 0.28, 1.0);
-            let hull_light = Color::new(0.3, 0.3, 0.38, 1.0);
-            let hull_dark = Color::new(0.12, 0.12, 0.18, 1.0);
-            draw_rectangle(ship_x + 10.0, ship_y + 5.0, ship_w - 20.0, ship_h - 10.0, hull_color);
-            draw_rectangle(ship_x + 5.0, ship_y + 10.0, ship_w - 10.0, ship_h - 20.0, hull_color);
-            // Top highlight.
-            draw_rectangle(ship_x + 15.0, ship_y + 5.0, ship_w - 30.0, 6.0, hull_light);
-            // Bottom shadow.
-            draw_rectangle(ship_x + 15.0, ship_y + ship_h - 12.0, ship_w - 30.0, 6.0, hull_dark);
+            let hull = Color::new(0.22, 0.22, 0.3, 1.0);
+            let hull_hi = Color::new(0.32, 0.32, 0.42, 1.0);
+            let hull_dk = Color::new(0.12, 0.12, 0.18, 1.0);
+            let accent = Color::new(0.4, 0.35, 0.55, 1.0);
 
-            // Cockpit window (blue glow — ship is powered).
-            let glow = (tick as f32 * 0.1).sin() * 0.1 + 0.6;
-            draw_rectangle(ship_x + ship_w * 0.7, ship_y + ship_h * 0.25,
-                TILE_SIZE * 1.0, TILE_SIZE * 0.7,
+            // Main hull body (tapered — wider in middle, narrower at ends).
+            draw_rectangle(ship_x + ship_w * 0.15, ship_y + ship_h * 0.2,
+                ship_w * 0.7, ship_h * 0.6, hull);
+            // Nose cone (triangle pointing right).
+            draw_triangle(
+                Vec2::new(ship_x + ship_w * 0.85, ship_cy), // tip
+                Vec2::new(ship_x + ship_w * 0.7, ship_y + ship_h * 0.2), // top
+                Vec2::new(ship_x + ship_w * 0.7, ship_y + ship_h * 0.8), // bottom
+                hull_hi,
+            );
+            // Engine block (wider rectangle at rear).
+            draw_rectangle(ship_x + ship_w * 0.05, ship_y + ship_h * 0.15,
+                ship_w * 0.15, ship_h * 0.7, hull_dk);
+            // Wing stubs (top and bottom).
+            draw_triangle(
+                Vec2::new(ship_x + ship_w * 0.3, ship_y), // top tip
+                Vec2::new(ship_x + ship_w * 0.2, ship_y + ship_h * 0.2),
+                Vec2::new(ship_x + ship_w * 0.5, ship_y + ship_h * 0.2),
+                hull,
+            );
+            draw_triangle(
+                Vec2::new(ship_x + ship_w * 0.3, ship_y + ship_h), // bottom tip
+                Vec2::new(ship_x + ship_w * 0.2, ship_y + ship_h * 0.8),
+                Vec2::new(ship_x + ship_w * 0.5, ship_y + ship_h * 0.8),
+                hull,
+            );
+
+            // Hull panel lines.
+            draw_line(ship_x + ship_w * 0.3, ship_y + ship_h * 0.2,
+                ship_x + ship_w * 0.3, ship_y + ship_h * 0.8, 1.0, accent);
+            draw_line(ship_x + ship_w * 0.5, ship_y + ship_h * 0.2,
+                ship_x + ship_w * 0.5, ship_y + ship_h * 0.8, 1.0, accent);
+
+            // Cockpit (glowing blue dome near nose).
+            let glow = (tick as f32 * 0.1).sin() * 0.15 + 0.7;
+            draw_circle(ship_x + ship_w * 0.72, ship_cy, ship_h * 0.18,
                 Color::new(0.2, 0.4, glow, 0.9));
-            draw_rectangle_lines(ship_x + ship_w * 0.7, ship_y + ship_h * 0.25,
-                TILE_SIZE * 1.0, TILE_SIZE * 0.7, 1.0,
-                Color::new(0.4, 0.5, 0.8, 0.8));
+            draw_circle(ship_x + ship_w * 0.72, ship_cy, ship_h * 0.12,
+                Color::new(0.3, 0.5, glow + 0.1, 0.7));
 
-            // Engine exhausts (dark circles at rear).
-            draw_circle(ship_x + 15.0, ship_y + ship_h * 0.35, 8.0, Color::new(0.15, 0.15, 0.2, 0.9));
-            draw_circle(ship_x + 15.0, ship_y + ship_h * 0.65, 8.0, Color::new(0.15, 0.15, 0.2, 0.9));
+            // Engine exhausts (glowing circles at rear).
+            draw_circle(ship_x + ship_w * 0.05, ship_cy - ship_h * 0.15, 6.0,
+                Color::new(0.1, 0.1, 0.15, 1.0));
+            draw_circle(ship_x + ship_w * 0.05, ship_cy + ship_h * 0.15, 6.0,
+                Color::new(0.1, 0.1, 0.15, 1.0));
+            // Engine glow (faint orange).
+            draw_circle(ship_x + ship_w * 0.02, ship_cy - ship_h * 0.15, 4.0,
+                Color::new(0.8, 0.4, 0.1, 0.4));
+            draw_circle(ship_x + ship_w * 0.02, ship_cy + ship_h * 0.15, 4.0,
+                Color::new(0.8, 0.4, 0.1, 0.4));
 
-            // Antenna / sensor array on top.
-            draw_line(ship_cx, ship_y + 2.0, ship_cx, ship_y - 12.0, 2.0, Color::new(0.4, 0.4, 0.5, 0.8));
-            let antenna_glow = (tick as f32 * 0.15).sin() * 0.3 + 0.7;
-            draw_circle(ship_cx, ship_y - 12.0, 3.0, Color::new(0.3, antenna_glow, 0.9, 0.9));
+            // Antenna.
+            draw_line(ship_cx + ship_w * 0.1, ship_y + ship_h * 0.2,
+                ship_cx + ship_w * 0.1, ship_y - 15.0, 1.5, Color::new(0.4, 0.4, 0.5, 0.8));
+            let ant_glow = (tick as f32 * 0.15).sin() * 0.3 + 0.7;
+            draw_circle(ship_cx + ship_w * 0.1, ship_y - 15.0, 3.0,
+                Color::new(0.3, ant_glow, 0.9, 0.9));
 
-            // Damage marks (scratches across hull).
-            draw_line(ship_x + 30.0, ship_y + 10.0, ship_x + 80.0, ship_y + 35.0, 1.5,
-                Color::new(0.5, 0.3, 0.2, 0.4));
-            draw_line(ship_x + 100.0, ship_y + 15.0, ship_x + 150.0, ship_y + 55.0, 1.5,
-                Color::new(0.5, 0.3, 0.2, 0.3));
+            // Damage scratches.
+            draw_line(ship_x + 40.0, ship_y + 20.0, ship_x + 90.0, ship_y + 50.0, 1.5,
+                Color::new(0.5, 0.3, 0.2, 0.35));
+            draw_line(ship_x + 110.0, ship_y + 25.0, ship_x + 140.0, ship_y + 60.0, 1.0,
+                Color::new(0.5, 0.3, 0.2, 0.25));
 
             // Label.
             if lod == 0 {
-                draw_text("FORGE BASE", ship_x + ship_w * 0.3, ship_y - 16.0, 16.0,
+                draw_text("FORGE BASE", ship_cx - 40.0, ship_y - 20.0, 16.0,
                     Color::new(0.7, 0.6, 0.9, 0.8));
+                draw_text("[ click to interact ]", ship_cx - 55.0, ship_y + ship_h + 14.0, 11.0,
+                    Color::new(0.5, 0.5, 0.6, 0.5));
             }
         }
     }
