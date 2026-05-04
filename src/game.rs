@@ -8,6 +8,7 @@ use std::collections::HashMap;
 
 use crate::building::Buildings;
 use crate::camera::GameCamera;
+use crate::recipe;
 use crate::constants::*;
 use crate::daynight::DayNightState;
 use crate::enemy::Enemies;
@@ -109,6 +110,8 @@ pub struct GameState {
     pub placement_flash: Option<(GridPos, u32)>,
     /// Build zone radius (tiles from map center). Expands with research.
     pub build_radius: f32,
+    /// Recipe picker: open for which building? (BuildingId, available recipes).
+    pub recipe_picker: Option<(BuildingId, Vec<recipe::RecipeId>)>,
     /// Active robot workers (start pos, target pos, progress 0.0-1.0).
     pub robots: Vec<(macroquad::prelude::Vec2, macroquad::prelude::Vec2, f32)>,
     /// Narrative/story progression state.
@@ -173,7 +176,8 @@ impl GameState {
             game_won: false,
             show_help: false,
             placement_flash: None,
-            build_radius: 30.0, // Start with 30-tile radius, expands with research
+            build_radius: 30.0,
+            recipe_picker: None,
             robots: Vec::new(),
             story: StoryState::new(),
             seed: actual_seed,
