@@ -673,6 +673,17 @@ pub fn draw_world(
                 draw_text("[ click for lore ]", ship_cx - 48.0, ship_y + ship_h + tilt + 18.0, 11.0,
                     Color::new(0.5, 0.5, 0.6, 0.4));
             }
+
+            // Robot docking area — small idle robots parked near the ship.
+            let dock_x = ship_x + ship_w + 8.0;
+            let dock_y = ship_cy - 10.0;
+            for i in 0..4 {
+                let rx = dock_x + (i % 2) as f32 * 12.0;
+                let ry = dock_y + (i / 2) as f32 * 12.0;
+                // Idle robot (small blue dot, dimmer than active robots).
+                draw_circle(rx, ry, 3.0, Color::new(0.3, 0.45, 0.7, 0.6));
+                draw_circle(rx, ry, 1.5, Color::new(0.5, 0.65, 0.9, 0.5));
+            }
         }
     }
 
