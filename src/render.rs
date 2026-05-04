@@ -522,84 +522,112 @@ pub fn draw_world(
         if ship_x >= min_world.x - ship_w && ship_x <= max_world.x + ship_w
             && ship_y >= min_world.y - ship_h && ship_y <= max_world.y + ship_h
         {
-            // Shadow beneath ship (oval).
-            draw_ellipse(ship_cx, ship_cy + ship_h * 0.5 + 5.0, ship_w * 0.4, 8.0, 0.0, Color::new(0.0, 0.0, 0.0, 0.25));
+            // CRASHED SHIP — tilted, asymmetric damage, debris, exposed internals.
+            let hull = Color::new(0.2, 0.2, 0.28, 1.0);
+            let hull_hi = Color::new(0.3, 0.3, 0.4, 1.0);
+            let hull_dk = Color::new(0.1, 0.1, 0.16, 1.0);
+            let damage = Color::new(0.35, 0.2, 0.12, 0.7);
+            let exposed = Color::new(0.5, 0.35, 0.15, 0.8);
+            let wire_color = Color::new(0.8, 0.5, 0.1, 0.6);
+            let glow = (tick as f32 * 0.1).sin() * 0.15 + 0.55;
 
-            let hull = Color::new(0.22, 0.22, 0.3, 1.0);
-            let hull_hi = Color::new(0.32, 0.32, 0.42, 1.0);
-            let hull_dk = Color::new(0.12, 0.12, 0.18, 1.0);
-            let accent = Color::new(0.4, 0.35, 0.55, 1.0);
+            // Crash crater / scorched ground beneath.
+            draw_ellipse(ship_cx + 10.0, ship_cy + 5.0, ship_w * 0.5, ship_h * 0.4, 0.0,
+                Color::new(0.08, 0.08, 0.06, 0.5));
 
-            // Main hull body (tapered — wider in middle, narrower at ends).
-            draw_rectangle(ship_x + ship_w * 0.15, ship_y + ship_h * 0.2,
-                ship_w * 0.7, ship_h * 0.6, hull);
-            // Nose cone (triangle pointing right).
+            // Scattered debris pieces around the crash site.
+            for i in 0..8u32 {
+                let angle = i as f32 * 0.8 + 0.3;
+                let dist = 60.0 + (i as f32 * 17.3).sin().abs() * 40.0;
+                let dx = ship_cx + angle.cos() * dist;
+                let dy = ship_cy + angle.sin() * dist;
+                let sz = 3.0 + (i % 3) as f32 * 2.0;
+                draw_rectangle(dx, dy, sz, sz, hull_dk);
+            }
+
+            // Main hull — tilted ~10 degrees (drawn with offset polygons).
+            let tilt = 8.0; // pixels of vertical offset for tilt effect
+            // Fuselage (main body — slightly tilted).
             draw_triangle(
-                Vec2::new(ship_x + ship_w * 0.85, ship_cy), // tip
-                Vec2::new(ship_x + ship_w * 0.7, ship_y + ship_h * 0.2), // top
-                Vec2::new(ship_x + ship_w * 0.7, ship_y + ship_h * 0.8), // bottom
-                hull_hi,
+                Vec2::new(ship_x + ship_w * 0.85, ship_cy - tilt * 0.3), // nose (tilted up)
+                Vec2::new(ship_x + ship_w * 0.12, ship_y + ship_h * 0.15),
+                Vec2::new(ship_x + ship_w * 0.12, ship_y + ship_h * 0.85 + tilt),
+                hull,
             );
-            // Engine block (wider rectangle at rear).
-            draw_rectangle(ship_x + ship_w * 0.05, ship_y + ship_h * 0.15,
-                ship_w * 0.15, ship_h * 0.7, hull_dk);
-            // Wing stubs (top and bottom).
+            // Hull top surface (lighter — catches light).
+            draw_rectangle(ship_x + ship_w * 0.12, ship_y + ship_h * 0.2,
+                ship_w * 0.6, ship_h * 0.25, hull_hi);
+            // Hull bottom (darker shadow).
+            draw_rectangle(ship_x + ship_w * 0.12, ship_cy + ship_h * 0.1 + tilt * 0.5,
+                ship_w * 0.55, ship_h * 0.2, hull_dk);
+
+            // Broken wing stub (top — intact).
             draw_triangle(
-                Vec2::new(ship_x + ship_w * 0.3, ship_y), // top tip
+                Vec2::new(ship_x + ship_w * 0.35, ship_y - 8.0),
                 Vec2::new(ship_x + ship_w * 0.2, ship_y + ship_h * 0.2),
-                Vec2::new(ship_x + ship_w * 0.5, ship_y + ship_h * 0.2),
+                Vec2::new(ship_x + ship_w * 0.55, ship_y + ship_h * 0.2),
                 hull,
             );
+            // Broken wing stub (bottom — snapped off, jagged edge).
             draw_triangle(
-                Vec2::new(ship_x + ship_w * 0.3, ship_y + ship_h), // bottom tip
-                Vec2::new(ship_x + ship_w * 0.2, ship_y + ship_h * 0.8),
-                Vec2::new(ship_x + ship_w * 0.5, ship_y + ship_h * 0.8),
-                hull,
+                Vec2::new(ship_x + ship_w * 0.25, ship_y + ship_h + tilt + 5.0),
+                Vec2::new(ship_x + ship_w * 0.2, ship_y + ship_h * 0.75 + tilt),
+                Vec2::new(ship_x + ship_w * 0.4, ship_y + ship_h * 0.8 + tilt),
+                hull_dk,
             );
 
-            // Hull panel lines.
-            draw_line(ship_x + ship_w * 0.3, ship_y + ship_h * 0.2,
-                ship_x + ship_w * 0.3, ship_y + ship_h * 0.8, 1.0, accent);
-            draw_line(ship_x + ship_w * 0.5, ship_y + ship_h * 0.2,
-                ship_x + ship_w * 0.5, ship_y + ship_h * 0.8, 1.0, accent);
+            // Damage breach (hole in hull exposing internals — top right area).
+            draw_rectangle(ship_x + ship_w * 0.5, ship_y + ship_h * 0.2,
+                ship_w * 0.15, ship_h * 0.25, exposed);
+            // Dangling wires from breach.
+            draw_line(ship_x + ship_w * 0.52, ship_y + ship_h * 0.3,
+                ship_x + ship_w * 0.48, ship_y + ship_h * 0.5, 1.5, wire_color);
+            draw_line(ship_x + ship_w * 0.58, ship_y + ship_h * 0.25,
+                ship_x + ship_w * 0.62, ship_y + ship_h * 0.45, 1.0, wire_color);
 
-            // Cockpit (glowing blue dome near nose).
-            let glow = (tick as f32 * 0.1).sin() * 0.15 + 0.7;
-            draw_circle(ship_x + ship_w * 0.72, ship_cy, ship_h * 0.18,
-                Color::new(0.2, 0.4, glow, 0.9));
-            draw_circle(ship_x + ship_w * 0.72, ship_cy, ship_h * 0.12,
-                Color::new(0.3, 0.5, glow + 0.1, 0.7));
+            // Cockpit (cracked glass, still faintly glowing blue — FORGE is alive).
+            draw_circle(ship_x + ship_w * 0.75, ship_cy - tilt * 0.2, ship_h * 0.16,
+                Color::new(0.15, 0.3, glow * 0.7, 0.8));
+            draw_circle(ship_x + ship_w * 0.75, ship_cy - tilt * 0.2, ship_h * 0.1,
+                Color::new(0.2, 0.4, glow, 0.6));
+            // Crack lines across cockpit glass.
+            draw_line(ship_x + ship_w * 0.72, ship_cy - tilt * 0.2 - 5.0,
+                ship_x + ship_w * 0.78, ship_cy - tilt * 0.2 + 8.0, 1.0,
+                Color::new(0.5, 0.5, 0.6, 0.4));
 
-            // Engine exhausts (glowing circles at rear).
-            draw_circle(ship_x + ship_w * 0.05, ship_cy - ship_h * 0.15, 6.0,
-                Color::new(0.1, 0.1, 0.15, 1.0));
-            draw_circle(ship_x + ship_w * 0.05, ship_cy + ship_h * 0.15, 6.0,
-                Color::new(0.1, 0.1, 0.15, 1.0));
-            // Engine glow (faint orange).
-            draw_circle(ship_x + ship_w * 0.02, ship_cy - ship_h * 0.15, 4.0,
-                Color::new(0.8, 0.4, 0.1, 0.4));
-            draw_circle(ship_x + ship_w * 0.02, ship_cy + ship_h * 0.15, 4.0,
-                Color::new(0.8, 0.4, 0.1, 0.4));
+            // Engine block (rear, partially destroyed).
+            draw_rectangle(ship_x + ship_w * 0.02, ship_y + ship_h * 0.2,
+                ship_w * 0.12, ship_h * 0.6 + tilt, hull_dk);
+            // One engine still smoldering (orange glow).
+            draw_circle(ship_x + ship_w * 0.04, ship_cy + ship_h * 0.15, 5.0,
+                Color::new(0.7, 0.3, 0.05, 0.5));
 
-            // Antenna.
-            draw_line(ship_cx + ship_w * 0.1, ship_y + ship_h * 0.2,
-                ship_cx + ship_w * 0.1, ship_y - 15.0, 1.5, Color::new(0.4, 0.4, 0.5, 0.8));
-            let ant_glow = (tick as f32 * 0.15).sin() * 0.3 + 0.7;
-            draw_circle(ship_cx + ship_w * 0.1, ship_y - 15.0, 3.0,
-                Color::new(0.3, ant_glow, 0.9, 0.9));
+            // Scorch marks radiating from crash.
+            for i in 0..5 {
+                let a = i as f32 * 1.2 + 0.5;
+                let len = 30.0 + (i as f32 * 7.0);
+                draw_line(ship_cx, ship_cy + tilt * 0.5,
+                    ship_cx + a.cos() * len, ship_cy + tilt * 0.5 + a.sin() * len,
+                    2.0, Color::new(0.15, 0.12, 0.08, 0.3));
+            }
 
-            // Damage scratches.
-            draw_line(ship_x + 40.0, ship_y + 20.0, ship_x + 90.0, ship_y + 50.0, 1.5,
-                Color::new(0.5, 0.3, 0.2, 0.35));
-            draw_line(ship_x + 110.0, ship_y + 25.0, ship_x + 140.0, ship_y + 60.0, 1.0,
-                Color::new(0.5, 0.3, 0.2, 0.25));
+            // Antenna (bent, still transmitting).
+            draw_line(ship_cx + 15.0, ship_y + ship_h * 0.2,
+                ship_cx + 20.0, ship_y - 18.0, 1.5, Color::new(0.35, 0.35, 0.45, 0.7));
+            draw_line(ship_cx + 20.0, ship_y - 18.0,
+                ship_cx + 12.0, ship_y - 25.0, 1.0, Color::new(0.35, 0.35, 0.45, 0.5));
+            let ant_glow = (tick as f32 * 0.2).sin() * 0.4 + 0.6;
+            draw_circle(ship_cx + 12.0, ship_y - 25.0, 3.0,
+                Color::new(0.3, ant_glow, 0.9, 0.8));
 
             // Label.
             if lod == 0 {
-                draw_text("FORGE BASE", ship_cx - 40.0, ship_y - 20.0, 16.0,
+                draw_text("FORGE BASE", ship_cx - 40.0, ship_y - 30.0, 16.0,
                     Color::new(0.7, 0.6, 0.9, 0.8));
-                draw_text("[ click to interact ]", ship_cx - 55.0, ship_y + ship_h + 14.0, 11.0,
-                    Color::new(0.5, 0.5, 0.6, 0.5));
+                draw_text("Horizon's Promise", ship_cx - 50.0, ship_y - 16.0, 12.0,
+                    Color::new(0.4, 0.4, 0.5, 0.5));
+                draw_text("[ click for lore ]", ship_cx - 48.0, ship_y + ship_h + tilt + 18.0, 11.0,
+                    Color::new(0.5, 0.5, 0.6, 0.4));
             }
         }
     }
