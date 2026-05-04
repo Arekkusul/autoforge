@@ -1760,13 +1760,25 @@ fn draw_ui(state: &GameState, atlas: &SpriteAtlas) {
                     Color::new(0.2, 0.3, 0.5, 0.4));
             }
 
-            // Recipe name.
-            draw_text(r.name, px + 15.0, ry + 4.0, 15.0, Color::new(0.9, 0.9, 0.95, 1.0));
+            // Recipe name + craftability indicator.
+            let can_craft = r.inputs.iter().all(|(res, count)| {
+                state.inventory.get(res).copied().unwrap_or(0) >= *count
+            });
+            let name_color = if can_craft {
+                Color::new(0.5, 0.95, 0.5, 1.0) // green = you have all inputs
+            } else {
+                Color::new(0.9, 0.9, 0.95, 1.0) // white = can't craft yet
+            };
+            draw_text(r.name, px + 15.0, ry + 4.0, 15.0, name_color);
 
-            // Inputs → Output (compact format).
+            // Inputs → Output with per-input availability coloring.
             let inputs: String = r.inputs.iter()
-                .map(|(res, c)| format!("{}x{}", c, short_resource_name(*res)))
-                .collect::<Vec<_>>().join("+");
+                .map(|(res, c)| {
+                    let have = state.inventory.get(res).copied().unwrap_or(0);
+                    let sym = if have >= *c { "+" } else { "-" };
+                    format!("{}{}x{}", sym, c, short_resource_name(*res))
+                })
+                .collect::<Vec<_>>().join(" ");
             let outputs: String = r.outputs.iter()
                 .map(|(res, c)| format!("{}x{}", c, short_resource_name(*res)))
                 .collect::<Vec<_>>().join("+");
