@@ -237,9 +237,67 @@ fn handle_input(state: &mut GameState) {
         state.placement_direction = state.placement_direction.rotated_cw();
     }
 
-    // Deselect
+    // X button click: close overlays by clicking the top-right corner.
+    if is_mouse_button_pressed(MouseButton::Left) {
+        let mx = mouse_position().0;
+        let my = mouse_position().1;
+        let sw = screen_width();
+        let sh = screen_height();
+
+        // Check each overlay's X button region (top-right corner of their panel).
+        // Recipe picker X.
+        if state.recipe_picker.is_some() {
+            let pw = 340.0f32;
+            let px = (sw - pw) * 0.5;
+            let py = sh * 0.15;
+            if mx >= px + pw - 30.0 && mx <= px + pw && my >= py && my <= py + 25.0 {
+                state.recipe_picker = None;
+            }
+        }
+        // Help overlay X.
+        if state.show_help {
+            let pw = (sw * 0.6).min(600.0);
+            let px = (sw - pw) * 0.5;
+            let py = (sh - (sh * 0.75).min(500.0)) * 0.5;
+            if mx >= px + pw - 30.0 && mx <= px + pw && my >= py && my <= py + 25.0 {
+                state.show_help = false;
+            }
+        }
+        // Recipe browser X.
+        if state.show_recipes {
+            let pw = (sw * 0.75).min(800.0);
+            let px = (sw - pw) * 0.5;
+            let py = (sh - (sh * 0.85).min(700.0)) * 0.5;
+            if mx >= px + pw - 30.0 && mx <= px + pw && my >= py && my <= py + 25.0 {
+                state.show_recipes = false;
+            }
+        }
+        // Research screen X.
+        if state.show_research {
+            let pw = (sw * 0.7).min(700.0);
+            let px = (sw - pw) * 0.5;
+            let py = (sh - (sh * 0.8).min(600.0)) * 0.5;
+            if mx >= px + pw - 30.0 && mx <= px + pw && my >= py && my <= py + 25.0 {
+                state.show_research = false;
+            }
+        }
+    }
+
+    // Escape: close the topmost overlay, or deselect building.
     if is_key_pressed(KeyCode::Escape) {
-        state.selected_building = None;
+        if state.recipe_picker.is_some() {
+            state.recipe_picker = None;
+        } else if state.show_help {
+            state.show_help = false;
+        } else if state.show_recipes {
+            state.show_recipes = false;
+        } else if state.show_research {
+            state.show_research = false;
+        } else if state.show_tutorial {
+            state.show_tutorial = false;
+        } else {
+            state.selected_building = None;
+        }
     }
 
     // Toggle research screen
@@ -492,10 +550,7 @@ fn handle_input(state: &mut GameState) {
         if selected { /* already handled */ }
     }
 
-    // Close recipe picker with Escape.
-    if state.recipe_picker.is_some() && is_key_pressed(KeyCode::Escape) {
-        state.recipe_picker = None;
-    }
+    // (Recipe picker Escape is handled in the unified Escape handler above.)
 
     // Left click with no selection: interact with existing building (open recipe picker)
     // or interact with the crashed ship at map center.
@@ -996,6 +1051,21 @@ fn simulation_tick(state: &mut GameState) {
 /// - **Top-right**: Hovered tile info panel (dark background)
 /// - **Bottom**: Categorized toolbar with sprite icons + labels
 /// - **Bottom-right**: Controls hint (fades out at low zoom)
+/// Draws a clickable X close button at the top-right of a panel.
+fn draw_close_button(px: f32, py: f32, pw: f32) {
+    let bx = px + pw - 28.0;
+    let by = py + 4.0;
+    let hover = mouse_position().0 >= bx && mouse_position().0 <= bx + 24.0
+        && mouse_position().1 >= by && mouse_position().1 <= by + 20.0;
+    let bg = if hover {
+        Color::new(0.7, 0.2, 0.2, 0.8)
+    } else {
+        Color::new(0.4, 0.2, 0.2, 0.6)
+    };
+    draw_rectangle(bx, by, 24.0, 20.0, bg);
+    draw_text("X", bx + 7.0, by + 15.0, 18.0, Color::new(1.0, 1.0, 1.0, 0.9));
+}
+
 /// Short display name for a resource (for compact recipe display).
 fn short_resource_name(r: types::Resource) -> &'static str {
     match r {
@@ -1611,6 +1681,7 @@ fn draw_ui(state: &GameState, atlas: &SpriteAtlas) {
         draw_rectangle_lines(px, py, pw, capped_ph, 2.0, Color::new(0.4, 0.3, 0.7, 0.8));
 
         draw_text("SELECT RECIPE", px + 20.0, py + 25.0, 22.0, Color::new(0.9, 0.8, 0.4, 1.0));
+        draw_close_button(px, py, pw);
         draw_text("Click to select, Esc to cancel", px + 20.0, py + 40.0, 12.0,
             Color::new(0.6, 0.6, 0.65, 0.7));
 
@@ -1669,6 +1740,7 @@ fn draw_ui(state: &GameState, atlas: &SpriteAtlas) {
         draw_rectangle_lines(px, py, pw, ph, 2.0, Color::new(0.4, 0.3, 0.7, 0.8));
         draw_text("AUTOFORGE — HELP (F1 to close)", px + 20.0, py + 30.0, 24.0, Color::new(0.9, 0.8, 0.4, 1.0));
 
+        draw_close_button(px, py, pw);
         let help = [
             ("BUILDING", ""),
             ("1-9, 0", "Select building from toolbar"),
@@ -1739,6 +1811,7 @@ fn draw_recipe_browser() {
     draw_rectangle_lines(px, py, pw, ph, 2.0, border);
 
     draw_text("RECIPE BOOK", px + 20.0, py + 32.0, 28.0, Color::new(0.9, 0.7, 1.0, 1.0));
+    draw_close_button(px, py, pw);
     draw_text(
         "How to build your factory — press E to close",
         px + 20.0,
@@ -1823,6 +1896,7 @@ fn draw_research_screen(state: &GameState) {
 
     // Title
     draw_text("RESEARCH", px + 20.0, py + 35.0, 32.0, Color::new(0.4, 0.85, 0.4, 1.0));
+    draw_close_button(px, py, pw);
     draw_text(
         "Click a technology to start researching. Tab to close.",
         px + 20.0,
