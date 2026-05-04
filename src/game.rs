@@ -30,6 +30,8 @@ pub struct GameStats {
     pub rockets_launched: u32,
     /// Total items crafted (all types combined).
     pub items_crafted: u64,
+    /// Total buildings placed over the session.
+    pub buildings_placed: u64,
     /// Total enemies killed.
     pub enemies_killed: u64,
 }

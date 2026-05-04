@@ -223,6 +223,15 @@ fn handle_input(state: &mut GameState) {
         state.show_help = !state.show_help;
     }
 
+    // Home key: center camera on map center (factory area)
+    if is_key_pressed(KeyCode::Home) {
+        state.camera.target = macroquad::prelude::Vec2::new(
+            state.grid.width as f32 * constants::TILE_SIZE * 0.5,
+            state.grid.height as f32 * constants::TILE_SIZE * 0.5,
+        );
+        state.camera.zoom = 1.0;
+    }
+
     // Undo last placement (Ctrl+Z or Cmd+Z).
     if is_key_pressed(KeyCode::Z)
         && (is_key_down(KeyCode::LeftControl) || is_key_down(KeyCode::RightControl)
@@ -609,7 +618,8 @@ fn handle_input(state: &mut GameState) {
                 // Deduct cost from inventory.
                 buildcost::pay_cost(&mut state.inventory, kind);
                 state.last_placed = Some(grid_pos);
-                state.placement_flash = Some((grid_pos, 10)); // 10 tick flash
+                state.placement_flash = Some((grid_pos, 10));
+                state.stats.buildings_placed += 1;
                 if kind.is_belt() {
                     state.last_belt_pos = Some(grid_pos);
                 }
