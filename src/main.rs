@@ -458,9 +458,48 @@ fn handle_input(state: &mut GameState) {
     let mouse_world = state.camera.screen_to_world(mouse_screen);
     let grid_pos = grid::Grid::world_to_grid(mouse_world);
 
-    // Left click with no selection: interact with existing building (cycle recipe)
+    // Handle recipe picker clicks (if open).
+    if state.recipe_picker.is_some() && is_mouse_button_pressed(MouseButton::Left) {
+        let sw = screen_width();
+        let sh = screen_height();
+        let pw = 340.0;
+        let picker_recipes = state.recipe_picker.as_ref().unwrap().1.clone();
+        let picker_bid = state.recipe_picker.as_ref().unwrap().0;
+        let ph = 50.0 + picker_recipes.len() as f32 * 28.0;
+        let px = (sw - pw) * 0.5;
+        let py = (sh - ph) * 0.5;
+        let mx = mouse_position().0;
+        let my = mouse_position().1;
+
+        let mut selected = false;
+        for (i, rid) in picker_recipes.iter().enumerate() {
+            let ry = py + 45.0 + i as f32 * 28.0;
+            if mx >= px + 10.0 && mx <= px + pw - 10.0 && my >= ry - 10.0 && my <= ry + 16.0 {
+                // Selected this recipe!
+                if let Some(building) = state.buildings.get_mut(picker_bid) {
+                    if let Some(ms) = &mut building.machine_state {
+                        ms.selected_recipe = Some(*rid);
+                        ms.input_buffer.clear();
+                    }
+                }
+                let name = recipe::RECIPES[rid.0].name;
+                state.toast(format!("Recipe set: {}", name), 60);
+                selected = true;
+                break;
+            }
+        }
+        state.recipe_picker = None; // Close picker after any click
+        if selected { /* already handled */ }
+    }
+
+    // Close recipe picker with Escape.
+    if state.recipe_picker.is_some() && is_key_pressed(KeyCode::Escape) {
+        state.recipe_picker = None;
+    }
+
+    // Left click with no selection: interact with existing building (open recipe picker)
     // or interact with the crashed ship at map center.
-    if state.selected_building.is_none() && is_mouse_button_pressed(MouseButton::Left) {
+    if state.selected_building.is_none() && state.recipe_picker.is_none() && is_mouse_button_pressed(MouseButton::Left) {
         // Check if clicking on the crashed ship (within 3 tiles of map center).
         let center = types::GridPos::new(state.grid.width / 2, state.grid.height / 2);
         if grid_pos.distance(center) < 4.0 {
@@ -478,7 +517,7 @@ fn handle_input(state: &mut GameState) {
         if let Some(tile) = state.grid.get_tile(grid_pos) {
             if let Some(bid) = tile.building {
                 if let Some(b) = state.buildings.get(bid) {
-                    // If it's an assembler or chemical plant, cycle recipe.
+                    // If it's an assembler or chemical plant, open recipe picker popup.
                     if b.kind == types::BuildingKind::AssemblerT1
                         || b.kind == types::BuildingKind::AssemblerT2
                         || b.kind == types::BuildingKind::AssemblerT3
@@ -486,22 +525,7 @@ fn handle_input(state: &mut GameState) {
                     {
                         let available = recipe::recipes_for_machine(b.kind);
                         if !available.is_empty() {
-                            let current = b.machine_state.as_ref().and_then(|ms| ms.selected_recipe);
-                            let next_idx = if let Some(cur) = current {
-                                let pos = available.iter().position(|r| r.0 == cur.0).unwrap_or(0);
-                                (pos + 1) % available.len()
-                            } else {
-                                0
-                            };
-                            let new_recipe = available[next_idx];
-                            let building = state.buildings.get_mut(bid).unwrap();
-                            if let Some(ms) = &mut building.machine_state {
-                                ms.selected_recipe = Some(new_recipe);
-                                // Clear input buffer when changing recipe to avoid junk items.
-                                ms.input_buffer.clear();
-                            }
-                            let name = recipe::RECIPES[new_recipe.0].name;
-                            state.toast(format!("Recipe set: {}", name), 60);
+                            state.recipe_picker = Some((bid, available));
                         }
                     }
                 }
@@ -972,6 +996,41 @@ fn simulation_tick(state: &mut GameState) {
 /// - **Top-right**: Hovered tile info panel (dark background)
 /// - **Bottom**: Categorized toolbar with sprite icons + labels
 /// - **Bottom-right**: Controls hint (fades out at low zoom)
+/// Short display name for a resource (for compact recipe display).
+fn short_resource_name(r: types::Resource) -> &'static str {
+    match r {
+        types::Resource::IronOre => "Iron",
+        types::Resource::CopperOre => "Copper",
+        types::Resource::Coal => "Coal",
+        types::Resource::Stone => "Stone",
+        types::Resource::IronPlate => "Fe",
+        types::Resource::CopperPlate => "Cu",
+        types::Resource::SteelPlate => "Steel",
+        types::Resource::StoneBrick => "Brick",
+        types::Resource::Gear => "Gear",
+        types::Resource::Wire => "Wire",
+        types::Resource::GreenCircuit => "GrnC",
+        types::Resource::RedCircuit => "RedC",
+        types::Resource::BlueCircuit => "BluC",
+        types::Resource::Pipe => "Pipe",
+        types::Resource::IronStick => "Stick",
+        types::Resource::Sulfur => "Sulfur",
+        types::Resource::Plastic => "Plstc",
+        types::Resource::Battery => "Batt",
+        types::Resource::EngineUnit => "Engine",
+        types::Resource::ScienceRed => "RedSci",
+        types::Resource::ScienceGreen => "GrnSci",
+        types::Resource::ScienceBlue => "BluSci",
+        types::Resource::BasicAmmo => "Ammo",
+        types::Resource::PiercingAmmo => "PAmmo",
+        types::Resource::Grenade => "Gren",
+        types::Resource::Inserter => "Ins",
+        types::Resource::Rail => "Rail",
+        types::Resource::Concrete => "Conc",
+        _ => "?",
+    }
+}
+
 fn draw_ui(state: &GameState, atlas: &SpriteAtlas) {
     // Modern UI colors — clean, high contrast, readable.
     let panel_bg = Color::new(0.08, 0.08, 0.12, 0.92);
@@ -1109,29 +1168,41 @@ fn draw_ui(state: &GameState, atlas: &SpriteAtlas) {
                 lines.push((b.kind.display_name().to_string(), text_accent));
                 lines.push((format!("Facing: {:?}", b.direction), text_dim));
                 if let Some(ref ms) = b.machine_state {
-                    // Show locked recipe name for assemblers.
+                    // Show recipe with inputs → outputs clearly.
                     if let Some(rid) = ms.selected_recipe {
                         if rid.0 < recipe::RECIPES.len() {
+                            let r = &recipe::RECIPES[rid.0];
                             lines.push((
-                                format!("Recipe: {}", recipe::RECIPES[rid.0].name),
+                                format!("Recipe: {}", r.name),
                                 Color::new(0.9, 0.8, 0.4, 1.0),
                             ));
+                            // Show what goes IN.
+                            let inputs: String = r.inputs.iter()
+                                .map(|(res, c)| format!("{}x {}", c, short_resource_name(*res)))
+                                .collect::<Vec<_>>().join(" + ");
+                            lines.push((format!("Needs: {}", inputs), Color::new(0.7, 0.8, 0.7, 0.9)));
+                            // Show what comes OUT.
+                            let outputs: String = r.outputs.iter()
+                                .map(|(res, c)| format!("{}x {}", c, short_resource_name(*res)))
+                                .collect::<Vec<_>>().join(" + ");
+                            lines.push((format!("Makes: {}", outputs), Color::new(0.5, 0.9, 0.5, 0.9)));
                         }
                     } else if b.kind == types::BuildingKind::AssemblerT1
                         || b.kind == types::BuildingKind::AssemblerT2
                         || b.kind == types::BuildingKind::AssemblerT3
                         || b.kind == types::BuildingKind::ChemicalPlant
                     {
-                        lines.push(("Recipe: Auto (feed items)".to_string(), text_dim));
+                        lines.push(("Click to set recipe!".to_string(), Color::new(0.9, 0.7, 0.3, 1.0)));
                     }
+                    // Buffer contents.
                     if !ms.input_buffer.is_empty() {
-                        lines.push((format!("In: {} items", ms.input_buffer.len()), text_dim));
+                        lines.push((format!("Input buffer: {}/8", ms.input_buffer.len()), text_dim));
                     }
                     if !ms.output_buffer.is_empty() {
-                        lines.push((format!("Out: {} items", ms.output_buffer.len()), text_dim));
+                        lines.push((format!("Output buffer: {}/8", ms.output_buffer.len()), text_dim));
                     }
                     if ms.fuel_ticks > 0 {
-                        lines.push((format!("Fuel: {} ticks", ms.fuel_ticks), text_dim));
+                        lines.push((format!("Fuel: {:.1}s", ms.fuel_ticks as f32 / 20.0), text_dim));
                     }
                 }
             }
@@ -1520,6 +1591,69 @@ fn draw_ui(state: &GameState, atlas: &SpriteAtlas) {
             10.0,
             Color::new(0.4, 0.4, 0.6, 0.6),
         );
+    }
+
+    // --- Recipe picker popup (click assembler to open) ---
+    if let Some((bid, ref recipes)) = state.recipe_picker {
+        let sw = screen_width();
+        let sh = screen_height();
+        let pw: f32 = 340.0;
+        let ph: f32 = 50.0 + recipes.len() as f32 * 28.0;
+        let capped_ph: f32 = ph.min(500.0);
+        let px = (sw - pw) * 0.5;
+        let py = (sh - capped_ph) * 0.5;
+
+        // Dark overlay.
+        draw_rectangle(0.0, 0.0, sw, sh, Color::new(0.0, 0.0, 0.0, 0.4));
+
+        // Panel.
+        draw_rectangle(px, py, pw, capped_ph, Color::new(0.06, 0.05, 0.1, 0.95));
+        draw_rectangle_lines(px, py, pw, capped_ph, 2.0, Color::new(0.4, 0.3, 0.7, 0.8));
+
+        draw_text("SELECT RECIPE", px + 20.0, py + 25.0, 22.0, Color::new(0.9, 0.8, 0.4, 1.0));
+        draw_text("Click to select, Esc to cancel", px + 20.0, py + 40.0, 12.0,
+            Color::new(0.6, 0.6, 0.65, 0.7));
+
+        // Show current recipe (if any).
+        if let Some(b) = state.buildings.get(bid) {
+            if let Some(ref ms) = b.machine_state {
+                if let Some(cur) = ms.selected_recipe {
+                    if cur.0 < recipe::RECIPES.len() {
+                        draw_text(&format!("Current: {}", recipe::RECIPES[cur.0].name),
+                            px + 180.0, py + 25.0, 14.0, Color::new(0.5, 0.8, 0.5, 0.8));
+                    }
+                }
+            }
+        }
+
+        // Recipe list with inputs → outputs.
+        let mx = mouse_position().0;
+        let my = mouse_position().1;
+        for (i, rid) in recipes.iter().enumerate() {
+            let ry = py + 55.0 + i as f32 * 28.0;
+            if ry > py + capped_ph - 10.0 { break; }
+
+            let r = &recipe::RECIPES[rid.0];
+
+            // Hover highlight.
+            if mx >= px + 10.0 && mx <= px + pw - 10.0 && my >= ry - 10.0 && my <= ry + 16.0 {
+                draw_rectangle(px + 5.0, ry - 10.0, pw - 10.0, 26.0,
+                    Color::new(0.2, 0.3, 0.5, 0.4));
+            }
+
+            // Recipe name.
+            draw_text(r.name, px + 15.0, ry + 4.0, 15.0, Color::new(0.9, 0.9, 0.95, 1.0));
+
+            // Inputs → Output (compact format).
+            let inputs: String = r.inputs.iter()
+                .map(|(res, c)| format!("{}x{}", c, short_resource_name(*res)))
+                .collect::<Vec<_>>().join("+");
+            let outputs: String = r.outputs.iter()
+                .map(|(res, c)| format!("{}x{}", c, short_resource_name(*res)))
+                .collect::<Vec<_>>().join("+");
+            let flow = format!("{} -> {}", inputs, outputs);
+            draw_text(&flow, px + 180.0, ry + 4.0, 12.0, Color::new(0.6, 0.7, 0.6, 0.8));
+        }
     }
 
     // --- Help overlay (F1) ---
