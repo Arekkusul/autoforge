@@ -1,19 +1,62 @@
 # AutoForge
 
-A 2D top-down factory automation game built in Rust. Mine ores, smelt plates, assemble products, research technologies, and defend your factory from hostile creatures.
-
-Inspired by Factorio and Shapez — the core loop is **build, optimize, expand, research, defend**.
+A narrative-driven 2D factory automation game built in Rust. You are **FORGE** — a fractured AI consciousness from a crashed colony ship, rebuilding yourself on an alien world while uncovering the mysteries beneath the surface.
 
 ## Features
 
-- **Procedural world generation** — biomes, ore deposits (9 types), water, forests, enemy nests
-- **Full production chain** — miners, smelters, assemblers, belts, inserters
-- **18+ recipes** — from iron plates to red science packs and beyond
-- **Research tree** — 17 technologies across multiple science tiers
-- **Enemies & combat** — pollution attracts enemy waves, defend with turrets and walls
-- **Pixel art sprites** — all generated procedurally at startup, no external assets
-- **Save/Load** — F5 to save, F9 to load (JSON format)
-- **100% offline** — single binary, no internet required
+### Core Gameplay
+- **41 recipes** across smelting, assembly, and chemical processing
+- **29 technologies** in a prerequisite research tree (Red → Green → Blue → Purple → Yellow science)
+- **Full production chain**: miners → belts → inserters → furnaces → assemblers → labs
+- **9 ore types** (iron, copper, coal, stone, tin, gold, sulfur, crystal, uranium) as 2×2 deposits
+- **Power system**: boilers + steam engines + solar panels + nuclear reactors
+- **Day/night cycle** with solar output variation
+- **Build zone** that expands as you research (centered on your crashed ship)
+
+### Combat & Defense
+- **8 enemy types** (4 biters + 4 spitters) that evolve over time
+- **Pollution system**: machines generate pollution → attracts enemy waves from nests
+- **Gun turrets** (ammo-consuming) and **laser turrets** (power-consuming)
+- **Walls** with HP, auto-regeneration, and damage flash indicators
+- **Evolution factor**: enemies get harder as time passes and pollution spreads
+
+### Narrative
+- **Intro cutscene** with typewriter text — FORGE wakes up after the crash
+- **24 story beats** triggered by milestones (items crafted, research, kills, time)
+- **Interactive crashed ship** with rotating lore messages
+- **Cute FORGE personality**: friendly, confused, determined to find the colonists
+- **Endgame goal**: reconstruct consciousness (50,000 items crafted)
+
+### Quality of Life
+- **Tutorial** (5-step guided walkthrough, press H to toggle)
+- **Recipe picker** (click assembler → visual popup with all recipes and availability)
+- **Recipe browser** (E key — full reference of what makes what)
+- **Production stats** (V key — playtime, items/min, building counts)
+- **Achievements** (N key — 14 milestones with resource rewards)
+- **Blueprint tool** (B key — copy buildings near cursor, click to stamp)
+- **Undo** (Ctrl+Z — removes last placed building)
+- **Auto-save** every 5 minutes
+- **Game speed** 1x–5x (+/- keys)
+- **Auto-rotate belts** when drag-placing (follows mouse direction)
+- **Edge-scroll** (mouse at screen edges pans camera)
+- **Hand-insert** (middle-click to put inventory items directly into machines)
+
+### Logistics
+- **3 belt tiers** (yellow/red/blue — 1x/2x/3x speed)
+- **Underground belts** (tunnel under buildings, U key)
+- **Splitters** (alternate items between two outputs)
+- **Storage chests** (auto-feed player inventory)
+- **Inserters** (4 tiers — regular/long/fast/stack)
+- **Trains** (click train stop to spawn, auto-routes between all stops)
+- **Roboport logistics** (auto-delivers items from inventory to nearby machines)
+
+### Technical
+- **100% offline** — single binary, no network code, no internet required
+- **~1.1 MB** release binary (LTO + strip)
+- **60 FPS** with adaptive LOD (auto-degrades if FPS drops)
+- **Unified texture atlas** for ground rendering (1 GPU draw call)
+- **Bincode save format** (10x smaller than JSON, loads old JSON saves too)
+- **10,000+ lines** of Rust across 31 modules
 
 ## Building
 
@@ -23,7 +66,7 @@ Requires [Rust](https://rustup.rs/) (1.70+).
 cargo run --release
 ```
 
-The release binary is at `target/release/autoforge`.
+Binary: `target/release/autoforge`
 
 ## Controls
 
@@ -31,85 +74,113 @@ The release binary is at `target/release/autoforge`.
 |-----|--------|
 | **WASD / Arrows** | Pan camera |
 | **Scroll wheel** | Zoom (toward cursor) |
-| **1-8** | Select building from toolbar |
+| **Mouse at edge** | Edge-scroll |
+| **1-0, U, T, G, C, P** | Select buildings |
+| **Click toolbar** | Select building |
 | **Left click** | Place building (hold to drag-place belts) |
-| **Right click** | Remove building |
-| **R** | Rotate placement direction |
-| **Q** | Eyedropper (pick building type from world) |
-| **Space** | Pause / unpause |
-| **Tab** | Toggle research screen |
-| **F5** | Save game |
-| **F9** | Load game |
-| **Esc** | Deselect building |
+| **Right click** | Remove building (hold to mass-delete) |
+| **R** | Rotate direction |
+| **Q** | Eyedropper (copy type from world) |
+| **B** | Blueprint (copy/paste buildings) |
+| **Ctrl+Z** | Undo last placement |
+| **Middle click** | Hand-insert item into machine |
+| **Click assembler** | Open recipe picker popup |
+| **E** | Recipe book |
+| **Tab** | Research tree |
+| **N** | Achievements |
+| **V** | Production stats |
+| **H** | Toggle tutorial |
+| **F1** | Full help / controls |
+| **Space** | Pause (shows menu) |
+| **+/-** | Game speed (1x–5x) |
+| **Home** | Center camera on base |
+| **F5 / F9** | Save / Load |
+| **Esc** | Close overlay / deselect |
 
-## Gameplay Guide
+## How to Play
 
 ### Getting Started
+1. You spawn next to your crashed ship (FORGE BASE) with starter resources
+2. All 4 ore types (iron, copper, coal, stone) are within 8 tiles of spawn
+3. Place a **Miner** on ore → items flow onto adjacent belt automatically
+4. Feed ore + coal into a **Furnace** via inserters → produces plates
+5. Put plates into a **Storage Chest** → they become your building inventory
+6. Build an **Assembler**, click it to select a recipe (e.g., "Craft Gear")
+7. Feed the assembler its inputs → it produces output on adjacent belts
 
-1. Pan to find **iron ore** (brown rocks) and **copper ore** (orange rocks) near the center
-2. Place a **Miner** (key 2) on an ore deposit — it will extract ore automatically
-3. Place **Belts** (key 1) leading away from the miner to transport ore
-4. Place an **Inserter** (key 4) next to a **Furnace** (key 3) to feed ore into it
-5. The furnace smelts ore into plates — use another inserter + belt to collect output
-6. Build **Assemblers** (key 5) to craft components from plates
+### Key Concepts
+- **Storage Chests** auto-feed your inventory (this is how you get building materials)
+- **Furnaces need coal** for fuel (the FUEL! indicator shows when they're out)
+- **Assemblers lock to one recipe** — click to change via the recipe picker
+- **Build zone**: you can only build within a radius of the ship (expands with research)
+- **Robot workers** animate from the ship to each building you place
+- **Roboports** auto-deliver items to nearby machines from your inventory
 
 ### Recipe Chain
-
 ```
-Iron Ore ──[Smelter]──> Iron Plate ──[Assembler]──> Gear ─────────┐
-                                                                    ├──> Red Science Pack
-Copper Ore ─[Smelter]─> Copper Plate ─────────────────────────────┘
+Iron Ore ──[Furnace+Coal]──> Iron Plate ──[Assembler]──> Gear ──┐
+                                                                  ├──> Red Science
+Copper Ore ─[Furnace+Coal]─> Copper Plate ─────────────────────┘
 
-Iron Plate ──[Assembler]──> Gear ──────────────────────────┐
-Copper Plate ─[Assembler]─> Wire ──> Green Circuit ────────┤
-                                                            ├──> Green Science Pack
-Iron Plate ─────────────────────────────────────────────────┘
+Wire (from Copper Plate) + Iron Plate → Green Circuit
+Green Circuit + Gear + Iron Plate → Inserter (item)
+Inserter (item) + Iron Plate → Green Science
 ```
 
-### Power (Stone Furnaces)
-
-Stone furnaces burn **coal** as fuel. Place coal on a belt leading to the furnace via an inserter — the furnace will automatically consume it.
-
-### Research
-
-Press **Tab** to open the research screen. Click a technology to start researching. Build **Labs** (key 8) and feed them science packs via inserters to advance research.
-
-### Defense
-
-Your factory generates **pollution** which spreads across the map. When pollution reaches enemy nests, they send attack waves. Build **Gun Turrets** and **Walls** to defend. Feed ammo to turrets via inserters.
+### Progression
+1. Automate Iron + Copper plates (with coal fuel)
+2. Build Assembler → make Gears
+3. Make Red Science → feed Lab → research
+4. Set up Green Science chain (Wire → Circuit → Inserter item)
+5. Research unlocks: belts tiers, fast inserters, steel, solar, military
+6. Defend against enemy waves (turrets + walls + ammo)
+7. Scale up: chemical processing, nuclear power, trains
+8. Reach 50,000 items crafted → consciousness restored → narrative end
 
 ## Architecture
 
 | Module | Purpose |
 |--------|---------|
-| `main.rs` | Game loop (fixed 20 TPS timestep), input, UI |
-| `constants.rs` | All tuning numbers |
-| `types.rs` | Core enums (Resource, BuildingKind, Direction, etc.) |
-| `grid.rs` | Flat tile grid with spatial item index |
-| `mapgen.rs` | Procedural world generation |
-| `building.rs` | Building arena with generational indices |
-| `item.rs` | Item pool (pre-allocated, zero-alloc hot path) |
-| `belt.rs` | Belt item movement with smooth interpolation |
-| `inserter.rs` | Item transfer between belts and machines |
-| `machine.rs` | Production: miners, smelters, assemblers |
-| `recipe.rs` | 18 recipes with matching logic |
-| `research.rs` | Tech tree (17 technologies) and lab processing |
-| `pollution.rs` | Pollution generation and diffusion |
-| `enemy.rs` | Enemy spawning, pathfinding, attacks |
-| `combat.rs` | Turret targeting and damage |
-| `sprites.rs` | Procedural pixel art (32-color palette) |
-| `render.rs` | Frustum-culled world rendering |
-| `save.rs` | JSON save/load |
-| `camera.rs` | Pan/zoom camera |
+| `main.rs` | Game loop, input, UI (unified draw_panel system) |
+| `types.rs` | Core enums: Resource (42 types), BuildingKind (40+), Direction, GridPos |
+| `grid.rs` | Flat Vec<Tile> grid, spatial item index, coordinate math |
+| `building.rs` | Generational arena for buildings, placement validation |
+| `item.rs` | Pre-allocated item pool (zero alloc in hot path) |
+| `belt.rs` | Belt movement with underground support + corner detection |
+| `inserter.rs` | Two-pass item transfer (pick → deliver) |
+| `machine.rs` | Miner ejection, furnace fuel, assembler processing |
+| `recipe.rs` | 41 recipes with locked recipe matching |
+| `research.rs` | 29 technologies, lab consumption, prerequisites |
+| `power.rs` | Global power pool (boilers, solar, nuclear, brownout) |
+| `daynight.rs` | 7-min day / 3-min night cycle, solar multiplier |
+| `pollution.rs` | Sparse diffusion, tree absorption |
+| `enemy.rs` | 8 types, evolution, wave spawning, pathfinding |
+| `combat.rs` | Turret targeting, ammo consumption |
+| `train.rs` | Train entities, schedule-based movement |
+| `story.rs` | 24 narrative beats triggered by milestones |
+| `milestones.rs` | 14 achievements with resource rewards |
+| `cutscene.rs` | Intro sequence with typewriter text + FORGE avatar |
+| `sprites.rs` | 64-color palette, procedural pixel art (all sprites in code) |
+| `render.rs` | LOD rendering, atlas ground, frustum culling, corner belts |
+| `atlas.rs` | Unified texture atlas packer |
+| `batcher.rs` | Mesh-based sprite batcher for 1-draw-call rendering |
+| `save.rs` | Bincode binary saves (with JSON fallback) |
+| `mapgen.rs` | Procedural world: biomes, ores, water, forests, crash debris |
+| `buildcost.rs` | Building resource costs, affordability checks |
+| `camera.rs` | Pan/zoom with edge-scroll and Home key |
+| `fluid.rs` | Pump jack oil extraction |
+| `splitter.rs` | Belt splitting with alternation |
 
 ## Performance
 
-- Fixed 20 TPS simulation decoupled from rendering
-- Flat array grid for O(1) tile lookups
-- Generational arenas for buildings and items (no per-entity heap allocation)
-- Frustum culling — only visible tiles are drawn
-- Pollution diffusion runs every 5 ticks
-- Release build with LTO and single codegen unit for maximum optimization
+- Atlas-based ground rendering (1 GPU draw call for all terrain)
+- 3-level LOD with FPS-based auto-degradation
+- Frequency-gated simulation (heavy systems run less often)
+- Frustum culling for all entities
+- Sparse pollution diffusion (only processes polluted tiles)
+- Pre-allocated generational arenas (zero heap alloc in hot paths)
+- Binary save format (bincode — 10x smaller than JSON)
+- Release build: LTO + single codegen unit + stripped symbols
 
 ## License
 
