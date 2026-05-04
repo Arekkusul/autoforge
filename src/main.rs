@@ -287,6 +287,8 @@ fn handle_input(state: &mut GameState) {
     if is_key_pressed(KeyCode::Escape) {
         if state.recipe_picker.is_some() {
             state.recipe_picker = None;
+        } else if state.show_achievements {
+            state.show_achievements = false;
         } else if state.show_help {
             state.show_help = false;
         } else if state.show_recipes {
@@ -313,6 +315,11 @@ fn handle_input(state: &mut GameState) {
     // Toggle full help overlay
     if is_key_pressed(KeyCode::F1) {
         state.show_help = !state.show_help;
+    }
+
+    // Toggle achievements screen
+    if is_key_pressed(KeyCode::N) {
+        state.show_achievements = !state.show_achievements;
     }
 
     // Home key: center camera on map center (factory area)
@@ -967,11 +974,25 @@ fn simulation_tick(state: &mut GameState) {
             &mut state.enemies,
             &mut state.stats.enemies_killed,
         );
-        // Loot drops: enemies killed give small resource bonus.
+        // Loot drops: enemies drop resources based on evolution level.
         let new_kills = state.stats.enemies_killed - kills_before;
         if new_kills > 0 {
-            *state.inventory.entry(types::Resource::IronPlate).or_insert(0) += new_kills as u32;
-            *state.inventory.entry(types::Resource::Coal).or_insert(0) += new_kills as u32;
+            let n = new_kills as u32;
+            *state.inventory.entry(types::Resource::IronPlate).or_insert(0) += n * 2;
+            *state.inventory.entry(types::Resource::Coal).or_insert(0) += n;
+            // Higher evolution = rarer drops.
+            if state.evolution > 0.3 {
+                *state.inventory.entry(types::Resource::CopperPlate).or_insert(0) += n;
+            }
+            if state.evolution > 0.5 {
+                *state.inventory.entry(types::Resource::Gear).or_insert(0) += n;
+            }
+            if state.evolution > 0.7 {
+                *state.inventory.entry(types::Resource::GreenCircuit).or_insert(0) += n;
+            }
+            if state.evolution > 0.9 {
+                *state.inventory.entry(types::Resource::SteelPlate).or_insert(0) += n;
+            }
         }
     }
 
@@ -1041,6 +1062,11 @@ fn simulation_tick(state: &mut GameState) {
             state.toast(format!("*** MILESTONE: {} ***", milestone.name), 120);
             state.toast(format!("+{} resource types rewarded!", milestone.reward.len()), 80);
         }
+
+        // Expand build zone with research milestones.
+        let base_radius = 30.0f32;
+        let bonus = state.research.completed.iter().filter(|&&c| c).count() as f32 * 3.0;
+        state.build_radius = base_radius + bonus;
     }
 }
 
@@ -1682,6 +1708,47 @@ fn draw_ui(state: &GameState, atlas: &SpriteAtlas) {
                 .collect::<Vec<_>>().join("+");
             let flow = format!("{} -> {}", inputs, outputs);
             draw_text(&flow, px + 180.0, ry + 4.0, 12.0, Color::new(0.6, 0.7, 0.6, 0.8));
+        }
+    }
+
+    // --- Achievements screen (N key) ---
+    if state.show_achievements {
+        let sw = screen_width();
+        let sh = screen_height();
+        let pw = (sw * 0.5).min(500.0);
+        let ph = (sh * 0.7).min(450.0);
+        let px = (sw - pw) * 0.5;
+        let py = (sh - ph) * 0.5;
+
+        let (ax, mut ay) = draw_panel(px, py, pw, ph, Some("Achievements"), true);
+
+        let completed = state.milestones_completed.iter().filter(|&&c| c).count();
+        let total = milestones::MILESTONES.len();
+        draw_text(
+            &format!("{}/{} completed", completed, total),
+            ax + 120.0, ay - 6.0, 13.0, text_dim,
+        );
+        ay += 4.0;
+
+        for (i, milestone) in milestones::MILESTONES.iter().enumerate() {
+            if ay > py + ph - 16.0 { break; }
+            let done = state.milestones_completed.get(i).copied().unwrap_or(false);
+            let icon = if done { "[X]" } else { "[ ]" };
+            let color = if done { text_accent } else { text_dim };
+            draw_text(&format!("{} {}", icon, milestone.name), ax, ay, 14.0, color);
+            draw_text(milestone.description, ax + 160.0, ay, 12.0, text_dim);
+            ay += 22.0;
+        }
+
+        // Notification log at bottom.
+        ay += 8.0;
+        draw_text("Recent Notifications:", ax, ay, 13.0, Color::new(0.95, 0.82, 0.35, 0.8));
+        ay += 16.0;
+        let log_start = state.notification_log.len().saturating_sub(6);
+        for msg in &state.notification_log[log_start..] {
+            if ay > py + ph - 8.0 { break; }
+            draw_text(msg, ax, ay, 11.0, text_dim);
+            ay += 14.0;
         }
     }
 

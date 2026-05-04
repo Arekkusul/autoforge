@@ -268,12 +268,24 @@ pub fn draw_world(
                         draw_text("FUEL!", warn_x + 3.0, warn_y + 11.0, 12.0, WHITE);
                     }
 
-                    // "FULL" warning when output buffer is maxed.
-                    if ms.output_buffer.len() >= 8 {
+                    // Status indicators.
+                    if ms.output_buffer.len() >= 8 && ms.progress_ticks == 0 {
+                        // BLOCKED: output full, machine idle — needs belt/inserter to drain output.
+                        let warn_x = world.x + 1.0;
+                        let warn_y = world.y + TILE_SIZE - 16.0;
+                        draw_rectangle(warn_x, warn_y, 52.0, 14.0, Color::new(0.8, 0.2, 0.1, 0.9));
+                        draw_text("BLOCKED", warn_x + 2.0, warn_y + 11.0, 10.0, WHITE);
+                    } else if ms.output_buffer.len() >= 8 {
                         let warn_x = world.x + 2.0;
                         let warn_y = world.y + TILE_SIZE - 16.0;
                         draw_rectangle(warn_x, warn_y, 38.0, 14.0, Color::new(0.7, 0.5, 0.0, 0.9));
                         draw_text("FULL", warn_x + 3.0, warn_y + 11.0, 12.0, WHITE);
+                    } else if ms.progress_ticks == 0 && ms.input_buffer.is_empty() && ms.selected_recipe.is_some() {
+                        // EMPTY: has a recipe but no inputs — needs items fed in.
+                        let warn_x = world.x + 2.0;
+                        let warn_y = world.y + TILE_SIZE - 16.0;
+                        draw_rectangle(warn_x, warn_y, 44.0, 14.0, Color::new(0.3, 0.3, 0.6, 0.8));
+                        draw_text("EMPTY", warn_x + 3.0, warn_y + 11.0, 11.0, WHITE);
                     }
                 }
 

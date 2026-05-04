@@ -26,7 +26,6 @@ pub fn tick_belts(grid: &mut Grid, buildings: &Buildings, items: &mut ItemPool) 
             None => continue,
         };
 
-        // Quick check: is this item even on a belt? Skip if not.
         let item_pos = item.pos;
 
         // Check if this item is on a belt tile.
