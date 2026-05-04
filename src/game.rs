@@ -107,6 +107,10 @@ pub struct GameState {
     pub show_help: bool,
     /// Brief placement flash effect (position + remaining ticks).
     pub placement_flash: Option<(GridPos, u32)>,
+    /// Build zone radius (tiles from map center). Expands with research.
+    pub build_radius: f32,
+    /// Active robot workers (start pos, target pos, progress 0.0-1.0).
+    pub robots: Vec<(macroquad::prelude::Vec2, macroquad::prelude::Vec2, f32)>,
     /// Narrative/story progression state.
     pub story: StoryState,
     /// Seed used for map generation (stored for save/load).
@@ -169,6 +173,8 @@ impl GameState {
             game_won: false,
             show_help: false,
             placement_flash: None,
+            build_radius: 30.0, // Start with 30-tile radius, expands with research
+            robots: Vec::new(),
             story: StoryState::new(),
             seed: actual_seed,
         }

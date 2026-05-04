@@ -174,6 +174,40 @@ async fn main() {
             );
         }
 
+        // Render robot workers (small dots moving from ship to target).
+        for (start, target, progress) in &state.robots {
+            let pos = *start + (*target - *start) * *progress;
+            // Robot body (small cute circle).
+            draw_circle(pos.x, pos.y, 4.0, Color::new(0.4, 0.6, 0.9, 0.9));
+            draw_circle(pos.x, pos.y, 2.0, Color::new(0.7, 0.8, 1.0, 0.9));
+            // Trail.
+            let trail_pos = *start + (*target - *start) * (*progress - 0.05).max(0.0);
+            draw_circle(trail_pos.x, trail_pos.y, 2.0, Color::new(0.4, 0.6, 0.9, 0.4));
+        }
+
+        // Build zone indicator (faint circle around ship).
+        if state.selected_building.is_some() {
+            let center_world = Vec2::new(
+                state.grid.width as f32 * TILE_SIZE * 0.5,
+                state.grid.height as f32 * TILE_SIZE * 0.5,
+            );
+            let radius_world = state.build_radius * TILE_SIZE;
+            // Draw faint circle showing build zone boundary.
+            let segments = 64;
+            for i in 0..segments {
+                let a1 = (i as f32 / segments as f32) * std::f32::consts::TAU;
+                let a2 = ((i + 1) as f32 / segments as f32) * std::f32::consts::TAU;
+                draw_line(
+                    center_world.x + a1.cos() * radius_world,
+                    center_world.y + a1.sin() * radius_world,
+                    center_world.x + a2.cos() * radius_world,
+                    center_world.y + a2.sin() * radius_world,
+                    1.5,
+                    Color::new(0.3, 0.5, 0.9, 0.3),
+                );
+            }
+        }
+
         // Red vignette flash when enemies are actively attacking buildings.
         let enemies_attacking = state.enemies.list.iter()
             .any(|e| e.alive && e.attack_cooldown > 15);
@@ -549,9 +583,18 @@ fn handle_input(state: &mut GameState) {
 
     if should_place {
         if let Some(kind) = state.selected_building {
+            // Check build zone — must be within radius of the ship (map center).
+            let center = types::GridPos::new(state.grid.width / 2, state.grid.height / 2);
+            let dist = grid_pos.distance(center);
+            if dist > state.build_radius {
+                if is_mouse_button_pressed(MouseButton::Left) {
+                    state.toast("Too far from ship! Expand with research.".to_string(), 50);
+                }
+                return;
+            }
+
             // Check if player can afford this building.
             if !buildcost::can_afford(&state.inventory, kind) {
-                // Can't afford — show toast if not spamming.
                 if is_mouse_button_pressed(MouseButton::Left) {
                     state.toast("Not enough resources!".to_string(), 40);
                 }
@@ -620,6 +663,14 @@ fn handle_input(state: &mut GameState) {
                 state.last_placed = Some(grid_pos);
                 state.placement_flash = Some((grid_pos, 10));
                 state.stats.buildings_placed += 1;
+
+                // Spawn robot worker from ship to placement site.
+                let ship_center = macroquad::prelude::Vec2::new(
+                    state.grid.width as f32 * constants::TILE_SIZE * 0.5,
+                    state.grid.height as f32 * constants::TILE_SIZE * 0.5,
+                );
+                let target = grid::Grid::grid_to_world_center(grid_pos);
+                state.robots.push((ship_center, target, 0.0));
                 if kind.is_belt() {
                     state.last_belt_pos = Some(grid_pos);
                 }
@@ -739,6 +790,12 @@ fn simulation_tick(state: &mut GameState) {
 
     // Tick toast notifications.
     state.tick_toasts();
+
+    // Tick robot workers (move from ship to target).
+    for robot in &mut state.robots {
+        robot.2 += 0.05; // 20 ticks to reach target
+    }
+    state.robots.retain(|r| r.2 < 1.0);
 
     // Tick placement flash.
     if let Some((_, ref mut ticks)) = state.placement_flash {

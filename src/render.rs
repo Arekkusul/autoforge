@@ -42,12 +42,12 @@ pub fn draw_world(
 
     let _anim_frame = ((tick / BELT_ANIM_SPEED as u64) % 2) as usize;
 
-    // LOD levels based on zoom + auto-quality reduction if FPS is low.
+    // LOD levels based on zoom + aggressive FPS-based quality reduction.
     let fps = get_fps();
-    let lod = if fps < 30 {
+    let lod = if fps < 25 {
         2 // Force lowest detail if severely lagging
-    } else if fps < 45 && camera.zoom < 0.8 {
-        2 // Drop detail if moderately lagging and zoomed out
+    } else if fps < 40 {
+        1 // Drop to colored rectangles for ground (huge perf win)
     } else if camera.zoom >= 0.8 {
         0
     } else if camera.zoom >= 0.4 {
@@ -510,32 +510,62 @@ pub fn draw_world(
         }
     }
 
-    // --- Crashed ship at map center (story element) ---
+    // --- Crashed ship / base at map center ---
     {
-        let ship_x = grid.width as f32 * TILE_SIZE * 0.5 - TILE_SIZE * 2.0;
-        let ship_y = grid.height as f32 * TILE_SIZE * 0.5 - TILE_SIZE * 1.0;
-        // Only draw if visible.
-        if ship_x >= min_world.x - TILE_SIZE * 4.0
-            && ship_x <= max_world.x + TILE_SIZE * 4.0
-            && ship_y >= min_world.y - TILE_SIZE * 4.0
-            && ship_y <= max_world.y + TILE_SIZE * 4.0
+        let ship_cx = grid.width as f32 * TILE_SIZE * 0.5;
+        let ship_cy = grid.height as f32 * TILE_SIZE * 0.5;
+        let ship_w = TILE_SIZE * 5.0;
+        let ship_h = TILE_SIZE * 3.0;
+        let ship_x = ship_cx - ship_w * 0.5;
+        let ship_y = ship_cy - ship_h * 0.5;
+
+        if ship_x >= min_world.x - ship_w && ship_x <= max_world.x + ship_w
+            && ship_y >= min_world.y - ship_h && ship_y <= max_world.y + ship_h
         {
-            // Ship hull (dark metal rectangle with damage marks).
-            draw_rectangle(ship_x, ship_y, TILE_SIZE * 4.0, TILE_SIZE * 2.0, Color::new(0.25, 0.25, 0.3, 0.9));
-            draw_rectangle_lines(ship_x, ship_y, TILE_SIZE * 4.0, TILE_SIZE * 2.0, 2.0, Color::new(0.4, 0.35, 0.5, 0.8));
-            // Damage scratches.
-            draw_line(ship_x + 10.0, ship_y + 5.0, ship_x + 50.0, ship_y + 30.0, 1.5, Color::new(0.5, 0.3, 0.2, 0.6));
-            draw_line(ship_x + 80.0, ship_y + 10.0, ship_x + 120.0, ship_y + 50.0, 1.5, Color::new(0.5, 0.3, 0.2, 0.6));
-            // Cockpit window (broken).
-            draw_rectangle(ship_x + TILE_SIZE * 3.0, ship_y + TILE_SIZE * 0.3, TILE_SIZE * 0.8, TILE_SIZE * 0.6, Color::new(0.2, 0.3, 0.5, 0.7));
+            // Shadow beneath ship.
+            draw_rectangle(ship_x + 5.0, ship_y + ship_h - 4.0, ship_w - 10.0, 8.0,
+                Color::new(0.0, 0.0, 0.0, 0.3));
+
+            // Hull — rounded shape using overlapping rectangles.
+            let hull_color = Color::new(0.2, 0.2, 0.28, 1.0);
+            let hull_light = Color::new(0.3, 0.3, 0.38, 1.0);
+            let hull_dark = Color::new(0.12, 0.12, 0.18, 1.0);
+            draw_rectangle(ship_x + 10.0, ship_y + 5.0, ship_w - 20.0, ship_h - 10.0, hull_color);
+            draw_rectangle(ship_x + 5.0, ship_y + 10.0, ship_w - 10.0, ship_h - 20.0, hull_color);
+            // Top highlight.
+            draw_rectangle(ship_x + 15.0, ship_y + 5.0, ship_w - 30.0, 6.0, hull_light);
+            // Bottom shadow.
+            draw_rectangle(ship_x + 15.0, ship_y + ship_h - 12.0, ship_w - 30.0, 6.0, hull_dark);
+
+            // Cockpit window (blue glow — ship is powered).
+            let glow = (tick as f32 * 0.1).sin() * 0.1 + 0.6;
+            draw_rectangle(ship_x + ship_w * 0.7, ship_y + ship_h * 0.25,
+                TILE_SIZE * 1.0, TILE_SIZE * 0.7,
+                Color::new(0.2, 0.4, glow, 0.9));
+            draw_rectangle_lines(ship_x + ship_w * 0.7, ship_y + ship_h * 0.25,
+                TILE_SIZE * 1.0, TILE_SIZE * 0.7, 1.0,
+                Color::new(0.4, 0.5, 0.8, 0.8));
+
+            // Engine exhausts (dark circles at rear).
+            draw_circle(ship_x + 15.0, ship_y + ship_h * 0.35, 8.0, Color::new(0.15, 0.15, 0.2, 0.9));
+            draw_circle(ship_x + 15.0, ship_y + ship_h * 0.65, 8.0, Color::new(0.15, 0.15, 0.2, 0.9));
+
+            // Antenna / sensor array on top.
+            draw_line(ship_cx, ship_y + 2.0, ship_cx, ship_y - 12.0, 2.0, Color::new(0.4, 0.4, 0.5, 0.8));
+            let antenna_glow = (tick as f32 * 0.15).sin() * 0.3 + 0.7;
+            draw_circle(ship_cx, ship_y - 12.0, 3.0, Color::new(0.3, antenna_glow, 0.9, 0.9));
+
+            // Damage marks (scratches across hull).
+            draw_line(ship_x + 30.0, ship_y + 10.0, ship_x + 80.0, ship_y + 35.0, 1.5,
+                Color::new(0.5, 0.3, 0.2, 0.4));
+            draw_line(ship_x + 100.0, ship_y + 15.0, ship_x + 150.0, ship_y + 55.0, 1.5,
+                Color::new(0.5, 0.3, 0.2, 0.3));
+
             // Label.
             if lod == 0 {
-                draw_text("COLONY SHIP WRECK", ship_x + 10.0, ship_y - 5.0, 14.0, Color::new(0.6, 0.5, 0.8, 0.7));
+                draw_text("FORGE BASE", ship_x + ship_w * 0.3, ship_y - 16.0, 16.0,
+                    Color::new(0.7, 0.6, 0.9, 0.8));
             }
-            // Smoke from wreck (animated).
-            let t = tick as f32 * 0.05;
-            draw_circle(ship_x + 30.0, ship_y - 10.0 - (t % 30.0), 4.0 + (t % 30.0) * 0.2, Color::new(0.4, 0.4, 0.4, (1.0 - (t % 30.0) / 30.0) * 0.3));
-            draw_circle(ship_x + 100.0, ship_y - 8.0 - ((t + 15.0) % 30.0), 3.0 + ((t + 15.0) % 30.0) * 0.15, Color::new(0.4, 0.4, 0.4, (1.0 - ((t + 15.0) % 30.0) / 30.0) * 0.25));
         }
     }
 
