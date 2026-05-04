@@ -110,8 +110,12 @@ pub struct GameState {
     pub show_help: bool,
     /// Whether the achievements screen is showing (N key).
     pub show_achievements: bool,
-    /// Whether the production stats screen is showing (P key).
+    /// Whether the production stats screen is showing (V key).
     pub show_stats: bool,
+    /// Blueprint: stored buildings from a copy operation (relative positions + kinds).
+    pub blueprint: Vec<(i32, i32, BuildingKind, Direction)>,
+    /// Whether we're in blueprint paste mode.
+    pub pasting_blueprint: bool,
     /// Brief placement flash effect (position + remaining ticks).
     pub placement_flash: Option<(GridPos, u32)>,
     /// Build zone radius (tiles from map center). Expands with research.
@@ -184,6 +188,8 @@ impl GameState {
             show_help: false,
             show_achievements: false,
             show_stats: false,
+            blueprint: Vec::new(),
+            pasting_blueprint: false,
             placement_flash: None,
             build_radius: 30.0,
             recipe_picker: None,

@@ -329,6 +329,36 @@ fn handle_input(state: &mut GameState) {
         state.show_stats = !state.show_stats;
     }
 
+    // Blueprint: B to copy buildings near cursor, then click to paste.
+    if is_key_pressed(KeyCode::B) {
+        if state.pasting_blueprint {
+            // Cancel paste mode.
+            state.pasting_blueprint = false;
+            state.toast("Blueprint paste cancelled.".to_string(), 40);
+        } else {
+            // Copy buildings within 5 tiles of cursor.
+            let mouse_screen = Vec2::new(mouse_position().0, mouse_position().1);
+            let mouse_world = state.camera.screen_to_world(mouse_screen);
+            let center = grid::Grid::world_to_grid(mouse_world);
+            let mut bp = Vec::new();
+            for (_, b) in state.buildings.iter() {
+                let dx = b.pos.x - center.x;
+                let dy = b.pos.y - center.y;
+                if dx.abs() <= 5 && dy.abs() <= 5 {
+                    bp.push((dx, dy, b.kind, b.direction));
+                }
+            }
+            if bp.is_empty() {
+                state.toast("No buildings to copy nearby.".to_string(), 40);
+            } else {
+                state.toast(format!("Copied {} buildings! Click to paste.", bp.len()), 60);
+                state.blueprint = bp;
+                state.pasting_blueprint = true;
+                state.selected_building = None;
+            }
+        }
+    }
+
     // Home key: center camera on map center (factory area)
     if is_key_pressed(KeyCode::Home) {
         state.camera.target = macroquad::prelude::Vec2::new(
@@ -655,6 +685,33 @@ fn handle_input(state: &mut GameState) {
                 }
             }
         }
+    }
+
+    // Blueprint paste: click to stamp buildings at cursor position.
+    if state.pasting_blueprint && is_mouse_button_pressed(MouseButton::Left) {
+        let mouse_screen = Vec2::new(mouse_position().0, mouse_position().1);
+        let mouse_world = state.camera.screen_to_world(mouse_screen);
+        let center = grid::Grid::world_to_grid(mouse_world);
+        let mut placed = 0u32;
+        for &(dx, dy, kind, dir) in &state.blueprint.clone() {
+            let pos = types::GridPos::new(center.x + dx, center.y + dy);
+            if !buildcost::can_afford(&state.inventory, kind) { continue; }
+            let needs_ms = !kind.is_belt() && !kind.is_underground_belt()
+                && !matches!(kind, types::BuildingKind::Wall | types::BuildingKind::Gate);
+            let b = building::Building {
+                kind, pos, direction: dir,
+                machine_state: if needs_ms { Some(building::MachineState::new()) } else { None },
+                hp: 100.0, max_hp: 100.0, underground_pair: None,
+            };
+            if state.buildings.place(b, &mut state.grid).is_some() {
+                buildcost::pay_cost(&mut state.inventory, kind);
+                placed += 1;
+            }
+        }
+        if placed > 0 {
+            state.toast(format!("Pasted {} buildings!", placed), 60);
+        }
+        state.pasting_blueprint = false;
     }
 
     // Reset belt drag tracking when mouse is released.
@@ -1991,11 +2048,27 @@ fn draw_research_screen(state: &GameState) {
         draw_text("No active research", px + 20.0, py + 80.0, 18.0, Color::new(0.6, 0.6, 0.6, 1.0));
     }
 
-    // Tech list
+    // Tech list with prerequisite lines.
     let start_y = py + 110.0;
     let row_h = 28.0;
     let col1 = px + 20.0;
     let col2 = px + 220.0;
+
+    // Draw prerequisite connection lines FIRST (behind text).
+    for (i, tech) in research::TECHNOLOGIES.iter().enumerate() {
+        let y = start_y + i as f32 * row_h;
+        if y > py + ph - 20.0 { break; }
+        for &prereq in tech.prerequisites {
+            let prereq_y = start_y + prereq as f32 * row_h;
+            let line_color = if state.research.completed[prereq] {
+                Color::new(0.3, 0.6, 0.3, 0.4) // green = satisfied
+            } else {
+                Color::new(0.5, 0.2, 0.2, 0.3) // red = unsatisfied
+            };
+            draw_line(col1 - 5.0, prereq_y, col1 - 5.0, y, 1.5, line_color);
+            draw_line(col1 - 5.0, y, col1, y, 1.5, line_color);
+        }
+    }
 
     for (i, tech) in research::TECHNOLOGIES.iter().enumerate() {
         let y = start_y + i as f32 * row_h;

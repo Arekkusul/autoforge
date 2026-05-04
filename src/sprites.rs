@@ -340,10 +340,10 @@ impl SpriteAtlas {
             inserter: img_to_tex(&make_inserter_sprite()),
 
             // Items
-            item_iron_ore: img_to_tex(&make_item_sprite(6, 7)),
-            item_copper_ore: img_to_tex(&make_item_sprite(7, 28)),
-            item_coal: img_to_tex(&make_item_sprite(27, 2)),
-            item_stone: img_to_tex(&make_item_sprite(25, 26)),
+            item_iron_ore: img_to_tex(&make_item_sprite(14, 16)),    // brown ramp
+            item_copper_ore: img_to_tex(&make_item_sprite(50, 52)), // copper ramp
+            item_coal: img_to_tex(&make_coal_item_sprite()),
+            item_stone: img_to_tex(&make_stone_item_sprite()),
             item_iron_plate: img_to_tex(&make_plate_item_sprite(3, 4)),
             item_copper_plate: img_to_tex(&make_plate_item_sprite(28, 15)),
             item_gear: img_to_tex(&make_gear_item_sprite()),
@@ -985,6 +985,38 @@ fn make_item_sprite(dark: u8, light: u8) -> Image {
         &[1,dark,light,dark,light,dark, 1, 0],
         &[0, 1,dark,dark,dark, 1, 0, 0],
         &[0, 0, 1, 1, 1, 1, 0, 0],
+        &[0, 0, 0, 0, 0, 0, 0, 0],
+    ];
+    make_image(pixels, 8)
+}
+
+/// Coal chunk — dark jagged irregular shape (distinct from round ores).
+fn make_coal_item_sprite() -> Image {
+    #[rustfmt::skip]
+    let pixels: &[&[u8]] = &[
+        &[0, 0, 0, 1, 0, 0, 0, 0],
+        &[0, 0, 1, 1, 1, 0, 0, 0],
+        &[0, 1, 1, 2, 1, 1, 0, 0],
+        &[1, 1, 2, 3, 2, 1, 1, 0],
+        &[0, 1, 1, 2, 1, 1, 0, 0],
+        &[0, 0, 1, 1, 1, 0, 0, 0],
+        &[0, 0, 0, 1, 1, 0, 0, 0],
+        &[0, 0, 0, 0, 0, 0, 0, 0],
+    ];
+    make_image(pixels, 8)
+}
+
+/// Stone piece — flat layered sedimentary shape (visually distinct from ores).
+fn make_stone_item_sprite() -> Image {
+    #[rustfmt::skip]
+    let pixels: &[&[u8]] = &[
+        &[0, 0, 0, 0, 0, 0, 0, 0],
+        &[0,45,46,47,47,46, 0, 0],
+        &[45,46,47,48,47,46,45, 0],
+        &[45,45,46,47,46,45,45, 0],
+        &[0,45,46,47,47,46,45, 0],
+        &[0,45,45,46,46,45, 0, 0],
+        &[0, 0,45,45,45, 0, 0, 0],
         &[0, 0, 0, 0, 0, 0, 0, 0],
     ];
     make_image(pixels, 8)
