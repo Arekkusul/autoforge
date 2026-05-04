@@ -71,6 +71,12 @@ pub struct SaveItem {
 /// Returns the save file path (next to the executable).
 fn save_path() -> PathBuf {
     let mut path = std::env::current_dir().unwrap_or_default();
+    path.push("autoforge_save.bin");
+    path
+}
+
+fn save_path_json() -> PathBuf {
+    let mut path = std::env::current_dir().unwrap_or_default();
     path.push("autoforge_save.json");
     path
 }
@@ -145,9 +151,10 @@ pub fn save_game(state: &GameState) -> bool {
         });
     }
 
-    match serde_json::to_string(&save) {
-        Ok(json) => {
-            if fs::write(save_path(), json).is_ok() {
+    // Save as binary (bincode) — much smaller and faster than JSON.
+    match bincode::serialize(&save) {
+        Ok(bytes) => {
+            if fs::write(save_path(), bytes).is_ok() {
                 return true;
             }
         }
@@ -160,14 +167,19 @@ pub fn save_game(state: &GameState) -> bool {
 ///
 /// Returns `true` on success.
 pub fn load_game(state: &mut GameState) -> bool {
-    let path = save_path();
-    let json = match fs::read_to_string(&path) {
-        Ok(j) => j,
-        Err(_) => return false,
-    };
-    let save: SaveData = match serde_json::from_str(&json) {
-        Ok(s) => s,
-        Err(_) => return false,
+    // Try binary (bincode) first, fall back to JSON for old saves.
+    let save: SaveData = if let Ok(bytes) = fs::read(save_path()) {
+        match bincode::deserialize(&bytes) {
+            Ok(s) => s,
+            Err(_) => return false,
+        }
+    } else if let Ok(json) = fs::read_to_string(save_path_json()) {
+        match serde_json::from_str(&json) {
+            Ok(s) => s,
+            Err(_) => return false,
+        }
+    } else {
+        return false;
     };
 
     // Rebuild grid.
