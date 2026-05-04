@@ -372,30 +372,71 @@ pub fn draw_world(
                 }
             }
 
-            // Belt direction indicator (LOD 0 only — saves 2 triangle draws per belt at LOD 1).
+            // Belt direction indicator with corner detection (LOD 0 only).
             if building.kind.is_belt() && lod == 0 {
                 let center = Vec2::new(world.x + TILE_SIZE * 0.5, world.y + TILE_SIZE * 0.5);
-                let (dx, dy) = building.direction.delta();
+                let dir = building.direction;
+                let (dx, dy) = dir.delta();
                 let dir_vec = Vec2::new(dx as f32, dy as f32);
 
-                // Animated chevron — green if items present, dim yellow if empty.
-                let anim_offset = (tick as f32 * 0.15) % TILE_SIZE;
                 let has_items = !grid.items_at(bpos).is_empty();
                 let chevron_color = if has_items {
-                    Color::new(0.3, 1.0, 0.4, 0.7) // green = flowing
+                    Color::new(0.3, 1.0, 0.4, 0.7)
                 } else {
-                    Color::new(0.8, 0.75, 0.3, 0.4) // dim yellow = idle
+                    Color::new(0.8, 0.75, 0.3, 0.4)
                 };
 
-                // Draw 2 chevron arrows along the belt.
-                for i in 0..2 {
-                    let offset = (anim_offset + i as f32 * TILE_SIZE * 0.5) % TILE_SIZE - TILE_SIZE * 0.5;
-                    let pos = center + dir_vec * offset;
-                    let perp = Vec2::new(-dy as f32, dx as f32) * (TILE_SIZE * 0.2);
-                    let tip = pos + dir_vec * 5.0;
-                    let base1 = pos - dir_vec * 3.0 + perp;
-                    let base2 = pos - dir_vec * 3.0 - perp;
-                    draw_triangle(tip, base1, base2, chevron_color);
+                // Corner detection: check if input comes from the side, not behind.
+                let behind = bpos.neighbor(dir.opposite());
+                let has_input_behind = grid.get_tile(behind)
+                    .and_then(|t| t.building)
+                    .and_then(|bid2| buildings.get(bid2))
+                    .map(|b2| b2.kind.is_belt() && b2.direction == dir)
+                    .unwrap_or(false);
+
+                let left_pos = bpos.neighbor(dir.rotated_ccw());
+                let has_input_left = grid.get_tile(left_pos)
+                    .and_then(|t| t.building)
+                    .and_then(|bid2| buildings.get(bid2))
+                    .map(|b2| b2.kind.is_belt() && b2.direction == dir.rotated_cw())
+                    .unwrap_or(false);
+
+                let right_pos = bpos.neighbor(dir.rotated_cw());
+                let has_input_right = grid.get_tile(right_pos)
+                    .and_then(|t| t.building)
+                    .and_then(|bid2| buildings.get(bid2))
+                    .map(|b2| b2.kind.is_belt() && b2.direction == dir.rotated_ccw())
+                    .unwrap_or(false);
+
+                let is_corner = !has_input_behind && (has_input_left || has_input_right);
+
+                if is_corner {
+                    // Draw a curved arrow for corners.
+                    let from_dir = if has_input_left { dir.rotated_ccw() } else { dir.rotated_cw() };
+                    let (fdx, fdy) = from_dir.delta();
+                    let from_vec = Vec2::new(fdx as f32, fdy as f32);
+
+                    // Draw an L-shaped curve: line from input side to center, then to output.
+                    let edge_in = center - from_vec * (TILE_SIZE * 0.4);
+                    let edge_out = center + dir_vec * (TILE_SIZE * 0.4);
+                    draw_line(edge_in.x, edge_in.y, center.x, center.y, 2.0, chevron_color);
+                    draw_line(center.x, center.y, edge_out.x, edge_out.y, 2.0, chevron_color);
+                    // Arrow tip at output.
+                    let perp = Vec2::new(-dy as f32, dx as f32) * 4.0;
+                    let tip = edge_out + dir_vec * 3.0;
+                    draw_triangle(tip, edge_out + perp, edge_out - perp, chevron_color);
+                } else {
+                    // Straight belt — animated chevrons.
+                    let anim_offset = (tick as f32 * 0.15) % TILE_SIZE;
+                    for i in 0..2 {
+                        let offset = (anim_offset + i as f32 * TILE_SIZE * 0.5) % TILE_SIZE - TILE_SIZE * 0.5;
+                        let pos = center + dir_vec * offset;
+                        let perp = Vec2::new(-dy as f32, dx as f32) * (TILE_SIZE * 0.2);
+                        let tip = pos + dir_vec * 5.0;
+                        let base1 = pos - dir_vec * 3.0 + perp;
+                        let base2 = pos - dir_vec * 3.0 - perp;
+                        draw_triangle(tip, base1, base2, chevron_color);
+                    }
                 }
             }
         } else {
