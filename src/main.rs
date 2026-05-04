@@ -1277,20 +1277,22 @@ fn draw_ui(state: &GameState, atlas: &SpriteAtlas) {
             }
         }
 
-        let panel_h = 12.0 + lines.len() as f32 * 22.0 + 8.0;
-        draw_rectangle(panel_x, 5.0, panel_w, panel_h, panel_bg);
-        draw_rectangle_lines(panel_x, 5.0, panel_w, panel_h, 1.0, panel_border);
-
-        for (i, (text, color)) in lines.iter().enumerate() {
-            draw_text(text, panel_x + 12.0, 26.0 + i as f32 * 22.0, 18.0, *color);
+        // Only show panel if there's meaningful info (skip bare grass tiles).
+        let has_info = tile.deposit.is_some() || tile.building.is_some() || !items_here.is_empty();
+        let panel_h = 8.0 + lines.len() as f32 * 20.0 + 8.0;
+        if has_info || lines.len() > 2 {
+            let (tx, mut ty) = draw_panel(panel_x, 8.0, panel_w, panel_h, None, false);
+            for (text, color) in &lines {
+                draw_text(text, tx, ty + 4.0, 14.0, *color);
+                ty += 20.0;
+            }
         }
     }
 
-    // --- Bottom: categorized toolbar with sprite icons ---
-    let toolbar_h = 80.0;
+    // --- Bottom: Toolbar (unified panel) ---
+    let toolbar_h = 88.0;
     let toolbar_y = screen_height() - toolbar_h;
-    draw_rectangle(0.0, toolbar_y, screen_width(), toolbar_h, panel_bg);
-    draw_line(0.0, toolbar_y, screen_width(), toolbar_y, 2.0, panel_border);
+    draw_panel(0.0, toolbar_y, screen_width(), toolbar_h, None, false);
 
     // Toolbar items: (hotkey label, display name, kind, texture)
     let toolbar_items: Vec<(&str, &str, types::BuildingKind, &Texture2D)> = vec![
@@ -1408,9 +1410,7 @@ fn draw_ui(state: &GameState, atlas: &SpriteAtlas) {
         let mm_y = screen_height() - 210.0 - mm_size; // above toolbar area
         let panel_bg = Color::new(0.06, 0.06, 0.08, 0.9);
 
-        draw_rectangle(mm_x - 4.0, mm_y - 18.0, mm_size + 8.0, mm_size + 22.0, panel_bg);
-        draw_rectangle_lines(mm_x - 4.0, mm_y - 18.0, mm_size + 8.0, mm_size + 22.0, 1.0, Color::new(0.3, 0.25, 0.5, 0.7));
-        draw_text("MAP", mm_x + mm_size * 0.5 - 15.0, mm_y - 4.0, 14.0, Color::new(0.6, 0.55, 0.8, 0.8));
+        draw_panel(mm_x - 4.0, mm_y - 24.0, mm_size + 8.0, mm_size + 32.0, Some("Map"), false);
 
         // Draw a simplified view of the map (each pixel = 4 tiles).
         let tiles_per_pixel = 4;
@@ -1513,16 +1513,14 @@ fn draw_ui(state: &GameState, atlas: &SpriteAtlas) {
         draw_text(line, help_x, help_y + i as f32 * 18.0, 15.0, hint_color);
     }
 
-    // --- Tutorial overlay ---
+    // --- Tutorial overlay (unified panel) ---
     if state.show_tutorial && state.tutorial_step < 6 {
-        let tut_bg = Color::new(0.05, 0.03, 0.1, 0.9);
-        let tut_w = 380.0;
+        let tut_w = 400.0;
         let tut_h = 80.0;
         let tut_x = (screen_width() - tut_w) * 0.5;
         let tut_y = 100.0;
 
-        draw_rectangle(tut_x, tut_y, tut_w, tut_h, tut_bg);
-        draw_rectangle_lines(tut_x, tut_y, tut_w, tut_h, 2.0, Color::new(0.5, 0.4, 0.8, 0.8));
+        draw_panel(tut_x, tut_y, tut_w, tut_h, Some("Tutorial"), true);
 
         let tutorial_text = match state.tutorial_step {
             0 => ("Welcome! Click a building in the toolbar below", "or press 1-8 to select it. Press E for recipes!"),
@@ -1538,65 +1536,46 @@ fn draw_ui(state: &GameState, atlas: &SpriteAtlas) {
         draw_text(tutorial_text.1, tut_x + 15.0, tut_y + 55.0, 16.0, Color::new(0.7, 0.65, 0.85, 0.9));
     }
 
-    // --- Inventory display (left side, below main panel) ---
+    // --- Inventory (left side, below status, compact two-column) ---
     {
-        let inv_x = 5.0;
-        let inv_y = 100.0;
-        let inv_bg = Color::new(0.06, 0.06, 0.08, 0.8);
-        let inv_w = 180.0;
-
-        // Show all resources the player has (dynamic list).
         let all_resources: &[(types::Resource, &str)] = &[
-            (types::Resource::IronPlate, "Iron Plate"),
-            (types::Resource::CopperPlate, "Copper Plate"),
-            (types::Resource::Stone, "Stone"),
-            (types::Resource::Coal, "Coal"),
-            (types::Resource::StoneBrick, "Stone Brick"),
-            (types::Resource::SteelPlate, "Steel Plate"),
-            (types::Resource::Gear, "Gear"),
-            (types::Resource::Wire, "Wire"),
-            (types::Resource::GreenCircuit, "Green Circuit"),
-            (types::Resource::RedCircuit, "Red Circuit"),
-            (types::Resource::BlueCircuit, "Blue Circuit"),
-            (types::Resource::Pipe, "Pipe"),
-            (types::Resource::IronStick, "Iron Stick"),
-            (types::Resource::Sulfur, "Sulfur"),
-            (types::Resource::Plastic, "Plastic"),
-            (types::Resource::Battery, "Battery"),
-            (types::Resource::BasicAmmo, "Ammo"),
-            (types::Resource::ScienceRed, "Red Science"),
-            (types::Resource::ScienceGreen, "Green Science"),
+            (types::Resource::IronPlate, "Fe"), (types::Resource::CopperPlate, "Cu"),
+            (types::Resource::Stone, "Stone"), (types::Resource::Coal, "Coal"),
+            (types::Resource::StoneBrick, "Brick"), (types::Resource::SteelPlate, "Steel"),
+            (types::Resource::Gear, "Gear"), (types::Resource::Wire, "Wire"),
+            (types::Resource::GreenCircuit, "GrnC"), (types::Resource::RedCircuit, "RedC"),
+            (types::Resource::BlueCircuit, "BluC"), (types::Resource::Pipe, "Pipe"),
+            (types::Resource::Sulfur, "Sulf"), (types::Resource::Plastic, "Plst"),
+            (types::Resource::Battery, "Batt"), (types::Resource::BasicAmmo, "Ammo"),
+            (types::Resource::ScienceRed, "RSci"), (types::Resource::ScienceGreen, "GSci"),
         ];
-        // Only show resources the player actually has.
-        let show_resources: Vec<&(types::Resource, &str)> = all_resources
-            .iter()
-            .filter(|(r, _)| state.inventory.get(r).copied().unwrap_or(0) > 0)
-            .collect();
+        let show: Vec<(&types::Resource, &&str, u32)> = all_resources.iter()
+            .filter_map(|(r, n)| {
+                let c = state.inventory.get(r).copied().unwrap_or(0);
+                if c > 0 { Some((r, n, c)) } else { None }
+            }).collect();
 
-        let inv_h = 18.0 + show_resources.len().min(12) as f32 * 16.0;
-        draw_rectangle(inv_x, inv_y, inv_w, inv_h, inv_bg);
+        if !show.is_empty() {
+            let rows = (show.len() + 1) / 2; // two columns
+            let inv_h = 30.0 + rows.min(8) as f32 * 16.0;
+            let (ix, mut iy) = draw_panel(8.0, 112.0, 200.0, inv_h, Some("Inventory"), false);
 
-        draw_text("Inventory", inv_x + 8.0, inv_y + 14.0, 14.0, Color::new(0.7, 0.6, 0.9, 1.0));
-        for (i, (resource, name)) in show_resources.iter().enumerate() {
-            if i >= 12 { break; } // max 12 visible
-            let count = state.inventory.get(resource).copied().unwrap_or(0);
-            let y = inv_y + 28.0 + i as f32 * 16.0;
-            let color = if count > 0 {
-                Color::new(0.85, 0.85, 0.9, 1.0)
-            } else {
-                Color::new(0.4, 0.4, 0.4, 0.6)
-            };
-            draw_text(&format!("{}: {}", name, count), inv_x + 10.0, y, 13.0, color);
+            for chunk in show.chunks(2) {
+                for (col, (_, name, count)) in chunk.iter().enumerate() {
+                    let x = ix + col as f32 * 96.0;
+                    draw_text(&format!("{}: {}", name, count), x, iy + 4.0, 12.0, text_bright);
+                }
+                iy += 16.0;
+            }
         }
     }
 
-    // --- Next Goal Indicator (below inventory on left) ---
+    // --- Goal Panel (below inventory) ---
     {
-        let goal_x = 5.0;
+        let goal_x = 8.0;
         let goal_y = 330.0;
-        let goal_bg = Color::new(0.08, 0.06, 0.14, 0.88);
-        draw_rectangle(goal_x, goal_y, 220.0, 90.0, goal_bg);
-        draw_rectangle_lines(goal_x, goal_y, 220.0, 90.0, 1.0, Color::new(0.4, 0.3, 0.6, 0.5));
+        let (gx, _gy) = draw_panel(goal_x, goal_y, 200.0, 80.0, Some("Goal"), false);
+        let goal_x = gx - 4.0; // re-alias for text positioning
         draw_text("Next Goal:", goal_x + 8.0, goal_y + 16.0, 14.0, Color::new(0.9, 0.7, 0.3, 1.0));
 
         let goal_text = if state.tutorial_step < 5 {
@@ -1659,15 +1638,8 @@ fn draw_ui(state: &GameState, atlas: &SpriteAtlas) {
         let px = (sw - pw) * 0.5;
         let py = (sh - capped_ph) * 0.5;
 
-        // Dark overlay.
         draw_rectangle(0.0, 0.0, sw, sh, Color::new(0.0, 0.0, 0.0, 0.4));
-
-        // Panel.
-        draw_rectangle(px, py, pw, capped_ph, Color::new(0.06, 0.05, 0.1, 0.95));
-        draw_rectangle_lines(px, py, pw, capped_ph, 2.0, Color::new(0.4, 0.3, 0.7, 0.8));
-
-        draw_text("SELECT RECIPE", px + 20.0, py + 25.0, 22.0, Color::new(0.9, 0.8, 0.4, 1.0));
-        draw_close_button(px, py, pw);
+        draw_panel(px, py, pw, capped_ph, Some("Select Recipe"), true);
         draw_text("Click to select, Esc to cancel", px + 20.0, py + 40.0, 12.0,
             Color::new(0.6, 0.6, 0.65, 0.7));
 
@@ -1722,11 +1694,7 @@ fn draw_ui(state: &GameState, atlas: &SpriteAtlas) {
         let px = (sw - pw) * 0.5;
         let py = (sh - ph) * 0.5;
 
-        draw_rectangle(px, py, pw, ph, Color::new(0.05, 0.04, 0.08, 0.95));
-        draw_rectangle_lines(px, py, pw, ph, 2.0, Color::new(0.4, 0.3, 0.7, 0.8));
-        draw_text("AUTOFORGE — HELP (F1 to close)", px + 20.0, py + 30.0, 24.0, Color::new(0.9, 0.8, 0.4, 1.0));
-
-        draw_close_button(px, py, pw);
+        draw_panel(px, py, pw, ph, Some("Help — F1 to close"), true);
         let help = [
             ("BUILDING", ""),
             ("1-9, 0", "Select building from toolbar"),
@@ -1793,17 +1761,13 @@ fn draw_recipe_browser() {
     let px = (sw - pw) * 0.5;
     let py = (sh - ph) * 0.5;
 
-    draw_rectangle(px, py, pw, ph, panel_bg);
-    draw_rectangle_lines(px, py, pw, ph, 2.0, border);
-
-    draw_text("RECIPE BOOK", px + 20.0, py + 32.0, 28.0, Color::new(0.9, 0.7, 1.0, 1.0));
-    draw_close_button(px, py, pw);
+    draw_panel(px, py, pw, ph, Some("Recipe Book — E to close"), true);
     draw_text(
-        "How to build your factory — press E to close",
+        "What goes in, what comes out",
         px + 20.0,
-        py + 52.0,
-        14.0,
-        Color::new(0.6, 0.6, 0.7, 0.8),
+        py + 48.0,
+        13.0,
+        Color::new(0.6, 0.6, 0.7, 0.7),
     );
 
     // Recipe entries.
@@ -1876,13 +1840,7 @@ fn draw_research_screen(state: &GameState) {
     let px = (sw - pw) * 0.5;
     let py = (sh - ph) * 0.5;
 
-    // Background
-    draw_rectangle(px, py, pw, ph, panel_bg);
-    draw_rectangle_lines(px, py, pw, ph, 2.0, border);
-
-    // Title
-    draw_text("RESEARCH", px + 20.0, py + 35.0, 32.0, Color::new(0.4, 0.85, 0.4, 1.0));
-    draw_close_button(px, py, pw);
+    draw_panel(px, py, pw, ph, Some("Research — Tab to close"), true);
     draw_text(
         "Click a technology to start researching. Tab to close.",
         px + 20.0,
