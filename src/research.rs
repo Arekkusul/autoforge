@@ -221,6 +221,38 @@ pub static TECHNOLOGIES: &[Technology] = &[
         description: "Unlocks Electric Furnace (2x speed, no fuel needed)",
         prerequisites: &[12],
     },
+    // 24: Mining Productivity 2 (infinite-style, expensive)
+    Technology {
+        name: "Mining Productivity 2",
+        science_cost: &[Resource::ScienceRed, Resource::ScienceGreen, Resource::ScienceBlue],
+        units_needed: 100,
+        description: "Miners +25% output (stacks with previous)",
+        prerequisites: &[16],
+    },
+    // 25: Turret Damage 2
+    Technology {
+        name: "Turret Damage 2",
+        science_cost: &[Resource::ScienceRed, Resource::ScienceGreen, Resource::ScienceBlue],
+        units_needed: 80,
+        description: "All turrets deal +50% damage",
+        prerequisites: &[14],
+    },
+    // 26: Belt Speed 2
+    Technology {
+        name: "Belt Speed 2",
+        science_cost: &[Resource::ScienceRed, Resource::ScienceGreen],
+        units_needed: 60,
+        description: "All belts move items 25% faster",
+        prerequisites: &[18],
+    },
+    // 27: FORGE Consciousness (endgame research — very expensive)
+    Technology {
+        name: "FORGE Consciousness",
+        science_cost: &[Resource::ScienceRed, Resource::ScienceGreen, Resource::ScienceBlue],
+        units_needed: 500,
+        description: "Restore full consciousness. The final goal.",
+        prerequisites: &[19, 20],
+    },
 ];
 
 /// Tracks which technologies are researched and current research progress.

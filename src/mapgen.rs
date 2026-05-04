@@ -74,6 +74,26 @@ pub fn generate_map(grid: &mut Grid, seed: u64) -> Vec<GridPos> {
     // --- Generate forest patches ---
     generate_forests(grid, &mut rng, cx, cy);
 
+    // --- Scatter crash debris near spawn (cliff tiles in a trail) ---
+    // Creates a visual "crash path" leading to the ship at center.
+    for i in 0..12 {
+        let angle = 2.2 + rng.next_f32() * 0.3; // roughly northwest
+        let dist = 12.0 + i as f32 * 4.0 + rng.next_f32() * 3.0;
+        let dx = cx + (angle.cos() * dist) as i32;
+        let dy = cy + (angle.sin() * dist) as i32;
+        for oy in -1..=1 {
+            for ox in -1..=1 {
+                if rng.next_f32() > 0.5 { continue; }
+                let pos = GridPos::new(dx + ox, dy + oy);
+                if let Some(tile) = grid.get_tile_mut(pos) {
+                    if tile.terrain == Terrain::Grass && tile.deposit.is_none() {
+                        tile.terrain = Terrain::Cliff;
+                    }
+                }
+            }
+        }
+    }
+
     // --- Generate desert patches (sandy areas, less pollution absorption) ---
     for _ in 0..15 {
         let dx = rng.range_i32(40, grid.width - 40);
