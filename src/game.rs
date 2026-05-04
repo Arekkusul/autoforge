@@ -110,6 +110,8 @@ pub struct GameState {
     pub show_help: bool,
     /// Whether the achievements screen is showing (N key).
     pub show_achievements: bool,
+    /// Whether the production stats screen is showing (P key).
+    pub show_stats: bool,
     /// Brief placement flash effect (position + remaining ticks).
     pub placement_flash: Option<(GridPos, u32)>,
     /// Build zone radius (tiles from map center). Expands with research.
@@ -181,6 +183,7 @@ impl GameState {
             game_won: false,
             show_help: false,
             show_achievements: false,
+            show_stats: false,
             placement_flash: None,
             build_radius: 30.0,
             recipe_picker: None,

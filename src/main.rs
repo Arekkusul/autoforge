@@ -287,6 +287,8 @@ fn handle_input(state: &mut GameState) {
     if is_key_pressed(KeyCode::Escape) {
         if state.recipe_picker.is_some() {
             state.recipe_picker = None;
+        } else if state.show_stats {
+            state.show_stats = false;
         } else if state.show_achievements {
             state.show_achievements = false;
         } else if state.show_help {
@@ -320,6 +322,11 @@ fn handle_input(state: &mut GameState) {
     // Toggle achievements screen
     if is_key_pressed(KeyCode::N) {
         state.show_achievements = !state.show_achievements;
+    }
+
+    // Toggle production stats
+    if is_key_pressed(KeyCode::V) {
+        state.show_stats = !state.show_stats;
     }
 
     // Home key: center camera on map center (factory area)
@@ -1708,6 +1715,52 @@ fn draw_ui(state: &GameState, atlas: &SpriteAtlas) {
                 .collect::<Vec<_>>().join("+");
             let flow = format!("{} -> {}", inputs, outputs);
             draw_text(&flow, px + 180.0, ry + 4.0, 12.0, Color::new(0.6, 0.7, 0.6, 0.8));
+        }
+    }
+
+    // --- Production Stats screen (V key) ---
+    if state.show_stats {
+        let sw = screen_width();
+        let sh = screen_height();
+        let pw = (sw * 0.5).min(480.0);
+        let ph = (sh * 0.6).min(400.0);
+        let px = (sw - pw) * 0.5;
+        let py = (sh - ph) * 0.5;
+
+        let (sx, mut sy) = draw_panel(px, py, pw, ph, Some("Production Stats"), true);
+
+        // General stats.
+        let playtime_min = state.stats.total_ticks / 1200;
+        let playtime_sec = (state.stats.total_ticks / 20) % 60;
+        let items_per_min = if state.stats.total_ticks > 0 {
+            state.stats.items_crafted as f32 / (state.stats.total_ticks as f32 / 1200.0)
+        } else { 0.0 };
+
+        draw_text(&format!("Playtime: {}:{:02}", playtime_min, playtime_sec), sx, sy, 14.0, text_bright);
+        sy += 20.0;
+        draw_text(&format!("Items crafted: {}", state.stats.items_crafted), sx, sy, 14.0, text_bright);
+        sy += 20.0;
+        draw_text(&format!("Production rate: {:.1}/min", items_per_min), sx, sy, 14.0, text_accent);
+        sy += 20.0;
+        draw_text(&format!("Buildings placed: {}", state.stats.buildings_placed), sx, sy, 14.0, text_bright);
+        sy += 20.0;
+        draw_text(&format!("Enemies killed: {}", state.stats.enemies_killed), sx, sy, 14.0, text_bright);
+        sy += 20.0;
+        draw_text(&format!("Rockets launched: {}", state.stats.rockets_launched), sx, sy, 14.0, text_bright);
+        sy += 24.0;
+
+        // Building count by type.
+        draw_text("Building Counts:", sx, sy, 14.0, Color::new(0.95, 0.82, 0.35, 0.9));
+        sy += 18.0;
+        let mut counts: std::collections::HashMap<&str, u32> = std::collections::HashMap::new();
+        for (_, b) in state.buildings.iter() {
+            *counts.entry(b.kind.display_name()).or_insert(0) += 1;
+        }
+        let mut sorted: Vec<(&&str, &u32)> = counts.iter().collect();
+        sorted.sort_by(|a, b| b.1.cmp(a.1));
+        for (name, count) in sorted.iter().take(10) {
+            draw_text(&format!("{}: {}", name, count), sx, sy, 13.0, text_dim);
+            sy += 16.0;
         }
     }
 
