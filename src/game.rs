@@ -102,10 +102,14 @@ pub struct GameState {
     pub show_research: bool,
     /// Toast notification messages (text, remaining display ticks).
     pub toasts: Vec<(String, u32)>,
+    /// Notification history (last 20 messages for review).
+    pub notification_log: Vec<String>,
     /// Whether the game has been won (all story complete).
     pub game_won: bool,
     /// Whether the help/keybinds overlay is showing (F1).
     pub show_help: bool,
+    /// Whether the achievements screen is showing (N key).
+    pub show_achievements: bool,
     /// Brief placement flash effect (position + remaining ticks).
     pub placement_flash: Option<(GridPos, u32)>,
     /// Build zone radius (tiles from map center). Expands with research.
@@ -173,8 +177,10 @@ impl GameState {
             game_speed: 1,
             show_research: false,
             toasts: Vec::new(),
+            notification_log: Vec::new(),
             game_won: false,
             show_help: false,
+            show_achievements: false,
             placement_flash: None,
             build_radius: 30.0,
             recipe_picker: None,
@@ -186,8 +192,12 @@ impl GameState {
 
     /// Adds a toast notification that displays for `duration_ticks` simulation ticks.
     pub fn toast(&mut self, message: String, duration_ticks: u32) {
+        // Log for history review.
+        self.notification_log.push(message.clone());
+        if self.notification_log.len() > 30 {
+            self.notification_log.remove(0);
+        }
         self.toasts.push((message, duration_ticks));
-        // Keep max 5 toasts visible.
         if self.toasts.len() > 5 {
             self.toasts.remove(0);
         }

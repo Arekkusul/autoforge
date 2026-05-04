@@ -35,7 +35,7 @@ pub fn building_cost(kind: BuildingKind) -> &'static [(Resource, u32)] {
         BuildingKind::WaterPump => &[(Resource::IronPlate, 2), (Resource::Pipe, 2)],
         BuildingKind::StoneFurnace => &[(Resource::Stone, 5)],
         BuildingKind::SteelFurnace => &[(Resource::SteelPlate, 5), (Resource::StoneBrick, 5)],
-        BuildingKind::ElectricFurnace => &[(Resource::SteelPlate, 10), (Resource::GreenCircuit, 5), (Resource::StoneBrick, 10)],
+        BuildingKind::ElectricFurnace => &[(Resource::IronPlate, 10), (Resource::GreenCircuit, 3), (Resource::StoneBrick, 5)],
         BuildingKind::AssemblerT1 => &[(Resource::IronPlate, 5), (Resource::Gear, 5), (Resource::GreenCircuit, 3)],
         BuildingKind::AssemblerT2 => &[(Resource::IronPlate, 9), (Resource::Gear, 5), (Resource::GreenCircuit, 5)],
         BuildingKind::AssemblerT3 => &[(Resource::SteelPlate, 5), (Resource::Gear, 10), (Resource::GreenCircuit, 10)],
