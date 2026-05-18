@@ -58,15 +58,20 @@ A narrative-driven 2D factory automation game built in Rust. You are **FORGE** â
 - **Bincode save format** (10x smaller than JSON, loads old JSON saves too)
 - **10,000+ lines** of Rust across 31 modules
 
-## Building
+## How to Run
 
 Requires [Rust](https://rustup.rs/) (1.70+).
 
 ```bash
+# Clone and run
+git clone <repo-url>
+cd autoforge
 cargo run --release
 ```
 
-Binary: `target/release/autoforge`
+This builds and launches the game. First build takes a few minutes; subsequent runs are near-instant.
+
+The compiled binary is at `target/release/autoforge` â€” you can run it directly without Cargo.
 
 ## Controls
 
