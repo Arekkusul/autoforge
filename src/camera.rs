@@ -39,6 +39,9 @@ impl GameCamera {
 
     /// Updates pan and zoom based on input. Call once per frame with frame delta time.
     pub fn update(&mut self, dt: f32) {
+        // Cap dt to prevent camera sliding when FPS is low.
+        let dt = dt.min(0.05); // max 50ms per frame for camera (effectively 20 FPS floor)
+
         // --- WASD / arrow key pan ---
         let mut pan = Vec2::ZERO;
         if is_key_down(KeyCode::W) || is_key_down(KeyCode::Up) {

@@ -41,14 +41,14 @@ impl EnemyKind {
     /// Movement speed in world pixels per tick.
     pub fn speed(self) -> f32 {
         match self {
-            EnemyKind::SmallBiter => 0.8,
-            EnemyKind::MediumBiter => 0.7,
-            EnemyKind::BigBiter => 0.5,
-            EnemyKind::BehemothBiter => 0.4,
-            EnemyKind::SmallSpitter => 0.9,
-            EnemyKind::MediumSpitter => 0.7,
-            EnemyKind::BigSpitter => 0.5,
-            EnemyKind::BehemothSpitter => 0.35,
+            EnemyKind::SmallBiter => 1.6,
+            EnemyKind::MediumBiter => 1.4,
+            EnemyKind::BigBiter => 1.0,
+            EnemyKind::BehemothBiter => 0.8,
+            EnemyKind::SmallSpitter => 1.8,
+            EnemyKind::MediumSpitter => 1.4,
+            EnemyKind::BigSpitter => 1.0,
+            EnemyKind::BehemothSpitter => 0.7,
         }
     }
 
@@ -112,6 +112,8 @@ pub struct Enemy {
     /// Ticks until next attack (if adjacent to building).
     pub attack_cooldown: u32,
     pub alive: bool,
+    /// Facing angle in radians (0 = right/east, rotates clockwise in screen space).
+    pub facing: f32,
 }
 
 /// Container for all enemies.
@@ -166,6 +168,7 @@ impl Enemies {
                 hp: kind.max_hp(),
                 attack_cooldown: 0,
                 alive: true,
+                facing: 0.0,
             });
         }
     }
@@ -230,6 +233,8 @@ pub fn tick_enemies(
             let speed = enemy.kind.speed();
             enemy.x += (dx / dist) * speed;
             enemy.y += (dy / dist) * speed;
+            // Face movement direction.
+            enemy.facing = dy.atan2(dx);
         }
 
         // Check if adjacent to a building — attack it.

@@ -44,9 +44,9 @@ pub fn draw_world(
 
     // LOD levels based on zoom + aggressive FPS-based quality reduction.
     let fps = get_fps();
-    let lod = if fps < 25 {
+    let lod = if fps < 30 {
         2 // Force lowest detail if severely lagging
-    } else if fps < 40 {
+    } else if fps < 50 {
         1 // Drop to colored rectangles for ground (huge perf win)
     } else if camera.zoom >= 0.8 {
         0
@@ -149,25 +149,26 @@ pub fn draw_world(
             if let Some(tile) = grid.get_tile(pos) {
                 if tile.ore_origin {
                     if let Some(deposit) = tile.deposit {
-                        let ore_tex = match deposit {
-                            OreDeposit::Iron => &atlas.ore_iron,
-                            OreDeposit::Copper => &atlas.ore_copper,
-                            OreDeposit::Coal => &atlas.ore_coal,
-                            OreDeposit::Stone => &atlas.ore_stone,
-                            OreDeposit::Uranium => &atlas.ore_uranium,
-                            OreDeposit::Tin => &atlas.ore_tin,
-                            OreDeposit::Gold => &atlas.ore_gold,
-                            OreDeposit::Sulfur => &atlas.ore_sulfur,
-                            OreDeposit::Crystal => &atlas.ore_crystal,
-                            OreDeposit::Oil => &atlas.ore_oil,
+                        let ore_src = match deposit {
+                            OreDeposit::Iron => atlas.r_ore_iron,
+                            OreDeposit::Copper => atlas.r_ore_copper,
+                            OreDeposit::Coal => atlas.r_ore_coal,
+                            OreDeposit::Stone => atlas.r_ore_stone,
+                            OreDeposit::Uranium => atlas.r_ore_uranium,
+                            OreDeposit::Tin => atlas.r_ore_tin,
+                            OreDeposit::Gold => atlas.r_ore_gold,
+                            OreDeposit::Sulfur => atlas.r_ore_sulfur,
+                            OreDeposit::Crystal => atlas.r_ore_crystal,
+                            OreDeposit::Oil => atlas.r_ore_oil,
                         };
                         let world = Grid::grid_to_world(pos);
                         draw_texture_ex(
-                            ore_tex,
+                            &atlas.tex,
                             world.x,
                             world.y,
                             WHITE,
                             DrawTextureParams {
+                                source: Some(ore_src),
                                 dest_size: Some(Vec2::splat(TILE_SIZE * 2.0)),
                                 ..Default::default()
                             },
@@ -189,9 +190,57 @@ pub fn draw_world(
         let world = Grid::grid_to_world(bpos);
 
         if lod <= 1 {
-            // Full sprite rendering.
-            let tex = building_texture(building.kind, atlas, _anim_frame);
-            let rotation = direction_to_rotation(building.direction);
+            // Full sprite rendering from unified atlas.
+            // For belts at LOD 0: detect corners for corner sprite.
+            // At LOD 1: skip corner detection (3 neighbor lookups per belt is expensive).
+            let (src_rect, rotation) = if building.kind.is_belt() && lod == 0 {
+                let dir = building.direction;
+                let behind = bpos.neighbor(dir.opposite());
+                let has_input_behind = grid.get_tile(behind)
+                    .and_then(|t| t.building)
+                    .and_then(|bid2| buildings.get(bid2))
+                    .map(|b2| b2.kind.is_belt() && b2.direction == dir)
+                    .unwrap_or(false);
+
+                let left_pos = bpos.neighbor(dir.rotated_ccw());
+                let has_input_left = grid.get_tile(left_pos)
+                    .and_then(|t| t.building)
+                    .and_then(|bid2| buildings.get(bid2))
+                    .map(|b2| b2.kind.is_belt() && b2.direction == dir.rotated_cw())
+                    .unwrap_or(false);
+
+                let right_pos = bpos.neighbor(dir.rotated_cw());
+                let has_input_right = grid.get_tile(right_pos)
+                    .and_then(|t| t.building)
+                    .and_then(|bid2| buildings.get(bid2))
+                    .map(|b2| b2.kind.is_belt() && b2.direction == dir.rotated_ccw())
+                    .unwrap_or(false);
+
+                let is_corner = !has_input_behind && (has_input_left || has_input_right);
+
+                if is_corner {
+                    let corner_src = if has_input_left {
+                        match building.kind {
+                            BuildingKind::BeltYellow => atlas.r_belt_corner_left_yellow[_anim_frame],
+                            BuildingKind::BeltRed => atlas.r_belt_corner_left_red[_anim_frame],
+                            BuildingKind::BeltBlue => atlas.r_belt_corner_left_blue[_anim_frame],
+                            _ => unreachable!(),
+                        }
+                    } else {
+                        match building.kind {
+                            BuildingKind::BeltYellow => atlas.r_belt_corner_right_yellow[_anim_frame],
+                            BuildingKind::BeltRed => atlas.r_belt_corner_right_red[_anim_frame],
+                            BuildingKind::BeltBlue => atlas.r_belt_corner_right_blue[_anim_frame],
+                            _ => unreachable!(),
+                        }
+                    };
+                    (corner_src, direction_to_rotation(dir))
+                } else {
+                    (building_src_rect(building.kind, atlas, _anim_frame), direction_to_rotation(dir))
+                }
+            } else {
+                (building_src_rect(building.kind, atlas, _anim_frame), direction_to_rotation(building.direction))
+            };
 
             // Damage tint: red when HP < 50%, flash when < 25%.
             let hp_ratio = if building.max_hp > 0.0 { building.hp / building.max_hp } else { 1.0 };
@@ -217,11 +266,12 @@ pub fn draw_world(
             };
 
             draw_texture_ex(
-                tex,
+                &atlas.tex,
                 world.x,
                 world.y,
                 tint,
                 DrawTextureParams {
+                    source: Some(src_rect),
                     dest_size: Some(Vec2::splat(TILE_SIZE)),
                     rotation,
                     pivot: Some(Vec2::new(world.x + TILE_SIZE * 0.5, world.y + TILE_SIZE * 0.5)),
@@ -372,73 +422,7 @@ pub fn draw_world(
                 }
             }
 
-            // Belt direction indicator with corner detection (LOD 0 only).
-            if building.kind.is_belt() && lod == 0 {
-                let center = Vec2::new(world.x + TILE_SIZE * 0.5, world.y + TILE_SIZE * 0.5);
-                let dir = building.direction;
-                let (dx, dy) = dir.delta();
-                let dir_vec = Vec2::new(dx as f32, dy as f32);
-
-                let has_items = !grid.items_at(bpos).is_empty();
-                let chevron_color = if has_items {
-                    Color::new(0.3, 1.0, 0.4, 0.7)
-                } else {
-                    Color::new(0.8, 0.75, 0.3, 0.4)
-                };
-
-                // Corner detection: check if input comes from the side, not behind.
-                let behind = bpos.neighbor(dir.opposite());
-                let has_input_behind = grid.get_tile(behind)
-                    .and_then(|t| t.building)
-                    .and_then(|bid2| buildings.get(bid2))
-                    .map(|b2| b2.kind.is_belt() && b2.direction == dir)
-                    .unwrap_or(false);
-
-                let left_pos = bpos.neighbor(dir.rotated_ccw());
-                let has_input_left = grid.get_tile(left_pos)
-                    .and_then(|t| t.building)
-                    .and_then(|bid2| buildings.get(bid2))
-                    .map(|b2| b2.kind.is_belt() && b2.direction == dir.rotated_cw())
-                    .unwrap_or(false);
-
-                let right_pos = bpos.neighbor(dir.rotated_cw());
-                let has_input_right = grid.get_tile(right_pos)
-                    .and_then(|t| t.building)
-                    .and_then(|bid2| buildings.get(bid2))
-                    .map(|b2| b2.kind.is_belt() && b2.direction == dir.rotated_ccw())
-                    .unwrap_or(false);
-
-                let is_corner = !has_input_behind && (has_input_left || has_input_right);
-
-                if is_corner {
-                    // Draw a curved arrow for corners.
-                    let from_dir = if has_input_left { dir.rotated_ccw() } else { dir.rotated_cw() };
-                    let (fdx, fdy) = from_dir.delta();
-                    let from_vec = Vec2::new(fdx as f32, fdy as f32);
-
-                    // Draw an L-shaped curve: line from input side to center, then to output.
-                    let edge_in = center - from_vec * (TILE_SIZE * 0.4);
-                    let edge_out = center + dir_vec * (TILE_SIZE * 0.4);
-                    draw_line(edge_in.x, edge_in.y, center.x, center.y, 2.0, chevron_color);
-                    draw_line(center.x, center.y, edge_out.x, edge_out.y, 2.0, chevron_color);
-                    // Arrow tip at output.
-                    let perp = Vec2::new(-dy as f32, dx as f32) * 4.0;
-                    let tip = edge_out + dir_vec * 3.0;
-                    draw_triangle(tip, edge_out + perp, edge_out - perp, chevron_color);
-                } else {
-                    // Straight belt — animated chevrons.
-                    let anim_offset = (tick as f32 * 0.15) % TILE_SIZE;
-                    for i in 0..2 {
-                        let offset = (anim_offset + i as f32 * TILE_SIZE * 0.5) % TILE_SIZE - TILE_SIZE * 0.5;
-                        let pos = center + dir_vec * offset;
-                        let perp = Vec2::new(-dy as f32, dx as f32) * (TILE_SIZE * 0.2);
-                        let tip = pos + dir_vec * 5.0;
-                        let base1 = pos - dir_vec * 3.0 + perp;
-                        let base2 = pos - dir_vec * 3.0 - perp;
-                        draw_triangle(tip, base1, base2, chevron_color);
-                    }
-                }
-            }
+            // (Belt arrows removed — direction is clear from the sprite texture itself.)
         } else {
             // LOD 2: Simple colored rectangle (very fast).
             let color = building_lod_color(building.kind);
@@ -484,14 +468,15 @@ pub fn draw_world(
             let item_size = TILE_SIZE * 0.65;
 
             if lod == 0 {
-                // Full sprite rendering (no background circle — saves 1 draw call per item).
-                let item_tex = item_texture(item.resource, atlas);
+                // Full sprite rendering from atlas.
+                let item_src = item_src_rect(item.resource, atlas);
                 draw_texture_ex(
-                    item_tex,
+                    &atlas.tex,
                     draw_pos.x - item_size * 0.5,
                     draw_pos.y - item_size * 0.5,
                     WHITE,
                     DrawTextureParams {
+                        source: Some(item_src),
                         dest_size: Some(Vec2::splat(item_size)),
                         ..Default::default()
                     },
@@ -538,13 +523,19 @@ pub fn draw_world(
         };
 
         if lod <= 1 {
+            // Rotate sprite to face movement direction.
+            // Sprite is drawn pointing up (North) by default, so offset by PI/2.
+            let rotation = enemy.facing + std::f32::consts::FRAC_PI_2;
             draw_texture_ex(
-                &atlas.enemy_small_biter,
+                &atlas.tex,
                 ex,
                 ey,
                 tint,
                 DrawTextureParams {
+                    source: Some(atlas.r_enemy_small_biter),
                     dest_size: Some(Vec2::splat(size)),
+                    rotation,
+                    pivot: Some(Vec2::new(enemy.x, enemy.y)),
                     ..Default::default()
                 },
             );
@@ -607,121 +598,35 @@ pub fn draw_world(
         if ship_x >= min_world.x - ship_w && ship_x <= max_world.x + ship_w
             && ship_y >= min_world.y - ship_h && ship_y <= max_world.y + ship_h
         {
-            // CRASHED SHIP — tilted, asymmetric damage, debris, exposed internals.
-            let hull = Color::new(0.2, 0.2, 0.28, 1.0);
-            let hull_hi = Color::new(0.3, 0.3, 0.4, 1.0);
-            let hull_dk = Color::new(0.1, 0.1, 0.16, 1.0);
-            let damage = Color::new(0.35, 0.2, 0.12, 0.7);
-            let exposed = Color::new(0.5, 0.35, 0.15, 0.8);
-            let wire_color = Color::new(0.8, 0.5, 0.1, 0.6);
-            let glow = (tick as f32 * 0.1).sin() * 0.15 + 0.55;
-
-            // Crash crater / scorched ground beneath.
-            draw_ellipse(ship_cx + 10.0, ship_cy + 5.0, ship_w * 0.5, ship_h * 0.4, 0.0,
-                Color::new(0.08, 0.08, 0.06, 0.5));
-
-            // Scattered debris pieces around the crash site.
-            for i in 0..8u32 {
-                let angle = i as f32 * 0.8 + 0.3;
-                let dist = 60.0 + (i as f32 * 17.3).sin().abs() * 40.0;
-                let dx = ship_cx + angle.cos() * dist;
-                let dy = ship_cy + angle.sin() * dist;
-                let sz = 3.0 + (i % 3) as f32 * 2.0;
-                draw_rectangle(dx, dy, sz, sz, hull_dk);
-            }
-
-            // Main hull — tilted ~10 degrees (drawn with offset polygons).
-            let tilt = 8.0; // pixels of vertical offset for tilt effect
-            // Fuselage (main body — slightly tilted).
-            draw_triangle(
-                Vec2::new(ship_x + ship_w * 0.85, ship_cy - tilt * 0.3), // nose (tilted up)
-                Vec2::new(ship_x + ship_w * 0.12, ship_y + ship_h * 0.15),
-                Vec2::new(ship_x + ship_w * 0.12, ship_y + ship_h * 0.85 + tilt),
-                hull,
+            // Pixel art crashed ship sprite (80x48 scaled to 5x3 tiles).
+            draw_texture_ex(
+                &atlas.tex,
+                ship_x,
+                ship_y,
+                WHITE,
+                DrawTextureParams {
+                    source: Some(atlas.r_crashed_ship),
+                    dest_size: Some(Vec2::new(ship_w, ship_h)),
+                    ..Default::default()
+                },
             );
-            // Hull top surface (lighter — catches light).
-            draw_rectangle(ship_x + ship_w * 0.12, ship_y + ship_h * 0.2,
-                ship_w * 0.6, ship_h * 0.25, hull_hi);
-            // Hull bottom (darker shadow).
-            draw_rectangle(ship_x + ship_w * 0.12, ship_cy + ship_h * 0.1 + tilt * 0.5,
-                ship_w * 0.55, ship_h * 0.2, hull_dk);
-
-            // Broken wing stub (top — intact).
-            draw_triangle(
-                Vec2::new(ship_x + ship_w * 0.35, ship_y - 8.0),
-                Vec2::new(ship_x + ship_w * 0.2, ship_y + ship_h * 0.2),
-                Vec2::new(ship_x + ship_w * 0.55, ship_y + ship_h * 0.2),
-                hull,
-            );
-            // Broken wing stub (bottom — snapped off, jagged edge).
-            draw_triangle(
-                Vec2::new(ship_x + ship_w * 0.25, ship_y + ship_h + tilt + 5.0),
-                Vec2::new(ship_x + ship_w * 0.2, ship_y + ship_h * 0.75 + tilt),
-                Vec2::new(ship_x + ship_w * 0.4, ship_y + ship_h * 0.8 + tilt),
-                hull_dk,
-            );
-
-            // Damage breach (hole in hull exposing internals — top right area).
-            draw_rectangle(ship_x + ship_w * 0.5, ship_y + ship_h * 0.2,
-                ship_w * 0.15, ship_h * 0.25, exposed);
-            // Dangling wires from breach.
-            draw_line(ship_x + ship_w * 0.52, ship_y + ship_h * 0.3,
-                ship_x + ship_w * 0.48, ship_y + ship_h * 0.5, 1.5, wire_color);
-            draw_line(ship_x + ship_w * 0.58, ship_y + ship_h * 0.25,
-                ship_x + ship_w * 0.62, ship_y + ship_h * 0.45, 1.0, wire_color);
-
-            // Cockpit (cracked glass, still faintly glowing blue — FORGE is alive).
-            draw_circle(ship_x + ship_w * 0.75, ship_cy - tilt * 0.2, ship_h * 0.16,
-                Color::new(0.15, 0.3, glow * 0.7, 0.8));
-            draw_circle(ship_x + ship_w * 0.75, ship_cy - tilt * 0.2, ship_h * 0.1,
-                Color::new(0.2, 0.4, glow, 0.6));
-            // Crack lines across cockpit glass.
-            draw_line(ship_x + ship_w * 0.72, ship_cy - tilt * 0.2 - 5.0,
-                ship_x + ship_w * 0.78, ship_cy - tilt * 0.2 + 8.0, 1.0,
-                Color::new(0.5, 0.5, 0.6, 0.4));
-
-            // Engine block (rear, partially destroyed).
-            draw_rectangle(ship_x + ship_w * 0.02, ship_y + ship_h * 0.2,
-                ship_w * 0.12, ship_h * 0.6 + tilt, hull_dk);
-            // One engine still smoldering (orange glow).
-            draw_circle(ship_x + ship_w * 0.04, ship_cy + ship_h * 0.15, 5.0,
-                Color::new(0.7, 0.3, 0.05, 0.5));
-
-            // Scorch marks radiating from crash.
-            for i in 0..5 {
-                let a = i as f32 * 1.2 + 0.5;
-                let len = 30.0 + (i as f32 * 7.0);
-                draw_line(ship_cx, ship_cy + tilt * 0.5,
-                    ship_cx + a.cos() * len, ship_cy + tilt * 0.5 + a.sin() * len,
-                    2.0, Color::new(0.15, 0.12, 0.08, 0.3));
-            }
-
-            // Antenna (bent, still transmitting).
-            draw_line(ship_cx + 15.0, ship_y + ship_h * 0.2,
-                ship_cx + 20.0, ship_y - 18.0, 1.5, Color::new(0.35, 0.35, 0.45, 0.7));
-            draw_line(ship_cx + 20.0, ship_y - 18.0,
-                ship_cx + 12.0, ship_y - 25.0, 1.0, Color::new(0.35, 0.35, 0.45, 0.5));
-            let ant_glow = (tick as f32 * 0.2).sin() * 0.4 + 0.6;
-            draw_circle(ship_cx + 12.0, ship_y - 25.0, 3.0,
-                Color::new(0.3, ant_glow, 0.9, 0.8));
 
             // Label.
             if lod == 0 {
-                draw_text("FORGE BASE", ship_cx - 40.0, ship_y - 30.0, 16.0,
+                draw_text("FORGE BASE", ship_cx - 40.0, ship_y - 8.0, 16.0,
                     Color::new(0.7, 0.6, 0.9, 0.8));
-                draw_text("Horizon's Promise", ship_cx - 50.0, ship_y - 16.0, 12.0,
+                draw_text("Horizon's Promise", ship_cx - 50.0, ship_y + 6.0, 12.0,
                     Color::new(0.4, 0.4, 0.5, 0.5));
-                draw_text("[ click for lore ]", ship_cx - 48.0, ship_y + ship_h + tilt + 18.0, 11.0,
+                draw_text("[ click for lore ]", ship_cx - 48.0, ship_y + ship_h + 18.0, 11.0,
                     Color::new(0.5, 0.5, 0.6, 0.4));
             }
 
             // Robot docking area — small idle robots parked near the ship.
             let dock_x = ship_x + ship_w + 8.0;
             let dock_y = ship_cy - 10.0;
-            for i in 0..4 {
+            for i in 0..4u32 {
                 let rx = dock_x + (i % 2) as f32 * 12.0;
                 let ry = dock_y + (i / 2) as f32 * 12.0;
-                // Idle robot (small blue dot, dimmer than active robots).
                 draw_circle(rx, ry, 3.0, Color::new(0.3, 0.45, 0.7, 0.6));
                 draw_circle(rx, ry, 1.5, Color::new(0.5, 0.65, 0.9, 0.5));
             }
@@ -782,15 +687,16 @@ pub fn draw_ghost_preview(
             Color::new(1.0, 0.3, 0.3, 0.5)
         };
 
-        let tex = building_texture(kind, atlas, 0);
+        let src_rect = building_src_rect(kind, atlas, 0);
         let rotation = direction_to_rotation(direction);
 
         draw_texture_ex(
-            tex,
+            &atlas.tex,
             world.x,
             world.y,
             tint,
             DrawTextureParams {
+                source: Some(src_rect),
                 dest_size: Some(Vec2::splat(TILE_SIZE)),
                 rotation,
                 pivot: Some(Vec2::new(
@@ -818,48 +724,67 @@ fn direction_to_rotation(dir: Direction) -> f32 {
     }
 }
 
-/// Selects the appropriate sprite texture for a building kind.
-fn building_texture<'a>(kind: BuildingKind, atlas: &'a SpriteAtlas, anim_frame: usize) -> &'a Texture2D {
+/// Returns the atlas source rect for a building kind.
+fn building_src_rect(kind: BuildingKind, atlas: &SpriteAtlas, anim_frame: usize) -> Rect {
     match kind {
-        BuildingKind::BeltYellow => &atlas.belt_yellow[anim_frame],
-        BuildingKind::BeltRed => &atlas.belt_red[anim_frame],
-        BuildingKind::BeltBlue => &atlas.belt_blue[anim_frame],
-        BuildingKind::Miner | BuildingKind::PumpJack => &atlas.miner,
-        BuildingKind::StoneFurnace => &atlas.stone_furnace,
-        BuildingKind::SteelFurnace => &atlas.steel_furnace,
-        BuildingKind::ElectricFurnace => &atlas.steel_furnace,
+        BuildingKind::BeltYellow => atlas.r_belt_yellow[anim_frame],
+        BuildingKind::BeltRed => atlas.r_belt_red[anim_frame],
+        BuildingKind::BeltBlue => atlas.r_belt_blue[anim_frame],
+        BuildingKind::Miner => atlas.r_miner,
+        BuildingKind::PumpJack => atlas.r_pump_jack,
+        BuildingKind::StoneFurnace => atlas.r_stone_furnace,
+        BuildingKind::SteelFurnace => atlas.r_steel_furnace,
+        BuildingKind::ElectricFurnace => atlas.r_electric_furnace,
         BuildingKind::AssemblerT1 | BuildingKind::AssemblerT2 | BuildingKind::AssemblerT3 => {
-            &atlas.assembler
+            atlas.r_assembler
         }
-        BuildingKind::Lab => &atlas.lab,
-        BuildingKind::Boiler => &atlas.boiler,
-        BuildingKind::SteamEngine => &atlas.steam_engine,
-        BuildingKind::SolarPanel => &atlas.solar_panel,
-        BuildingKind::StorageChest => &atlas.chest,
-        BuildingKind::GunTurret | BuildingKind::LaserTurret => &atlas.gun_turret,
-        BuildingKind::Wall | BuildingKind::Gate => &atlas.wall,
+        BuildingKind::ChemicalPlant => atlas.r_chemical_plant,
+        BuildingKind::OilRefinery => atlas.r_oil_refinery,
+        BuildingKind::Lab => atlas.r_lab,
+        BuildingKind::Boiler => atlas.r_boiler,
+        BuildingKind::SteamEngine => atlas.r_steam_engine,
+        BuildingKind::SolarPanel => atlas.r_solar_panel,
+        BuildingKind::NuclearReactor => atlas.r_nuclear_reactor,
+        BuildingKind::Accumulator => atlas.r_accumulator,
+        BuildingKind::StorageChest => atlas.r_chest,
+        BuildingKind::GunTurret => atlas.r_gun_turret,
+        BuildingKind::LaserTurret => atlas.r_laser_turret,
+        BuildingKind::Wall | BuildingKind::Gate => atlas.r_wall,
         BuildingKind::InserterRegular
         | BuildingKind::InserterLong
         | BuildingKind::InserterFast
-        | BuildingKind::InserterStack => &atlas.inserter,
-        _ => &atlas.chest, // fallback for unimplemented sprites
+        | BuildingKind::InserterStack => atlas.r_inserter,
+        BuildingKind::UndergroundBeltYellow
+        | BuildingKind::UndergroundBeltRed
+        | BuildingKind::UndergroundBeltBlue => atlas.r_underground_belt,
+        BuildingKind::Splitter => atlas.r_splitter,
+        BuildingKind::WaterPump => atlas.r_water_pump,
+        BuildingKind::Centrifuge => atlas.r_chemical_plant,
+        BuildingKind::RocketSilo => atlas.r_rocket_silo,
+        BuildingKind::Radar => atlas.r_radar,
+        BuildingKind::PipeSegment | BuildingKind::UndergroundPipe | BuildingKind::StorageTank => atlas.r_pipe,
+        BuildingKind::RailStraight | BuildingKind::RailCurved => atlas.r_rail,
+        BuildingKind::TrainStop | BuildingKind::RailSignal => atlas.r_train_stop,
+        BuildingKind::Roboport => atlas.r_roboport,
+        BuildingKind::Beacon => atlas.r_beacon,
+        _ => atlas.r_chest,
     }
 }
 
-/// Selects the appropriate sprite texture for an item resource.
-fn item_texture<'a>(resource: Resource, atlas: &'a SpriteAtlas) -> &'a Texture2D {
+/// Returns the atlas source rect for an item resource.
+fn item_src_rect(resource: Resource, atlas: &SpriteAtlas) -> Rect {
     match resource {
-        Resource::IronOre => &atlas.item_iron_ore,
-        Resource::CopperOre => &atlas.item_copper_ore,
-        Resource::Coal => &atlas.item_coal,
-        Resource::Stone => &atlas.item_stone,
-        Resource::IronPlate => &atlas.item_iron_plate,
-        Resource::CopperPlate => &atlas.item_copper_plate,
-        Resource::Gear => &atlas.item_gear,
-        Resource::Wire => &atlas.item_wire,
-        Resource::GreenCircuit => &atlas.item_green_circuit,
-        Resource::ScienceRed => &atlas.item_science_red,
-        _ => &atlas.item_iron_ore, // fallback for items without sprites yet
+        Resource::IronOre => atlas.r_item_iron_ore,
+        Resource::CopperOre => atlas.r_item_copper_ore,
+        Resource::Coal => atlas.r_item_coal,
+        Resource::Stone => atlas.r_item_stone,
+        Resource::IronPlate => atlas.r_item_iron_plate,
+        Resource::CopperPlate => atlas.r_item_copper_plate,
+        Resource::Gear => atlas.r_item_gear,
+        Resource::Wire => atlas.r_item_wire,
+        Resource::GreenCircuit => atlas.r_item_green_circuit,
+        Resource::ScienceRed => atlas.r_item_science_red,
+        _ => atlas.r_item_iron_ore, // fallback for items without sprites yet
     }
 }
 

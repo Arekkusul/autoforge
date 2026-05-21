@@ -125,27 +125,27 @@ pub fn generate_map(grid: &mut Grid, seed: u64) -> Vec<GridPos> {
     place_ore_cluster_2x2(grid, &mut rng, OreDeposit::Coal, cx - 5, cy + 5, 3, 8000);   // SW
     place_ore_cluster_2x2(grid, &mut rng, OreDeposit::Stone, cx + 5, cy + 6, 3, 6000);  // SE
 
-    // Common ores — scattered around the map (fewer, but each is 2×2).
+    // Common ores — scattered abundantly across the map.
     let common_ores = [
-        (OreDeposit::Iron, 10),
-        (OreDeposit::Copper, 10),
-        (OreDeposit::Coal, 8),
-        (OreDeposit::Stone, 6),
+        (OreDeposit::Iron, 20),
+        (OreDeposit::Copper, 18),
+        (OreDeposit::Coal, 15),
+        (OreDeposit::Stone, 12),
     ];
     for (ore, count) in common_ores {
         for _ in 0..count {
-            let nodes = rng.range_i32(2, 5); // 2-5 nodes per cluster
-            let ox = rng.range_i32(30, grid.width - 30);
-            let oy = rng.range_i32(30, grid.height - 30);
-            let amount = rng.range_i32(3000, 10000) as u32;
+            let nodes = rng.range_i32(3, 7); // 3-7 nodes per cluster
+            let ox = rng.range_i32(20, grid.width - 20);
+            let oy = rng.range_i32(20, grid.height - 20);
+            let amount = rng.range_i32(6000, 15000) as u32;
             place_ore_cluster_2x2(grid, &mut rng, ore, ox, oy, nodes, amount);
         }
     }
 
-    // Mid-distance ores — Tin, Sulfur (moderate distance from center).
+    // Mid-distance ores — Tin, Sulfur (moderate distance from center, more abundant).
     let mid_ores = [
-        (OreDeposit::Tin, 8, 50.0, 150.0),
-        (OreDeposit::Sulfur, 6, 60.0, 160.0),
+        (OreDeposit::Tin, 14, 40.0, 160.0),
+        (OreDeposit::Sulfur, 10, 50.0, 170.0),
     ];
     for (ore, count, min_dist, max_dist) in mid_ores {
         for _ in 0..count {
@@ -153,16 +153,16 @@ pub fn generate_map(grid: &mut Grid, seed: u64) -> Vec<GridPos> {
             let dist = min_dist + rng.next_f32() * (max_dist - min_dist);
             let ox = cx + (angle.cos() * dist) as i32;
             let oy = cy + (angle.sin() * dist) as i32;
-            let nodes = rng.range_i32(2, 4);
-            place_ore_cluster_2x2(grid, &mut rng, ore, ox, oy, nodes, 5000);
+            let nodes = rng.range_i32(3, 6);
+            place_ore_cluster_2x2(grid, &mut rng, ore, ox, oy, nodes, 8000);
         }
     }
 
-    // Rare ores — Gold, Crystal, Uranium (far from center).
+    // Rare ores — Gold, Crystal, Uranium (far from center, more plentiful).
     let rare_ores = [
-        (OreDeposit::Gold, 5, 100.0, 200.0),
-        (OreDeposit::Crystal, 5, 90.0, 190.0),
-        (OreDeposit::Uranium, 4, 130.0, 220.0),
+        (OreDeposit::Gold, 10, 80.0, 210.0),
+        (OreDeposit::Crystal, 8, 70.0, 200.0),
+        (OreDeposit::Uranium, 6, 100.0, 230.0),
     ];
     for (ore, count, min_dist, max_dist) in rare_ores {
         for _ in 0..count {
@@ -170,8 +170,8 @@ pub fn generate_map(grid: &mut Grid, seed: u64) -> Vec<GridPos> {
             let dist = min_dist + rng.next_f32() * (max_dist - min_dist);
             let ox = cx + (angle.cos() * dist) as i32;
             let oy = cy + (angle.sin() * dist) as i32;
-            let nodes = rng.range_i32(1, 3);
-            place_ore_cluster_2x2(grid, &mut rng, ore, ox, oy, nodes, 3000);
+            let nodes = rng.range_i32(2, 5);
+            place_ore_cluster_2x2(grid, &mut rng, ore, ox, oy, nodes, 6000);
         }
     }
 

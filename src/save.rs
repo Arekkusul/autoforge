@@ -211,7 +211,7 @@ pub fn load_game(state: &mut GameState) -> bool {
                     progress_ticks: sb.progress_ticks,
                     total_ticks: sb.total_ticks,
                     fuel_ticks: sb.fuel_ticks,
-                    selected_recipe: sb.selected_recipe.map(RecipeId),
+                    selected_recipe: sb.selected_recipe.filter(|&idx| idx < crate::recipe::RECIPES.len()).map(RecipeId),
                 })
             } else {
                 None
