@@ -281,30 +281,41 @@ pub fn tick_machine_output(
             direction,
             direction.rotated_cw(),
             direction.opposite(),
-            direction.rotated_cw().rotated_cw().rotated_cw(),
+            direction.rotated_ccw(),
         ];
 
-        let mut eject_pos = None;
-        for dir in &directions {
-            let check_pos = pos.neighbor(*dir);
-            if let Some(tile) = grid.get_tile(check_pos) {
-                if let Some(check_bid) = tile.building {
-                    if let Some(check_b) = buildings.get(check_bid) {
-                        if check_b.kind.is_belt() && grid.items_at(check_pos).is_empty() {
-                            eject_pos = Some(check_pos);
-                            break;
+        // Eject up to 2 items per tick to prevent output backup.
+        for _ in 0..2 {
+            let has_output = buildings.get(bid)
+                .and_then(|b| b.machine_state.as_ref())
+                .map(|ms| !ms.output_buffer.is_empty())
+                .unwrap_or(false);
+            if !has_output { break; }
+
+            let mut eject_pos = None;
+            for dir in &directions {
+                let check_pos = pos.neighbor(*dir);
+                if let Some(tile) = grid.get_tile(check_pos) {
+                    if let Some(check_bid) = tile.building {
+                        if let Some(check_b) = buildings.get(check_bid) {
+                            if check_b.kind.is_belt() && grid.items_at(check_pos).is_empty() {
+                                eject_pos = Some(check_pos);
+                                break;
+                            }
                         }
                     }
                 }
             }
-        }
 
-        if let Some(out_pos) = eject_pos {
-            let building = buildings.get_mut(bid).unwrap();
-            let ms = building.machine_state.as_mut().unwrap();
-            let resource = ms.output_buffer.remove(0);
-            let item_id = items.spawn(resource, out_pos);
-            grid.add_item_to_tile(out_pos, item_id);
+            if let Some(out_pos) = eject_pos {
+                let building = buildings.get_mut(bid).unwrap();
+                let ms = building.machine_state.as_mut().unwrap();
+                let resource = ms.output_buffer.remove(0);
+                let item_id = items.spawn(resource, out_pos);
+                grid.add_item_to_tile(out_pos, item_id);
+            } else {
+                break; // no space to eject
+            }
         }
     }
 }

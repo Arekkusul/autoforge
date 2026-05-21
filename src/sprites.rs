@@ -119,13 +119,13 @@ pub static PALETTE: [(u8, u8, u8, u8); 64] = [
 /// during the migration. New code should use `atlas.tex` + source rects via the batcher.
 pub struct SpriteAtlas {
     /// The single GPU texture containing ALL sprites (512×512).
-    /// Use this with `source: Some(rect)` in draw_texture_ex for 1 draw call batching.
+    /// All rendering uses this texture with source Rects for zero texture switches.
     pub tex: Texture2D,
     /// Atlas dimensions for UV normalization.
     pub tex_size: Vec2,
 
     // --- Atlas source rects (position of each sprite within `tex`) ---
-    /// Source rects for ground tiles packed in the atlas.
+    // Ground tiles (16×16)
     pub r_ground_grass: Rect,
     pub r_ground_grass_alt: Rect,
     pub r_ground_desert: Rect,
@@ -133,110 +133,92 @@ pub struct SpriteAtlas {
     pub r_ground_water: Rect,
     pub r_ground_water_alt: Rect,
 
-    // --- Legacy individual textures (kept for compatibility, will be removed) ---
-    pub ground_grass: Texture2D,
-    pub ground_grass_alt: Texture2D,
-    pub ground_desert: Texture2D,
-    pub ground_forest: Texture2D,
-    pub ground_water: Texture2D,
-    pub ground_water_alt: Texture2D,
+    // Ore deposits (16×16)
+    pub r_ore_iron: Rect,
+    pub r_ore_copper: Rect,
+    pub r_ore_coal: Rect,
+    pub r_ore_stone: Rect,
+    pub r_ore_uranium: Rect,
+    pub r_ore_tin: Rect,
+    pub r_ore_gold: Rect,
+    pub r_ore_sulfur: Rect,
+    pub r_ore_crystal: Rect,
+    pub r_ore_oil: Rect,
 
-    pub ore_iron: Texture2D,
-    pub ore_copper: Texture2D,
-    pub ore_coal: Texture2D,
-    pub ore_stone: Texture2D,
-    pub ore_uranium: Texture2D,
-    pub ore_tin: Texture2D,
-    pub ore_gold: Texture2D,
-    pub ore_sulfur: Texture2D,
-    pub ore_crystal: Texture2D,
-    pub ore_oil: Texture2D,
+    // Belts (16×16, 2 animation frames each)
+    pub r_belt_yellow: [Rect; 2],
+    pub r_belt_red: [Rect; 2],
+    pub r_belt_blue: [Rect; 2],
+    pub r_belt_corner_left_yellow: [Rect; 2],
+    pub r_belt_corner_left_red: [Rect; 2],
+    pub r_belt_corner_left_blue: [Rect; 2],
+    pub r_belt_corner_right_yellow: [Rect; 2],
+    pub r_belt_corner_right_red: [Rect; 2],
+    pub r_belt_corner_right_blue: [Rect; 2],
 
-    pub belt_yellow: [Texture2D; 2],
-    pub belt_red: [Texture2D; 2],
-    pub belt_blue: [Texture2D; 2],
+    // Machines & structures (16×16)
+    pub r_miner: Rect,
+    pub r_stone_furnace: Rect,
+    pub r_steel_furnace: Rect,
+    pub r_assembler: Rect,
+    pub r_lab: Rect,
+    pub r_boiler: Rect,
+    pub r_steam_engine: Rect,
+    pub r_solar_panel: Rect,
+    pub r_chest: Rect,
+    pub r_gun_turret: Rect,
+    pub r_laser_turret: Rect,
+    pub r_wall: Rect,
+    pub r_inserter: Rect,
+    pub r_underground_belt: Rect,
+    pub r_splitter: Rect,
+    pub r_chemical_plant: Rect,
+    pub r_water_pump: Rect,
+    pub r_oil_refinery: Rect,
+    pub r_nuclear_reactor: Rect,
+    pub r_accumulator: Rect,
+    pub r_radar: Rect,
+    pub r_pipe: Rect,
+    pub r_roboport: Rect,
+    pub r_rail: Rect,
+    pub r_train_stop: Rect,
+    pub r_rocket_silo: Rect,
+    pub r_beacon: Rect,
+    pub r_electric_furnace: Rect,
+    pub r_pump_jack: Rect,
 
-    pub miner: Texture2D,
-    pub stone_furnace: Texture2D,
-    pub steel_furnace: Texture2D,
-    pub assembler: Texture2D,
-    pub lab: Texture2D,
-    pub boiler: Texture2D,
-    pub steam_engine: Texture2D,
-    pub solar_panel: Texture2D,
-    pub chest: Texture2D,
+    // Items (8×8)
+    pub r_item_iron_ore: Rect,
+    pub r_item_copper_ore: Rect,
+    pub r_item_coal: Rect,
+    pub r_item_stone: Rect,
+    pub r_item_iron_plate: Rect,
+    pub r_item_copper_plate: Rect,
+    pub r_item_gear: Rect,
+    pub r_item_wire: Rect,
+    pub r_item_green_circuit: Rect,
+    pub r_item_science_red: Rect,
 
-    pub gun_turret: Texture2D,
-    pub wall: Texture2D,
-    pub inserter: Texture2D,
-
-    pub item_iron_ore: Texture2D,
-    pub item_copper_ore: Texture2D,
-    pub item_coal: Texture2D,
-    pub item_stone: Texture2D,
-    pub item_iron_plate: Texture2D,
-    pub item_copper_plate: Texture2D,
-    pub item_gear: Texture2D,
-    pub item_wire: Texture2D,
-    pub item_green_circuit: Texture2D,
-    pub item_science_red: Texture2D,
-
-    pub enemy_small_biter: Texture2D,
+    // Enemies & special (variable sizes)
+    pub r_enemy_small_biter: Rect,
+    pub r_crashed_ship: Rect,
 }
 
 impl SpriteAtlas {
-    /// Generates all sprite textures from pixel data. Call once at startup.
+    /// Generates all sprites and packs them into a single 512×512 texture atlas.
     ///
-    /// Note on performance: macroquad automatically batches consecutive draws of
-    /// the SAME texture. Since each sprite is a different Texture2D, every sprite
-    /// switch breaks the batch. For maximum performance, a true atlas would pack
-    /// all into one texture. However, macroquad's internal batching is efficient
-    /// enough for <500 on-screen sprites (our typical case with frustum culling).
-    ///
-    /// The real performance wins come from:
-    /// 1. Frustum culling (only draw visible tiles/entities)
-    /// 2. LOD system (fewer draws when zoomed out)
-    /// 3. Frequency-gated simulation (heavy systems run less often)
-    /// 4. Adaptive quality (auto-LOD when FPS drops)
+    /// All rendering uses `atlas.tex` with source `Rect`s — since every draw
+    /// references the same GPU texture, macroquad auto-batches all world rendering
+    /// into ~1 draw call. Zero texture switches.
     pub fn generate() -> Self {
-        // ================================================================
-        // PRODUCTION ASSET PIPELINE
-        // ================================================================
-        // Priority 1: Load from embedded PNG spritesheet (AI-generated art).
-        //   Place a `spritesheet.png` in assets/ and it auto-embeds at compile time.
-        // Priority 2: Fall back to procedural generation (current approach).
-        //
-        // To use AI-generated sprites:
-        //   1. Generate sprites following assets/SPRITESHEET_TEMPLATE.md
-        //   2. Save as assets/spritesheet.png (1024×1024, RGBA PNG)
-        //   3. Uncomment the include_bytes! line below
-        //   4. Rebuild — sprites are now embedded in the binary
-        //
-        // const SPRITESHEET: &[u8] = include_bytes!("../assets/spritesheet.png");
-        // let atlas_tex = Texture2D::from_file_with_format(SPRITESHEET, Some(ImageFormat::Png));
-        // ================================================================
-
-        // Currently using procedural generation (no PNG available yet).
-        // All sprites are packed into a single 512×512 Image at startup.
-        // Each sprite gets a Texture2D created from the SAME atlas image.
-        // Since macroquad batches draws of the same Texture2D, this means
-        // ALL world rendering becomes 1-3 GPU draw calls.
-        //
-        // Architecture: We build ONE big image, upload it ONCE, then create
-        // individual Texture2D handles that all point to the same GPU texture.
-        // macroquad doesn't directly support sub-textures, so we use
-        // draw_texture_ex with source Rects for atlas-based rendering.
-        // ================================================================
-
         let mut atlas_img = Image::gen_image_color(512, 512, Color::new(0.0, 0.0, 0.0, 0.0));
 
-        // Pack white pixel at (0,0) for solid rect rendering.
+        // Pack white pixel at (0,0) for solid rect rendering via batcher.
         atlas_img.set_pixel(0, 0, WHITE);
         atlas_img.set_pixel(1, 0, WHITE);
         atlas_img.set_pixel(0, 1, WHITE);
         atlas_img.set_pixel(1, 1, WHITE);
 
-        // Helper: blit a sprite image into the atlas at the given position.
         fn blit(atlas: &mut Image, sprite: &Image, ax: u32, ay: u32) {
             for y in 0..sprite.height() as u32 {
                 for x in 0..sprite.width() as u32 {
@@ -248,111 +230,181 @@ impl SpriteAtlas {
             }
         }
 
-        // Generate all sprite images and blit them into the atlas.
-        // Layout: row 0 (y=0): ground tiles (16×16 each, 6 tiles = 96px)
-        //         row 1 (y=17): ore sprites (16×16 each, 10 tiles = 160px)
-        //         row 2 (y=34): machines (16×16 each, 12 tiles = 192px)
-        //         row 3 (y=51): belts (16×16 each, 6 tiles = 96px)
-        //         row 4 (y=68): items (8×8 each, 10 items = 80px)
-        //         row 5 (y=77): enemies (12×12 each)
-
-        // Row 0: Ground (start at x=2 to avoid white pixel area)
-        let imgs_ground = [
-            make_ground_image(10, 11, 12),  // grass (new green ramp)
-            make_ground_image(10, 12, 11),  // grass alt
-            make_ground_image(16, 15, 14),  // desert (brown ramp)
-            make_forest_image(),           // forest
-            make_water_image(12, 13),      // water
-            make_water_image(13, 12),      // water alt
-        ];
-        for (i, img) in imgs_ground.iter().enumerate() {
-            blit(&mut atlas_img, img, (i as u32 * 17) + 4, 0);
+        /// Blit a sprite and return its source Rect.
+        fn pack(atlas: &mut Image, sprite: &Image, ax: u32, ay: u32) -> Rect {
+            blit(atlas, sprite, ax, ay);
+            Rect::new(ax as f32, ay as f32, sprite.width() as f32, sprite.height() as f32)
         }
 
-        // Upload the atlas ONCE.
+        // Atlas layout (512×512, 1px padding between rows):
+        //   Row 0 (y=0):   ground tiles, 16×16, 6 sprites
+        //   Row 1 (y=17):  ore deposits, 16×16, 10 sprites
+        //   Row 2 (y=34):  machines/structures, 16×16, 12 sprites
+        //   Row 3 (y=51):  belts straight, 16×16, 6 sprites (3 colors × 2 frames)
+        //   Row 4 (y=68):  belt corners left, 16×16, 6 sprites
+        //   Row 5 (y=85):  belt corners right, 16×16, 6 sprites
+        //   Row 6 (y=102): items, 8×8, 10 sprites
+        //   Row 7 (y=111): enemy 12×12 + crashed ship 80×48
+
+        let s = 17u32; // stride for 16×16 sprites (16 + 1px padding)
+
+        // Row 0: Ground (start at x=4 to avoid white pixel area)
+        let r_ground_grass     = pack(&mut atlas_img, &make_ground_image(10, 11, 12), 4, 0);
+        let r_ground_grass_alt = pack(&mut atlas_img, &make_ground_image(10, 12, 11), 4 + s, 0);
+        let r_ground_desert    = pack(&mut atlas_img, &make_ground_image(16, 15, 14), 4 + s*2, 0);
+        let r_ground_forest    = pack(&mut atlas_img, &make_forest_image(), 4 + s*3, 0);
+        let r_ground_water     = pack(&mut atlas_img, &make_water_image(25, 27), 4 + s*4, 0);
+        let r_ground_water_alt = pack(&mut atlas_img, &make_water_image(26, 28), 4 + s*5, 0);
+
+        // Row 1: Ore deposits
+        let y1 = 17u32;
+        let r_ore_iron    = pack(&mut atlas_img, &make_ore_sprite(6, 7), 0, y1);
+        let r_ore_copper  = pack(&mut atlas_img, &make_ore_sprite(7, 28), s, y1);
+        let r_ore_coal    = pack(&mut atlas_img, &make_ore_sprite(27, 2), s*2, y1);
+        let r_ore_stone   = pack(&mut atlas_img, &make_ore_sprite(25, 26), s*3, y1);
+        let r_ore_uranium = pack(&mut atlas_img, &make_ore_sprite(22, 9), s*4, y1);
+        let r_ore_tin     = pack(&mut atlas_img, &make_ore_sprite(4, 5), s*5, y1);
+        let r_ore_gold    = pack(&mut atlas_img, &make_ore_sprite(30, 16), s*6, y1);
+        let r_ore_sulfur  = pack(&mut atlas_img, &make_ore_sprite(16, 31), s*7, y1);
+        let r_ore_crystal = pack(&mut atlas_img, &make_ore_sprite(19, 5), s*8, y1);
+        let r_ore_oil     = pack(&mut atlas_img, &make_oil_sprite(), s*9, y1);
+
+        // Row 2: Machines & structures
+        let y2 = 34u32;
+        let r_miner         = pack(&mut atlas_img, &make_miner_sprite(), 0, y2);
+        let r_stone_furnace = pack(&mut atlas_img, &make_stone_furnace_sprite(), s, y2);
+        let r_steel_furnace = pack(&mut atlas_img, &make_steel_furnace_sprite(), s*2, y2);
+        let r_assembler     = pack(&mut atlas_img, &make_assembler_sprite(), s*3, y2);
+        let r_lab           = pack(&mut atlas_img, &make_lab_sprite(), s*4, y2);
+        let r_boiler        = pack(&mut atlas_img, &make_boiler_sprite(), s*5, y2);
+        let r_steam_engine  = pack(&mut atlas_img, &make_steam_engine_sprite(), s*6, y2);
+        let r_solar_panel   = pack(&mut atlas_img, &make_solar_panel_sprite(), s*7, y2);
+        let r_chest         = pack(&mut atlas_img, &make_chest_sprite(), s*8, y2);
+        let r_gun_turret    = pack(&mut atlas_img, &make_gun_turret_sprite(), s*9, y2);
+        let r_wall          = pack(&mut atlas_img, &make_wall_sprite(), s*10, y2);
+        let r_inserter      = pack(&mut atlas_img, &make_inserter_sprite(), s*11, y2);
+
+        // Row 3: Belts straight (3 colors × 2 frames)
+        let y3 = 51u32;
+        let r_belt_yellow = [
+            pack(&mut atlas_img, &make_belt_sprite(17, 16, 0), 0, y3),
+            pack(&mut atlas_img, &make_belt_sprite(17, 16, 1), s, y3),
+        ];
+        let r_belt_red = [
+            pack(&mut atlas_img, &make_belt_sprite(10, 11, 0), s*2, y3),
+            pack(&mut atlas_img, &make_belt_sprite(10, 11, 1), s*3, y3),
+        ];
+        let r_belt_blue = [
+            pack(&mut atlas_img, &make_belt_sprite(12, 13, 0), s*4, y3),
+            pack(&mut atlas_img, &make_belt_sprite(12, 13, 1), s*5, y3),
+        ];
+
+        // Row 4: Belt corners left
+        let y4 = 68u32;
+        let r_belt_corner_left_yellow = [
+            pack(&mut atlas_img, &make_belt_corner_sprite(17, 16, 0, false), 0, y4),
+            pack(&mut atlas_img, &make_belt_corner_sprite(17, 16, 1, false), s, y4),
+        ];
+        let r_belt_corner_left_red = [
+            pack(&mut atlas_img, &make_belt_corner_sprite(10, 11, 0, false), s*2, y4),
+            pack(&mut atlas_img, &make_belt_corner_sprite(10, 11, 1, false), s*3, y4),
+        ];
+        let r_belt_corner_left_blue = [
+            pack(&mut atlas_img, &make_belt_corner_sprite(12, 13, 0, false), s*4, y4),
+            pack(&mut atlas_img, &make_belt_corner_sprite(12, 13, 1, false), s*5, y4),
+        ];
+
+        // Row 5: Belt corners right
+        let y5 = 85u32;
+        let r_belt_corner_right_yellow = [
+            pack(&mut atlas_img, &make_belt_corner_sprite(17, 16, 0, true), 0, y5),
+            pack(&mut atlas_img, &make_belt_corner_sprite(17, 16, 1, true), s, y5),
+        ];
+        let r_belt_corner_right_red = [
+            pack(&mut atlas_img, &make_belt_corner_sprite(10, 11, 0, true), s*2, y5),
+            pack(&mut atlas_img, &make_belt_corner_sprite(10, 11, 1, true), s*3, y5),
+        ];
+        let r_belt_corner_right_blue = [
+            pack(&mut atlas_img, &make_belt_corner_sprite(12, 13, 0, true), s*4, y5),
+            pack(&mut atlas_img, &make_belt_corner_sprite(12, 13, 1, true), s*5, y5),
+        ];
+
+        // Row 6: Items (8×8, stride=9)
+        let y6 = 102u32;
+        let si = 9u32;
+        let r_item_iron_ore     = pack(&mut atlas_img, &make_item_sprite(14, 16), 0, y6);
+        let r_item_copper_ore   = pack(&mut atlas_img, &make_item_sprite(50, 52), si, y6);
+        let r_item_coal         = pack(&mut atlas_img, &make_coal_item_sprite(), si*2, y6);
+        let r_item_stone        = pack(&mut atlas_img, &make_stone_item_sprite(), si*3, y6);
+        let r_item_iron_plate   = pack(&mut atlas_img, &make_plate_item_sprite(3, 4), si*4, y6);
+        let r_item_copper_plate = pack(&mut atlas_img, &make_plate_item_sprite(28, 15), si*5, y6);
+        let r_item_gear         = pack(&mut atlas_img, &make_gear_item_sprite(), si*6, y6);
+        let r_item_wire         = pack(&mut atlas_img, &make_wire_item_sprite(), si*7, y6);
+        let r_item_green_circuit = pack(&mut atlas_img, &make_circuit_item_sprite(), si*8, y6);
+        let r_item_science_red  = pack(&mut atlas_img, &make_flask_item_sprite(10, 11), si*9, y6);
+
+        // Row 7: Enemy + crashed ship
+        let y7 = 111u32;
+        let r_enemy_small_biter = pack(&mut atlas_img, &make_enemy_sprite(23, 24), 0, y7);
+        let r_crashed_ship      = pack(&mut atlas_img, &make_crashed_ship_sprite(), 14, y7);
+
+        // Row 8-9: Additional buildings (16×16)
+        let y8 = 160u32;
+        let r_underground_belt = pack(&mut atlas_img, &make_underground_belt_sprite(), 0, y8);
+        let r_splitter         = pack(&mut atlas_img, &make_splitter_sprite(), s, y8);
+        let r_chemical_plant   = pack(&mut atlas_img, &make_chemical_plant_sprite(), s*2, y8);
+        let r_water_pump       = pack(&mut atlas_img, &make_water_pump_sprite(), s*3, y8);
+        let r_oil_refinery     = pack(&mut atlas_img, &make_oil_refinery_sprite(), s*4, y8);
+        let r_nuclear_reactor  = pack(&mut atlas_img, &make_nuclear_reactor_sprite(), s*5, y8);
+        let r_accumulator      = pack(&mut atlas_img, &make_accumulator_sprite(), s*6, y8);
+        let r_radar            = pack(&mut atlas_img, &make_radar_sprite(), s*7, y8);
+        let r_pipe             = pack(&mut atlas_img, &make_pipe_sprite(), s*8, y8);
+        let r_roboport         = pack(&mut atlas_img, &make_roboport_sprite(), s*9, y8);
+
+        let y9 = 177u32;
+        let r_rail             = pack(&mut atlas_img, &make_rail_sprite(), 0, y9);
+        let r_train_stop       = pack(&mut atlas_img, &make_train_stop_sprite(), s, y9);
+        let r_rocket_silo      = pack(&mut atlas_img, &make_rocket_silo_sprite(), s*2, y9);
+        let r_beacon           = pack(&mut atlas_img, &make_beacon_sprite(), s*3, y9);
+        let r_electric_furnace = pack(&mut atlas_img, &make_electric_furnace_sprite(), s*4, y9);
+        let r_pump_jack        = pack(&mut atlas_img, &make_pump_jack_sprite(), s*5, y9);
+        let r_laser_turret     = pack(&mut atlas_img, &make_laser_turret_sprite(), s*6, y9);
+
+        // Export atlas as PNG for inspection / art replacement.
+        atlas_img.export_png("assets/spritesheet.png");
+
+        // Upload to GPU as single texture.
         let atlas_tex = Texture2D::from_image(&atlas_img);
         atlas_tex.set_filter(FilterMode::Nearest);
 
-        // For backward compatibility, still create individual textures.
-        // These will be REMOVED once render.rs is fully migrated to atlas source rects.
         Self {
             tex: atlas_tex,
             tex_size: Vec2::new(512.0, 512.0),
 
-            // Atlas source rects for ground tiles (packed at row 0, starting x=4).
-            r_ground_grass: Rect::new(4.0, 0.0, 16.0, 16.0),
-            r_ground_grass_alt: Rect::new(21.0, 0.0, 16.0, 16.0),
-            r_ground_desert: Rect::new(38.0, 0.0, 16.0, 16.0),
-            r_ground_forest: Rect::new(55.0, 0.0, 16.0, 16.0),
-            r_ground_water: Rect::new(72.0, 0.0, 16.0, 16.0),
-            r_ground_water_alt: Rect::new(89.0, 0.0, 16.0, 16.0),
+            r_ground_grass, r_ground_grass_alt, r_ground_desert,
+            r_ground_forest, r_ground_water, r_ground_water_alt,
 
-            // Legacy textures (backward compat).
-            ground_grass: make_ground_sprite(10, 11, 12),      // New green ramp
-            ground_grass_alt: make_ground_sprite(10, 12, 11),  // Variant
-            ground_desert: make_ground_sprite(16, 15, 14),     // Brown/tan ramp
-            ground_forest: make_forest_sprite(),
-            ground_water: make_water_sprite(12, 13),
-            ground_water_alt: make_water_sprite(13, 12),
+            r_ore_iron, r_ore_copper, r_ore_coal, r_ore_stone,
+            r_ore_uranium, r_ore_tin, r_ore_gold, r_ore_sulfur,
+            r_ore_crystal, r_ore_oil,
 
-            // Ore overlays
-            ore_iron: img_to_tex(&make_ore_sprite(6, 7)),
-            ore_copper: img_to_tex(&make_ore_sprite(7, 28)),
-            ore_coal: img_to_tex(&make_ore_sprite(27, 2)),
-            ore_stone: img_to_tex(&make_ore_sprite(25, 26)),
-            ore_uranium: img_to_tex(&make_ore_sprite(22, 9)),
-            ore_tin: img_to_tex(&make_ore_sprite(4, 5)),      // silver-white
-            ore_gold: img_to_tex(&make_ore_sprite(30, 16)),   // gold-yellow
-            ore_sulfur: img_to_tex(&make_ore_sprite(16, 31)),  // bright yellow
-            ore_crystal: img_to_tex(&make_ore_sprite(19, 5)),  // purple-white
-            ore_oil: img_to_tex(&make_oil_sprite()),
+            r_belt_yellow, r_belt_red, r_belt_blue,
+            r_belt_corner_left_yellow, r_belt_corner_left_red, r_belt_corner_left_blue,
+            r_belt_corner_right_yellow, r_belt_corner_right_red, r_belt_corner_right_blue,
 
-            // Belts
-            belt_yellow: [
-                img_to_tex(&make_belt_sprite(17, 16, 0)),
-                img_to_tex(&make_belt_sprite(17, 16, 1)),
-            ],
-            belt_red: [
-                img_to_tex(&make_belt_sprite(10, 11, 0)),
-                img_to_tex(&make_belt_sprite(10, 11, 1)),
-            ],
-            belt_blue: [
-                img_to_tex(&make_belt_sprite(12, 13, 0)),
-                img_to_tex(&make_belt_sprite(12, 13, 1)),
-            ],
+            r_miner, r_stone_furnace, r_steel_furnace, r_assembler,
+            r_lab, r_boiler, r_steam_engine, r_solar_panel, r_chest,
+            r_gun_turret, r_laser_turret, r_wall, r_inserter,
+            r_underground_belt, r_splitter, r_chemical_plant, r_water_pump,
+            r_oil_refinery, r_nuclear_reactor, r_accumulator, r_radar,
+            r_pipe, r_roboport, r_rail, r_train_stop, r_rocket_silo,
+            r_beacon, r_electric_furnace, r_pump_jack,
 
-            // Machines
-            miner: img_to_tex(&make_miner_sprite()),
-            stone_furnace: img_to_tex(&make_stone_furnace_sprite()),
-            steel_furnace: img_to_tex(&make_steel_furnace_sprite()),
-            assembler: img_to_tex(&make_assembler_sprite()),
-            lab: img_to_tex(&make_lab_sprite()),
-            boiler: img_to_tex(&make_boiler_sprite()),
-            steam_engine: img_to_tex(&make_steam_engine_sprite()),
-            solar_panel: img_to_tex(&make_solar_panel_sprite()),
-            chest: img_to_tex(&make_chest_sprite()),
+            r_item_iron_ore, r_item_copper_ore, r_item_coal, r_item_stone,
+            r_item_iron_plate, r_item_copper_plate, r_item_gear, r_item_wire,
+            r_item_green_circuit, r_item_science_red,
 
-            // Military
-            gun_turret: img_to_tex(&make_gun_turret_sprite()),
-            wall: img_to_tex(&make_wall_sprite()),
-
-            // Inserter
-            inserter: img_to_tex(&make_inserter_sprite()),
-
-            // Items
-            item_iron_ore: img_to_tex(&make_item_sprite(14, 16)),    // brown ramp
-            item_copper_ore: img_to_tex(&make_item_sprite(50, 52)), // copper ramp
-            item_coal: img_to_tex(&make_coal_item_sprite()),
-            item_stone: img_to_tex(&make_stone_item_sprite()),
-            item_iron_plate: img_to_tex(&make_plate_item_sprite(3, 4)),
-            item_copper_plate: img_to_tex(&make_plate_item_sprite(28, 15)),
-            item_gear: img_to_tex(&make_gear_item_sprite()),
-            item_wire: img_to_tex(&make_wire_item_sprite()),
-            item_green_circuit: img_to_tex(&make_circuit_item_sprite()),
-            item_science_red: img_to_tex(&make_flask_item_sprite(10, 11)),
-
-            // Enemies
-            enemy_small_biter: img_to_tex(&make_enemy_sprite(23, 24)),
+            r_enemy_small_biter, r_crashed_ship,
         }
     }
 }
@@ -361,14 +413,25 @@ impl SpriteAtlas {
 // Internal sprite generation helpers
 // ===========================================================================
 
-/// Converts an Image to a Texture2D with nearest-neighbor filtering.
-fn img_to_tex(img: &Image) -> Texture2D {
-    let tex = Texture2D::from_image(img);
-    tex.set_filter(FilterMode::Nearest);
-    tex
+/// Creates an [`Image`] from a 2D grid of palette indices at the given size.
+fn make_image_rect(pixels: &[&[u8]], width: u16, height: u16) -> Image {
+    let mut image = Image::gen_image_color(width, height, Color::new(0.0, 0.0, 0.0, 0.0));
+    for (y, row) in pixels.iter().enumerate() {
+        for (x, &idx) in row.iter().enumerate() {
+            if idx == 0 || x >= width as usize || y >= height as usize {
+                continue;
+            }
+            let (r, g, b, a) = PALETTE[idx as usize];
+            image.set_pixel(
+                x as u32,
+                y as u32,
+                Color::new(r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0, a as f32 / 255.0),
+            );
+        }
+    }
+    image
 }
 
-/// Creates an [`Image`] from a 2D grid of palette indices at the given size.
 fn make_image(pixels: &[&[u8]], size: u16) -> Image {
     let mut image = Image::gen_image_color(size, size, Color::new(0.0, 0.0, 0.0, 0.0));
 
@@ -395,14 +458,6 @@ fn make_image(pixels: &[&[u8]], size: u16) -> Image {
 }
 
 /// Creates a [`Texture2D`] from a 2D grid of palette indices.
-/// Wrapper around make_image for backward compatibility.
-fn make_texture(pixels: &[&[u8]], size: u16) -> Texture2D {
-    let image = make_image(pixels, size);
-    let tex = Texture2D::from_image(&image);
-    tex.set_filter(FilterMode::Nearest);
-    tex
-}
-
 /// Creates a high-quality ground tile with Bayer dithering, subtle texture variation,
 /// and occasional tiny detail pixels (flowers/pebbles).
 fn make_ground_image(base: u8, highlight: u8, alt: u8) -> Image {
@@ -507,69 +562,6 @@ fn make_water_image(base: u8, highlight: u8) -> Image {
     make_image(&row_refs, 16)
 }
 
-fn make_ground_sprite(base: u8, highlight: u8, alt: u8) -> Texture2D {
-    let mut rows: Vec<Vec<u8>> = Vec::new();
-    for y in 0..16u8 {
-        let mut row = Vec::new();
-        for x in 0..16u8 {
-            let hash = ((x as u16).wrapping_mul(7) + (y as u16).wrapping_mul(13)) % 17;
-            let pixel = if hash == 0 {
-                highlight
-            } else if hash == 3 {
-                alt
-            } else {
-                base
-            };
-            row.push(pixel);
-        }
-        rows.push(row);
-    }
-    let row_refs: Vec<&[u8]> = rows.iter().map(|r| r.as_slice()).collect();
-    make_texture(&row_refs, 16)
-}
-
-/// Creates a forest ground sprite — visually distinct dark green with tree canopy shapes.
-fn make_forest_sprite() -> Texture2D {
-    let mut rows: Vec<Vec<u8>> = Vec::new();
-    for y in 0..16u8 {
-        let mut row = Vec::new();
-        for x in 0..16u8 {
-            let hash = ((x as u16).wrapping_mul(11) + (y as u16).wrapping_mul(7)) % 23;
-            let pixel = if hash == 0 {
-                6 // tree trunk (brown)
-            } else if hash < 3 {
-                8 // darkest green (canopy shadow)
-            } else if hash < 7 {
-                1 // very dark (deep forest shadow — makes forest obviously dark)
-            } else if hash < 10 {
-                8 // dark green
-            } else {
-                2 // shadow (makes it look dense and dark)
-            };
-            row.push(pixel);
-        }
-        rows.push(row);
-    }
-    let row_refs: Vec<&[u8]> = rows.iter().map(|r| r.as_slice()).collect();
-    make_texture(&row_refs, 16)
-}
-
-/// Creates a water tile sprite.
-fn make_water_sprite(base: u8, highlight: u8) -> Texture2D {
-    let mut rows: Vec<Vec<u8>> = Vec::new();
-    for y in 0..16u8 {
-        let mut row = Vec::new();
-        for x in 0..16u8 {
-            let wave = ((x as u16 + y as u16 * 3) % 8 == 0) as u8;
-            let pixel = if wave == 1 { highlight } else { base };
-            row.push(pixel);
-        }
-        rows.push(row);
-    }
-    let row_refs: Vec<&[u8]> = rows.iter().map(|r| r.as_slice()).collect();
-    make_texture(&row_refs, 16)
-}
-
 /// Creates an ore deposit sprite — a large rocky formation with colored veins.
 ///
 /// The rock has a 3D appearance with highlights on top-left and shadows on
@@ -670,6 +662,89 @@ fn make_belt_sprite(base_color: u8, arrow_color: u8, frame: u8) -> Image {
     }
     let row_refs: Vec<&[u8]> = rows.iter().map(|r| r.as_slice()).collect();
     make_image(&row_refs, 16)
+}
+
+/// Corner belt sprite matching straight belt design. Fills the entire tile with
+/// the same edge pattern (outline→highlight→inner hl→surface→inner sh→shadow→outline)
+/// plus a rounded cutout in the inner corner.
+/// `mirror=false`: left-turn (W→N). `mirror=true`: right-turn (E→N).
+fn make_belt_corner_sprite(base_color: u8, arrow_color: u8, _frame: u8, mirror: bool) -> Image {
+    let mut pixels = [[0u8; 16]; 16];
+
+    for y in 0..16u8 {
+        for x in 0..16u8 {
+            // Work in canonical left-turn space; mirror flips x.
+            let sx = if mirror { 15 - x } else { x };
+
+            // Cutout in bottom-right: rounded inner corner.
+            let cdx = 15.5 - sx as f32;
+            let cdy = 15.5 - y as f32;
+            let cdist = (cdx * cdx + cdy * cdy).sqrt();
+            let cut_r = 3.0f32;
+
+            if cdist < cut_r {
+                pixels[y as usize][x as usize] = 0; // transparent cutout
+                continue;
+            }
+
+            // Determine edge layers exactly like the straight belt.
+            // Straight belt: x=0→outline(1), x=1→hl(55), x=2→ihl(56),
+            //                x=13→ish(54), x=14→sh(53), x=15→outline(1)
+            //                surface: x<7→55, x>=7→54
+            // Corner: apply same pattern on BOTH axes, pick the outermost.
+
+            // Distance from each edge.
+            let d_left = sx;
+            let d_top = y;
+            let d_right = 15 - sx;
+            let d_bottom = 15 - y;
+            // Distance from inner corner curve.
+            let d_curve = cdist - cut_r;
+
+            // The "depth" into the belt from the nearest boundary.
+            let d_min = d_left.min(d_top).min(d_right).min(d_bottom).min(d_curve as u8);
+
+            let pixel = match d_min {
+                0 => 1,  // outline
+                1 => {
+                    // Highlight or shadow depending on which edge is closest.
+                    if d_left <= d_right && d_left <= d_bottom && d_left <= (d_curve as u8) {
+                        if mirror { 53 } else { 55 } // left edge
+                    } else if d_top <= d_bottom && d_top <= d_right && d_top <= (d_curve as u8) {
+                        55 // top edge (always lit)
+                    } else if d_curve as u8 <= d_right && (d_curve as u8) <= d_bottom {
+                        55 // inner curve highlight
+                    } else if d_right <= d_bottom {
+                        if mirror { 55 } else { 53 } // right edge shadow
+                    } else {
+                        53 // bottom edge shadow
+                    }
+                }
+                2 => {
+                    if d_left <= d_right && d_left <= d_bottom && d_left <= (d_curve as u8) {
+                        if mirror { 54 } else { 56 }
+                    } else if d_top <= d_bottom && d_top <= d_right && d_top <= (d_curve as u8) {
+                        56
+                    } else if d_curve as u8 <= d_right && (d_curve as u8) <= d_bottom {
+                        56
+                    } else if d_right <= d_bottom {
+                        if mirror { 56 } else { 54 }
+                    } else {
+                        54
+                    }
+                }
+                _ => {
+                    // Belt surface — same gradient as straight belt.
+                    if sx < 8 { 55 } else { 54 }
+                }
+            };
+
+            pixels[y as usize][x as usize] = pixel;
+        }
+    }
+
+    let rows: Vec<&[u8]> = pixels.iter().map(|r| r.as_slice()).collect();
+    make_image(&rows, 16)
 }
 
 // ===========================================================================
@@ -1127,4 +1202,486 @@ fn make_enemy_sprite(body: u8, shadow: u8) -> Image {
         &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     ];
     make_image(pixels, 12)
+}
+
+/// 80x48 pixel art crashed colony ship "Horizon's Promise".
+/// Hull is dark blue-gray (1-4), damage exposes warm brown internals (13-16),
+/// cockpit glows blue-purple (29-31), scorch marks in dark tones.
+fn make_crashed_ship_sprite() -> Image {
+    // Palette reference:
+    // 1=deep shadow, 2=dark shadow, 3=mid gray, 4=light gray
+    // 5=silver, 6=pale, 7=near-white, 8=specular
+    // 13=dark brown, 14=mid brown, 15=warm brown, 16=tan
+    // 17=dark coral, 18=coral, 19=amber, 20=peach
+    // 25=deep blue, 26=mid blue, 27=periwinkle, 28=sky blue
+    // 29=deep purple, 30=mid purple, 31=lilac
+    // 37=dark gold, 38=gold, 39=yellow
+    let _=0u8; let H=2u8; let D=1u8; let M=3u8; let L=4u8; let S=5u8;
+    let B=14u8; let W=15u8; let G=27u8; let P=30u8; let K=29u8;
+    let F=18u8; let Y=38u8; let R=17u8;
+    #[rustfmt::skip]
+    let pixels: &[&[u8]] = &[
+        // Row 0-3: antenna + top debris
+        &[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,G,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        &[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,D,G,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        &[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,D,H,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        &[0,0,0,0,0,0,0,0,D,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,D,H,D,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        // Row 4-5: broken top wing stub
+        &[0,0,0,0,0,0,D,H,D,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,H,H,H,D,D,D,D,H,H,H,D,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        &[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,H,H,D,D,H,H,H,M,M,H,H,H,H,M,H,D,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        // Row 6-7: top hull surface
+        &[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,D,D,H,H,M,M,M,M,H,H,M,L,M,M,H,H,M,M,H,D,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        &[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,D,D,D,H,H,M,M,L,L,M,M,M,M,L,L,S,L,M,H,M,L,M,M,H,D,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        // Row 8-9: engine block (rear) + hull top with damage
+        &[0,0,0,0,0,0,0,0,0,0,0,0,0,D,D,D,D,D,D,D,D,H,H,H,H,H,H,M,M,M,M,M,M,H,H,M,M,M,L,L,S,S,L,L,M,M,B,W,B,M,M,L,L,S,L,L,M,M,H,D,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        &[0,0,0,0,0,0,0,0,0,0,0,0,D,D,H,H,H,H,H,H,M,M,M,M,M,M,M,M,L,L,L,L,M,M,M,L,L,L,S,S,S,S,S,L,M,B,W,B,W,B,M,L,S,S,L,L,M,M,M,H,D,D,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        // Row 10-11: engine + main fuselage with exposed internals
+        &[0,0,0,0,0,0,0,0,0,0,D,D,H,R,F,D,H,H,M,M,M,L,L,L,L,L,M,M,L,S,S,L,L,M,L,L,S,S,L,L,L,L,L,L,B,W,F,R,F,W,B,L,L,S,S,L,M,M,M,M,H,D,D,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        &[0,0,0,0,0,0,0,0,0,D,D,H,H,F,R,D,H,M,M,L,L,L,S,S,L,L,L,L,L,S,S,S,L,L,L,S,S,L,L,M,M,M,L,B,W,Y,F,R,Y,W,B,L,L,S,L,L,M,M,M,M,M,H,D,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        // Row 12-13: mid fuselage with cockpit area
+        &[0,0,0,0,0,0,0,0,0,D,H,H,M,D,D,H,M,M,L,L,S,S,S,L,L,L,L,L,S,S,L,L,L,L,L,L,S,L,M,M,M,M,L,B,B,B,B,B,B,B,L,L,L,L,L,M,M,M,M,M,M,H,D,D,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        &[0,0,0,0,0,0,0,0,D,D,H,M,M,H,H,M,M,L,L,S,S,L,L,L,L,L,M,L,L,S,L,L,M,M,M,L,L,M,M,M,M,L,L,M,M,L,L,M,M,L,L,L,M,M,M,M,H,K,P,K,M,M,H,D,D,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        // Row 14-15: cockpit glow area
+        &[0,0,0,0,0,0,0,0,D,H,M,M,M,M,M,M,L,L,S,S,L,L,M,M,M,M,M,M,L,L,M,M,M,M,M,L,M,M,H,H,M,L,L,M,M,M,M,M,M,M,L,M,M,M,H,K,K,P,G,P,K,M,H,H,D,D,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        &[0,0,0,0,0,0,0,D,D,H,M,M,M,L,L,M,L,S,S,L,L,M,M,M,H,M,M,M,L,M,M,H,H,M,M,M,M,H,H,H,M,L,L,M,M,H,H,M,M,L,L,M,H,H,K,P,G,G,G,G,P,K,H,H,D,D,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        // Row 16-17: main hull center
+        &[0,0,0,0,0,0,0,D,H,M,M,M,L,L,S,L,L,S,L,L,M,M,H,H,H,M,M,M,M,M,H,H,H,H,M,M,H,H,D,H,M,M,L,M,H,H,H,H,M,L,M,M,H,K,P,G,G,28,G,G,P,K,H,D,D,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        &[0,0,0,0,0,0,0,D,H,M,M,L,L,S,S,L,L,L,L,M,M,H,H,D,H,H,M,M,M,H,H,D,D,H,H,H,H,D,D,H,M,L,L,M,H,D,D,H,M,L,M,M,H,K,P,G,28,28,28,G,P,K,H,D,D,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        // Row 18-19: hull plates + rivet lines
+        &[0,0,0,0,0,0,0,D,H,M,L,L,S,S,L,L,M,M,M,M,H,H,D,D,D,H,M,M,H,H,D,D,D,D,H,H,D,D,D,H,M,L,L,M,H,D,D,H,M,L,M,M,H,K,P,G,G,28,G,G,P,K,H,D,D,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        &[0,0,0,0,0,0,0,D,H,M,L,S,S,L,L,M,M,M,M,H,H,D,D,D,H,H,M,M,H,D,D,D,D,D,D,D,D,D,H,M,M,L,L,M,H,H,D,H,M,L,M,M,H,K,P,G,G,G,G,P,K,H,H,D,D,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        // Row 20-21: hull bottom + damage hole
+        &[0,0,0,0,0,0,0,D,H,M,L,L,L,M,M,M,M,H,H,H,D,D,D,H,H,M,M,H,H,D,D,D,D,D,D,D,D,H,M,M,L,L,M,M,H,H,H,M,M,L,M,M,M,H,K,P,P,P,K,K,H,H,D,D,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        &[0,0,0,0,0,0,0,D,H,M,M,L,L,M,M,H,H,H,D,D,D,D,H,H,M,M,M,H,D,D,B,W,B,D,D,D,H,M,M,L,L,L,M,M,H,H,M,M,L,L,M,M,M,M,H,H,K,K,H,H,D,D,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        // Row 22-23: lower fuselage
+        &[0,0,0,0,0,0,0,D,H,M,M,M,L,L,M,H,H,D,D,D,D,H,H,M,M,M,H,D,D,B,W,Y,W,B,D,H,M,M,L,L,L,M,M,H,H,M,M,L,L,M,M,M,M,M,H,H,D,D,D,D,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        &[0,0,0,0,0,0,0,D,H,H,M,M,M,L,M,H,D,D,D,D,H,H,M,M,M,H,D,D,B,W,F,R,F,W,B,M,M,L,L,L,M,M,H,H,M,M,L,L,M,M,M,H,H,H,H,D,D,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        // Row 24-25: hull shadow + lower wing stub
+        &[0,0,0,0,0,0,0,0,D,H,H,M,M,M,M,H,D,D,D,H,H,M,M,M,H,H,D,D,D,B,W,B,D,D,H,M,L,L,L,M,M,H,H,D,M,L,L,M,M,M,H,H,D,D,D,D,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        &[0,0,0,0,0,0,0,0,D,D,H,H,M,M,M,H,D,D,H,H,M,M,M,H,H,D,D,D,D,D,D,D,D,H,M,M,L,L,M,M,H,H,D,D,M,L,M,M,H,H,D,D,D,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        // Row 26-27: bottom wing + hull underside
+        &[0,0,0,0,0,0,0,0,0,D,D,H,H,M,M,H,D,H,H,M,M,M,H,H,D,D,D,D,D,D,D,D,H,M,M,L,L,M,M,H,H,D,D,D,M,M,M,H,H,D,D,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        &[0,0,0,0,0,0,0,0,0,0,D,D,H,H,M,H,H,H,M,M,H,H,H,D,D,0,0,0,0,0,0,H,M,M,L,L,M,M,H,H,D,D,0,D,M,M,H,H,D,D,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        // Row 28-29: lower hull taper + broken bits
+        &[0,0,0,0,0,0,0,0,0,0,0,D,D,H,H,H,H,M,M,H,H,D,D,0,0,0,0,0,0,0,0,H,M,L,L,M,M,H,D,D,D,0,0,D,H,H,D,D,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        &[0,0,0,0,0,0,0,0,0,0,0,0,D,D,H,H,M,M,H,H,D,D,0,0,0,0,0,0,0,0,H,M,M,L,M,M,H,D,D,0,0,0,0,0,D,D,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        // Row 30-31: scattered debris below
+        &[0,0,0,0,0,0,0,0,0,0,0,0,0,D,D,H,H,H,D,D,0,0,0,0,0,0,0,0,0,H,M,M,L,M,M,H,D,D,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        &[0,0,D,D,0,0,0,0,0,0,0,0,0,0,D,D,H,D,D,0,0,0,0,0,0,0,0,0,H,M,M,M,M,H,H,D,D,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        // Row 32-35: ground debris / scorch marks
+        &[0,D,H,D,0,0,0,0,0,0,0,0,0,0,0,D,D,D,0,0,0,0,D,D,0,0,0,H,M,M,H,H,D,D,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,D,D,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        &[0,0,D,0,0,0,0,D,0,0,0,0,0,0,0,0,D,0,0,0,0,D,H,D,0,0,0,0,H,H,D,D,0,0,0,0,0,0,0,0,0,0,0,0,0,D,D,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,D,H,D,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        &[0,0,0,0,0,0,D,H,D,0,0,0,0,0,0,0,0,0,0,0,0,0,D,0,0,0,0,0,D,D,0,0,0,0,0,0,0,D,D,0,0,0,0,0,D,H,D,0,0,0,0,0,0,0,0,D,0,0,0,0,0,D,H,D,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        &[0,0,0,0,0,0,0,D,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,D,H,D,0,0,0,0,0,0,D,0,0,0,0,0,0,0,0,D,H,D,0,0,0,0,0,D,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        // Row 36-39: more scattered debris
+        &[0,0,0,0,0,0,0,0,0,0,0,D,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,D,0,0,0,0,0,0,0,0,0,0,0,0,0,D,0,0,0,D,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        &[0,0,0,0,0,0,0,0,0,0,D,H,D,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,D,H,D,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        &[0,0,0,0,0,0,0,0,0,0,0,D,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,D,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        &[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        // Row 40-47: empty padding
+        &[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        &[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        &[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        &[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        &[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        &[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        &[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        &[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    ];
+    make_image_rect(pixels, 80, 48)
+}
+
+// ===========================================================================
+// Additional building sprites
+// ===========================================================================
+
+/// Underground belt — dark hole with belt edges visible.
+fn make_underground_belt_sprite() -> Image {
+    let pixels: &[&[u8]] = &[
+        &[0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0],
+        &[0, 1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 1, 0],
+        &[1, 3, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 3, 1],
+        &[1, 3, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 3, 1],
+        &[1, 3, 1, 1,17,17,17,17,17,17,17,17, 1, 1, 3, 1],
+        &[1, 3, 1, 1,17,16,16,16,16,16,16,17, 1, 1, 3, 1],
+        &[1, 3, 1, 1,17,16, 1, 1, 1, 1,16,17, 1, 1, 3, 1],
+        &[1, 3, 1, 1,17,16, 1, 2, 2, 1,16,17, 1, 1, 3, 1],
+        &[1, 3, 1, 1,17,16, 1, 2, 2, 1,16,17, 1, 1, 3, 1],
+        &[1, 3, 1, 1,17,16, 1, 1, 1, 1,16,17, 1, 1, 3, 1],
+        &[1, 3, 1, 1,17,16,16,16,16,16,16,17, 1, 1, 3, 1],
+        &[1, 3, 1, 1,17,17,17,17,17,17,17,17, 1, 1, 3, 1],
+        &[1, 3, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 3, 1],
+        &[1, 3, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 3, 1],
+        &[0, 1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 1, 0],
+        &[0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0],
+    ];
+    make_image(pixels, 16)
+}
+
+/// Splitter — wide belt mechanism with divider in center.
+fn make_splitter_sprite() -> Image {
+    let pixels: &[&[u8]] = &[
+        &[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+        &[1, 3, 3, 3, 3, 3, 3, 4, 4, 3, 3, 3, 3, 3, 3, 1],
+        &[1, 3,17,17,17,17, 3, 4, 4, 3,17,17,17,17, 3, 1],
+        &[1, 3,17,16,16,17, 3, 5, 5, 3,17,16,16,17, 3, 1],
+        &[1, 3,17,16,16,17, 3, 4, 4, 3,17,16,16,17, 3, 1],
+        &[1, 3,17,16,16,17, 3, 4, 4, 3,17,16,16,17, 3, 1],
+        &[1, 3,17,16,16,17, 3, 5, 5, 3,17,16,16,17, 3, 1],
+        &[1, 4, 4, 4, 4, 4, 4, 6, 6, 4, 4, 4, 4, 4, 4, 1],
+        &[1, 4, 4, 4, 4, 4, 4, 6, 6, 4, 4, 4, 4, 4, 4, 1],
+        &[1, 3,17,16,16,17, 3, 5, 5, 3,17,16,16,17, 3, 1],
+        &[1, 3,17,16,16,17, 3, 4, 4, 3,17,16,16,17, 3, 1],
+        &[1, 3,17,16,16,17, 3, 4, 4, 3,17,16,16,17, 3, 1],
+        &[1, 3,17,16,16,17, 3, 5, 5, 3,17,16,16,17, 3, 1],
+        &[1, 3,17,17,17,17, 3, 4, 4, 3,17,17,17,17, 3, 1],
+        &[1, 3, 3, 3, 3, 3, 3, 4, 4, 3, 3, 3, 3, 3, 3, 1],
+        &[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    ];
+    make_image(pixels, 16)
+}
+
+/// Chemical plant — green industrial structure with pipes and reaction chamber.
+fn make_chemical_plant_sprite() -> Image {
+    let pixels: &[&[u8]] = &[
+        &[0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0],
+        &[0, 1, 9, 9, 9, 9,10,10,10,10, 9, 9, 9, 9, 1, 0],
+        &[1, 9,10,10, 3, 3, 3,12,12, 3, 3, 3,10,10, 9, 1],
+        &[1, 9,10, 3, 3, 9, 9,12,12, 9, 9, 3, 3,10, 9, 1],
+        &[1, 9, 3, 3, 9,10,10,11,11,10,10, 9, 3, 3, 9, 1],
+        &[1,10, 3, 9,10,11,11,12,12,11,11,10, 9, 3,10, 1],
+        &[1,10, 3, 9,10,11,12,12,12,12,11,10, 9, 3,10, 1],
+        &[1,10, 3, 9,10,11,12,10,10,12,11,10, 9, 3,10, 1],
+        &[1,10, 3, 9,10,11,12,10,10,12,11,10, 9, 3,10, 1],
+        &[1,10, 3, 9,10,11,12,12,12,12,11,10, 9, 3,10, 1],
+        &[1,10, 3, 9,10,11,11,12,12,11,11,10, 9, 3,10, 1],
+        &[1, 9, 3, 3, 9,10,10,11,11,10,10, 9, 3, 3, 9, 1],
+        &[1, 9,10, 3, 3, 9, 9, 3, 3, 9, 9, 3, 3,10, 9, 1],
+        &[1, 9,10,10, 3, 3, 3, 3, 3, 3, 3, 3,10,10, 9, 1],
+        &[0, 1, 9, 9, 9, 9,10,10,10,10, 9, 9, 9, 9, 1, 0],
+        &[0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0],
+    ];
+    make_image(pixels, 16)
+}
+
+/// Water pump — blue machine that extracts water from water tiles.
+fn make_water_pump_sprite() -> Image {
+    let pixels: &[&[u8]] = &[
+        &[0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0],
+        &[0, 0, 1,25,25,26,26,26,26,26,26,25,25, 1, 0, 0],
+        &[0, 1,25,26,26,27,27,28,28,27,27,26,26,25, 1, 0],
+        &[1,25,26,27, 3, 3, 4, 4, 4, 4, 3, 3,27,26,25, 1],
+        &[1,25,26, 3, 3,25,25,26,26,25,25, 3, 3,26,25, 1],
+        &[1,25,26, 3,25,27,27,28,28,27,27,25, 3,26,25, 1],
+        &[1,26,27, 4,25,27,28,28,28,28,27,25, 4,27,26, 1],
+        &[1,26,27, 4,26,28,28, 5, 5,28,28,26, 4,27,26, 1],
+        &[1,26,27, 4,26,28,28, 5, 5,28,28,26, 4,27,26, 1],
+        &[1,26,27, 4,25,27,28,28,28,28,27,25, 4,27,26, 1],
+        &[1,25,26, 3,25,27,27,28,28,27,27,25, 3,26,25, 1],
+        &[1,25,26, 3, 3,25,25,26,26,25,25, 3, 3,26,25, 1],
+        &[1,25,26,27, 3, 3, 4, 4, 4, 4, 3, 3,27,26,25, 1],
+        &[0, 1,25,26,26,27,27,28,28,27,27,26,26,25, 1, 0],
+        &[0, 0, 1,25,25,26,26,26,26,26,26,25,25, 1, 0, 0],
+        &[0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0],
+    ];
+    make_image(pixels, 16)
+}
+
+/// Oil refinery — large industrial block with distillation towers.
+fn make_oil_refinery_sprite() -> Image {
+    let pixels: &[&[u8]] = &[
+        &[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+        &[1, 2, 2, 3, 3, 3, 4, 4, 4, 4, 3, 3, 3, 2, 2, 1],
+        &[1, 2, 3,14,14, 3, 4, 5, 5, 4, 3,14,14, 3, 2, 1],
+        &[1, 3,14,15,15,14, 3, 4, 4, 3,14,15,15,14, 3, 1],
+        &[1, 3,14,15,16,15, 3, 3, 3, 3,14,15,16,15, 3, 1],
+        &[1, 3,14,15,16,15,14, 3, 3,14,14,15,16,15, 3, 1],
+        &[1, 3,14,15,16,15,14, 2, 2,14,14,15,16,15, 3, 1],
+        &[1, 3, 3,14,15,14, 3, 2, 2, 3,14,15,14, 3, 3, 1],
+        &[1, 3, 3,14,15,14, 3, 2, 2, 3,14,15,14, 3, 3, 1],
+        &[1, 3,14,15,16,15,14, 2, 2,14,14,15,16,15, 3, 1],
+        &[1, 3,14,15,16,15,14, 3, 3,14,14,15,16,15, 3, 1],
+        &[1, 3,14,15,16,15, 3, 3, 3, 3,14,15,16,15, 3, 1],
+        &[1, 3,14,15,15,14, 3, 4, 4, 3,14,15,15,14, 3, 1],
+        &[1, 2, 3,14,14, 3, 4, 5, 5, 4, 3,14,14, 3, 2, 1],
+        &[1, 2, 2, 3, 3, 3, 4, 4, 4, 4, 3, 3, 3, 2, 2, 1],
+        &[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    ];
+    make_image(pixels, 16)
+}
+
+/// Nuclear reactor — heavy containment structure with glowing core.
+fn make_nuclear_reactor_sprite() -> Image {
+    let pixels: &[&[u8]] = &[
+        &[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+        &[1, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 3, 3, 3, 3, 1],
+        &[1, 3, 4, 4, 4, 4, 3, 3, 3, 3, 4, 4, 4, 4, 3, 1],
+        &[1, 3, 4, 3, 3, 3, 9, 9, 9, 9, 3, 3, 3, 4, 3, 1],
+        &[1, 3, 4, 3, 9, 9,10,10,10,10, 9, 9, 3, 4, 3, 1],
+        &[1, 4, 4, 3, 9,10,11,61,61,11,10, 9, 3, 4, 4, 1],
+        &[1, 4, 3, 9,10,11,61,62,62,61,11,10, 9, 3, 4, 1],
+        &[1, 4, 3, 9,10,61,62,62,62,62,61,10, 9, 3, 4, 1],
+        &[1, 4, 3, 9,10,61,62,62,62,62,61,10, 9, 3, 4, 1],
+        &[1, 4, 3, 9,10,11,61,62,62,61,11,10, 9, 3, 4, 1],
+        &[1, 4, 4, 3, 9,10,11,61,61,11,10, 9, 3, 4, 4, 1],
+        &[1, 3, 4, 3, 9, 9,10,10,10,10, 9, 9, 3, 4, 3, 1],
+        &[1, 3, 4, 3, 3, 3, 9, 9, 9, 9, 3, 3, 3, 4, 3, 1],
+        &[1, 3, 4, 4, 4, 4, 3, 3, 3, 3, 4, 4, 4, 4, 3, 1],
+        &[1, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 3, 3, 3, 3, 1],
+        &[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    ];
+    make_image(pixels, 16)
+}
+
+/// Accumulator — energy storage cell with charge level indicator.
+fn make_accumulator_sprite() -> Image {
+    let pixels: &[&[u8]] = &[
+        &[0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0],
+        &[0, 1, 3, 3, 3, 3, 4, 4, 4, 4, 3, 3, 3, 3, 1, 0],
+        &[1, 3, 4, 4,25,25,25,26,26,25,25,25, 4, 4, 3, 1],
+        &[1, 3, 4,25,26,26,26,27,27,26,26,26,25, 4, 3, 1],
+        &[1, 3,25,26,27,27,27,28,28,27,27,27,26,25, 3, 1],
+        &[1, 3,25,26,27,28,28,28,28,28,28,27,26,25, 3, 1],
+        &[1, 4,25,26,27,28, 5, 5, 5, 5,28,27,26,25, 4, 1],
+        &[1, 4,25,27,28,28, 5, 6, 6, 5,28,28,27,25, 4, 1],
+        &[1, 4,25,27,28,28, 5, 6, 6, 5,28,28,27,25, 4, 1],
+        &[1, 4,25,26,27,28, 5, 5, 5, 5,28,27,26,25, 4, 1],
+        &[1, 3,25,26,27,28,28,28,28,28,28,27,26,25, 3, 1],
+        &[1, 3,25,26,27,27,27,28,28,27,27,27,26,25, 3, 1],
+        &[1, 3, 4,25,26,26,26,27,27,26,26,26,25, 4, 3, 1],
+        &[1, 3, 4, 4,25,25,25,26,26,25,25,25, 4, 4, 3, 1],
+        &[0, 1, 3, 3, 3, 3, 4, 4, 4, 4, 3, 3, 3, 3, 1, 0],
+        &[0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0],
+    ];
+    make_image(pixels, 16)
+}
+
+/// Radar — rotating dish antenna on a base.
+fn make_radar_sprite() -> Image {
+    let pixels: &[&[u8]] = &[
+        &[0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 0, 1, 1, 5, 5, 1, 1, 0, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 1, 5, 6, 6, 6, 6, 5, 1, 0, 0, 0, 0],
+        &[0, 0, 0, 1, 5, 6, 7, 7, 7, 7, 6, 5, 1, 0, 0, 0],
+        &[0, 0, 1, 5, 6, 7, 7, 8, 8, 7, 7, 6, 5, 1, 0, 0],
+        &[0, 0, 1, 5, 6, 7, 8, 8, 8, 8, 7, 6, 5, 1, 0, 0],
+        &[0, 0, 0, 1, 5, 6, 7, 7, 7, 7, 6, 5, 1, 0, 0, 0],
+        &[0, 0, 0, 0, 1, 5, 4, 4, 4, 4, 5, 1, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 0, 1, 3, 4, 4, 3, 1, 0, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 0, 0, 1, 3, 3, 1, 0, 0, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 0, 0, 1, 3, 3, 1, 0, 0, 0, 0, 0, 0],
+        &[0, 0, 0, 1, 1, 1, 1, 3, 3, 1, 1, 1, 1, 0, 0, 0],
+        &[0, 0, 1, 3, 3, 3, 3, 4, 4, 3, 3, 3, 3, 1, 0, 0],
+        &[0, 1, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 3, 3, 1, 0],
+        &[0, 1, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 3, 1, 0],
+        &[0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0],
+    ];
+    make_image(pixels, 16)
+}
+
+/// Pipe — gray conduit for fluid transport.
+fn make_pipe_sprite() -> Image {
+    let pixels: &[&[u8]] = &[
+        &[0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 1, 4, 4, 5, 5, 4, 4, 1, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 1, 4, 3, 4, 4, 3, 4, 1, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 1, 3, 3, 3, 3, 3, 3, 1, 0, 0, 0, 0],
+        &[1, 1, 1, 1, 1, 3, 3, 3, 3, 3, 3, 1, 1, 1, 1, 1],
+        &[1, 4, 4, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 1],
+        &[1, 4, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 4, 1],
+        &[1, 5, 4, 3, 3, 3, 3, 4, 4, 3, 3, 3, 3, 4, 5, 1],
+        &[1, 5, 4, 3, 3, 3, 3, 4, 4, 3, 3, 3, 3, 4, 5, 1],
+        &[1, 4, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 4, 1],
+        &[1, 4, 4, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 1],
+        &[1, 1, 1, 1, 1, 3, 3, 3, 3, 3, 3, 1, 1, 1, 1, 1],
+        &[0, 0, 0, 0, 1, 3, 3, 3, 3, 3, 3, 1, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 1, 4, 3, 4, 4, 3, 4, 1, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 1, 4, 4, 5, 5, 4, 4, 1, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0],
+    ];
+    make_image(pixels, 16)
+}
+
+/// Roboport — logistics hub with antenna and landing pad.
+fn make_roboport_sprite() -> Image {
+    let pixels: &[&[u8]] = &[
+        &[0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 0, 0, 1,29,29, 1, 0, 0, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 0, 1,29,30,30,29, 1, 0, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 0, 0, 1, 3, 3, 1, 0, 0, 0, 0, 0, 0],
+        &[0, 1, 1, 1, 1, 1, 1, 3, 3, 1, 1, 1, 1, 1, 1, 0],
+        &[1, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 3, 3, 3, 3, 1],
+        &[1, 3, 4, 4, 4, 4, 5, 5, 5, 5, 4, 4, 4, 4, 3, 1],
+        &[1, 3, 4, 5, 5,29,29,30,30,29,29, 5, 5, 4, 3, 1],
+        &[1, 3, 4, 5, 5,29,30,30,30,30,29, 5, 5, 4, 3, 1],
+        &[1, 3, 4, 4, 4, 4, 5, 5, 5, 5, 4, 4, 4, 4, 3, 1],
+        &[1, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 3, 3, 3, 3, 1],
+        &[0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+        &[0, 0, 1,17,17, 1, 0, 0, 0, 0, 1,17,17, 1, 0, 0],
+        &[0, 0, 1,17,17, 1, 0, 0, 0, 0, 1,17,17, 1, 0, 0],
+        &[0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0],
+        &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    ];
+    make_image(pixels, 16)
+}
+
+/// Rail — track segment with ties and rails.
+fn make_rail_sprite() -> Image {
+    let pixels: &[&[u8]] = &[
+        &[0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0],
+        &[0, 0, 1,14,14,14,14,14,14,14,14,14,14, 1, 0, 0],
+        &[0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0],
+        &[0, 0, 1,14,14,14,14,14,14,14,14,14,14, 1, 0, 0],
+        &[0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0],
+        &[0, 0, 1,14,14,14,14,14,14,14,14,14,14, 1, 0, 0],
+        &[0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0],
+        &[0, 0, 1,14,14,14,14,14,14,14,14,14,14, 1, 0, 0],
+        &[0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0],
+    ];
+    make_image(pixels, 16)
+}
+
+/// Train stop — platform marker with signal lamp.
+fn make_train_stop_sprite() -> Image {
+    let pixels: &[&[u8]] = &[
+        &[0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0],
+        &[0, 0, 1,22,22,23,23,23,23,23,23,22,22, 1, 0, 0],
+        &[0, 1,22,23,23,24,24,24,24,24,24,23,23,22, 1, 0],
+        &[1,22,23, 3, 3, 3, 3, 4, 4, 3, 3, 3, 3,23,22, 1],
+        &[1,22,23, 3, 4, 4, 4, 4, 4, 4, 4, 4, 3,23,22, 1],
+        &[1,23,24, 3, 4, 5,61,61,61,61, 5, 4, 3,24,23, 1],
+        &[1,23,24, 3, 4,61,62,62,62,62,61, 4, 3,24,23, 1],
+        &[1,23,24, 4, 4,61,62,62,62,62,61, 4, 4,24,23, 1],
+        &[1,23,24, 4, 4,61,62,62,62,62,61, 4, 4,24,23, 1],
+        &[1,23,24, 3, 4,61,62,62,62,62,61, 4, 3,24,23, 1],
+        &[1,23,24, 3, 4, 5,61,61,61,61, 5, 4, 3,24,23, 1],
+        &[1,22,23, 3, 4, 4, 4, 4, 4, 4, 4, 4, 3,23,22, 1],
+        &[1,22,23, 3, 3, 3, 3, 4, 4, 3, 3, 3, 3,23,22, 1],
+        &[0, 1,22,23,23,24,24,24,24,24,24,23,23,22, 1, 0],
+        &[0, 0, 1,22,22,23,23,23,23,23,23,22,22, 1, 0, 0],
+        &[0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0],
+    ];
+    make_image(pixels, 16)
+}
+
+/// Rocket silo — massive launch facility with circular hatch.
+fn make_rocket_silo_sprite() -> Image {
+    let pixels: &[&[u8]] = &[
+        &[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+        &[1, 2, 2, 2, 3, 3, 3, 4, 4, 3, 3, 3, 2, 2, 2, 1],
+        &[1, 2, 3, 3, 3, 4, 4, 4, 4, 4, 4, 3, 3, 3, 2, 1],
+        &[1, 2, 3, 4, 4, 4, 3, 3, 3, 3, 4, 4, 4, 3, 2, 1],
+        &[1, 3, 3, 4, 3, 3, 2, 2, 2, 2, 3, 3, 4, 3, 3, 1],
+        &[1, 3, 4, 4, 3, 2, 1, 1, 1, 1, 2, 3, 4, 4, 3, 1],
+        &[1, 3, 4, 3, 2, 1,22,22,22,22, 1, 2, 3, 4, 3, 1],
+        &[1, 4, 4, 3, 2, 1,22,23,23,22, 1, 2, 3, 4, 4, 1],
+        &[1, 4, 4, 3, 2, 1,22,23,23,22, 1, 2, 3, 4, 4, 1],
+        &[1, 3, 4, 3, 2, 1,22,22,22,22, 1, 2, 3, 4, 3, 1],
+        &[1, 3, 4, 4, 3, 2, 1, 1, 1, 1, 2, 3, 4, 4, 3, 1],
+        &[1, 3, 3, 4, 3, 3, 2, 2, 2, 2, 3, 3, 4, 3, 3, 1],
+        &[1, 2, 3, 4, 4, 4, 3, 3, 3, 3, 4, 4, 4, 3, 2, 1],
+        &[1, 2, 3, 3, 3, 4, 4, 4, 4, 4, 4, 3, 3, 3, 2, 1],
+        &[1, 2, 2, 2, 3, 3, 3, 4, 4, 3, 3, 3, 2, 2, 2, 1],
+        &[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    ];
+    make_image(pixels, 16)
+}
+
+/// Beacon — module broadcaster with purple energy field.
+fn make_beacon_sprite() -> Image {
+    let pixels: &[&[u8]] = &[
+        &[0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0],
+        &[0, 0, 0, 1, 1, 3, 3, 4, 4, 3, 3, 1, 1, 0, 0, 0],
+        &[0, 0, 1, 3, 3, 4,29,29,29,29, 4, 3, 3, 1, 0, 0],
+        &[0, 1, 3, 4,29,29,30,30,30,30,29,29, 4, 3, 1, 0],
+        &[0, 1, 3,29,30,30,31,31,31,31,30,30,29, 3, 1, 0],
+        &[1, 3, 4,29,30,31,32,32,32,32,31,30,29, 4, 3, 1],
+        &[1, 3,29,30,31,32,32, 5, 5,32,32,31,30,29, 3, 1],
+        &[1, 4,29,30,31,32, 5, 6, 6, 5,32,31,30,29, 4, 1],
+        &[1, 4,29,30,31,32, 5, 6, 6, 5,32,31,30,29, 4, 1],
+        &[1, 3,29,30,31,32,32, 5, 5,32,32,31,30,29, 3, 1],
+        &[1, 3, 4,29,30,31,32,32,32,32,31,30,29, 4, 3, 1],
+        &[0, 1, 3,29,30,30,31,31,31,31,30,30,29, 3, 1, 0],
+        &[0, 1, 3, 4,29,29,30,30,30,30,29,29, 4, 3, 1, 0],
+        &[0, 0, 1, 3, 3, 4,29,29,29,29, 4, 3, 3, 1, 0, 0],
+        &[0, 0, 0, 1, 1, 3, 3, 4, 4, 3, 3, 1, 1, 0, 0, 0],
+        &[0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0],
+    ];
+    make_image(pixels, 16)
+}
+
+/// Electric furnace — advanced smelter with blue energy coils.
+fn make_electric_furnace_sprite() -> Image {
+    let pixels: &[&[u8]] = &[
+        &[0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0],
+        &[0, 1, 3, 3, 3, 4, 4, 4, 4, 4, 4, 3, 3, 3, 1, 0],
+        &[1, 3, 4, 4,25,25,26,26,26,26,25,25, 4, 4, 3, 1],
+        &[1, 3, 4,25,26,27,27,27,27,27,27,26,25, 4, 3, 1],
+        &[1, 3,25,26,27, 3, 3, 3, 3, 3, 3,27,26,25, 3, 1],
+        &[1, 4,25,27, 3, 3,22,22,22,22, 3, 3,27,25, 4, 1],
+        &[1, 4,26,27, 3,22,23,24,24,23,22, 3,27,26, 4, 1],
+        &[1, 4,26,27, 3,22,24,24,24,24,22, 3,27,26, 4, 1],
+        &[1, 4,26,27, 3,22,24,24,24,24,22, 3,27,26, 4, 1],
+        &[1, 4,26,27, 3,22,23,24,24,23,22, 3,27,26, 4, 1],
+        &[1, 4,25,27, 3, 3,22,22,22,22, 3, 3,27,25, 4, 1],
+        &[1, 3,25,26,27, 3, 3, 3, 3, 3, 3,27,26,25, 3, 1],
+        &[1, 3, 4,25,26,27,27,27,27,27,27,26,25, 4, 3, 1],
+        &[1, 3, 4, 4,25,25,26,26,26,26,25,25, 4, 4, 3, 1],
+        &[0, 1, 3, 3, 3, 4, 4, 4, 4, 4, 4, 3, 3, 3, 1, 0],
+        &[0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0],
+    ];
+    make_image(pixels, 16)
+}
+
+/// Pump jack — oil extractor with rotating arm.
+fn make_pump_jack_sprite() -> Image {
+    let pixels: &[&[u8]] = &[
+        &[0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0],
+        &[0, 0, 0, 1, 1, 3, 3, 4, 4, 3, 3, 1, 1, 0, 0, 0],
+        &[0, 0, 1, 3, 3, 4,14,14,14,14, 4, 3, 3, 1, 0, 0],
+        &[0, 1, 3, 4,14,15,15,16,16,15,15,14, 4, 3, 1, 0],
+        &[0, 1, 3,14,15,16, 3, 3, 3, 3,16,15,14, 3, 1, 0],
+        &[1, 3, 4,14,15, 3, 3, 4, 4, 3, 3,15,14, 4, 3, 1],
+        &[1, 3, 4,14, 3, 3, 4, 4, 4, 4, 3, 3,14, 4, 3, 1],
+        &[1, 3, 4, 3, 3, 4, 4, 1, 1, 4, 4, 3, 3, 4, 3, 1],
+        &[1, 3, 4, 3, 3, 4, 4, 1, 1, 4, 4, 3, 3, 4, 3, 1],
+        &[1, 3, 4,14, 3, 3, 4, 4, 4, 4, 3, 3,14, 4, 3, 1],
+        &[1, 3, 4,14,15, 3, 3, 4, 4, 3, 3,15,14, 4, 3, 1],
+        &[0, 1, 3,14,15,16, 3, 3, 3, 3,16,15,14, 3, 1, 0],
+        &[0, 1, 3, 4,14,15,15,16,16,15,15,14, 4, 3, 1, 0],
+        &[0, 0, 1, 3, 3, 4,14,14,14,14, 4, 3, 3, 1, 0, 0],
+        &[0, 0, 0, 1, 1, 3, 3, 4, 4, 3, 3, 1, 1, 0, 0, 0],
+        &[0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0],
+    ];
+    make_image(pixels, 16)
+}
+
+/// Laser turret — sleek blue energy weapon.
+fn make_laser_turret_sprite() -> Image {
+    let pixels: &[&[u8]] = &[
+        &[0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0],
+        &[0, 0, 0, 1, 1,25,25,26,26,25,25, 1, 1, 0, 0, 0],
+        &[0, 0, 1, 3,25,26,27,28,28,27,26,25, 3, 1, 0, 0],
+        &[0, 1, 3, 3, 3,25,26,27,27,26,25, 3, 3, 3, 1, 0],
+        &[0, 1, 3, 3, 3, 3,25,26,26,25, 3, 3, 3, 3, 1, 0],
+        &[1, 3, 3, 3, 3, 3, 3, 4, 4, 3, 3, 3, 3, 3, 3, 1],
+        &[1, 3, 4, 4, 3, 3, 4, 4, 4, 4, 3, 3, 4, 4, 3, 1],
+        &[1, 3, 4, 4, 4, 4, 4, 5, 5, 4, 4, 4, 4, 4, 3, 1],
+        &[1, 3, 4, 4, 4, 4, 4, 5, 5, 4, 4, 4, 4, 4, 3, 1],
+        &[1, 3, 4, 4, 3, 3, 4, 4, 4, 4, 3, 3, 4, 4, 3, 1],
+        &[1, 3, 3, 3, 3, 3, 3, 4, 4, 3, 3, 3, 3, 3, 3, 1],
+        &[0, 1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 1, 0],
+        &[0, 1, 3, 3, 3, 4, 4, 4, 4, 4, 4, 3, 3, 3, 1, 0],
+        &[0, 0, 1, 3, 4, 4, 4, 4, 4, 4, 4, 4, 3, 1, 0, 0],
+        &[0, 0, 0, 1, 1, 3, 3, 3, 3, 3, 3, 1, 1, 0, 0, 0],
+        &[0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0],
+    ];
+    make_image(pixels, 16)
 }

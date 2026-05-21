@@ -116,6 +116,8 @@ impl SpriteBatcher {
             return;
         }
 
+        // Clone is intentional: draw_mesh takes &Mesh, and we want to keep
+        // the pre-allocated buffer capacity for the next frame (clear reuses memory).
         let mesh = Mesh {
             vertices: self.vertices.clone(),
             indices: self.indices.clone(),

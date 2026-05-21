@@ -114,7 +114,7 @@ async fn main() {
         // Edge-scroll: move camera when mouse is near screen edges.
         {
             let edge_margin = 10.0;
-            let edge_speed = 300.0 * get_frame_time() / state.camera.zoom;
+            let edge_speed = 300.0 * get_frame_time().min(0.05) / state.camera.zoom;
             let (mx, my) = mouse_position();
             if mx < edge_margin { state.camera.target.x -= edge_speed; }
             if mx > screen_width() - edge_margin { state.camera.target.x += edge_speed; }
@@ -257,50 +257,72 @@ fn handle_input(state: &mut GameState) {
         state.placement_direction = state.placement_direction.rotated_cw();
     }
 
-    // X button click: close overlays by clicking the top-right corner.
+    // X button click: close overlays. X button is at (px + pw - 28, py + 4, 24x20).
+    // If an X button is hit, consume the click (return early) so it doesn't also place a building.
     if is_mouse_button_pressed(MouseButton::Left) {
         let mx = mouse_position().0;
         let my = mouse_position().1;
         let sw = screen_width();
         let sh = screen_height();
 
-        // Check each overlay's X button region (top-right corner of their panel).
-        // Recipe picker X.
+        // Helper: check if mouse is inside X button region for a panel at (px, py, pw).
+        let hit_x = |px: f32, py: f32, pw: f32| -> bool {
+            let bx = px + pw - 28.0;
+            let by = py + 4.0;
+            mx >= bx && mx <= bx + 24.0 && my >= by && my <= by + 20.0
+        };
+
+        let mut consumed = false;
+
+        if state.show_tutorial && state.tutorial_step < 6 {
+            let pw = 400.0f32;
+            let py = 100.0f32;
+            let px = (sw - pw) * 0.5;
+            if hit_x(px, py, pw) { state.show_tutorial = false; consumed = true; }
+        }
         if state.recipe_picker.is_some() {
             let pw = 340.0f32;
+            let ph: f32 = 50.0 + state.recipe_picker.as_ref().map(|r| r.1.len()).unwrap_or(0) as f32 * 28.0;
             let px = (sw - pw) * 0.5;
-            let py = sh * 0.15;
-            if mx >= px + pw - 30.0 && mx <= px + pw && my >= py && my <= py + 25.0 {
-                state.recipe_picker = None;
-            }
+            let py = (sh - ph.min(500.0)) * 0.5;
+            if hit_x(px, py, pw) { state.recipe_picker = None; consumed = true; }
         }
-        // Help overlay X.
         if state.show_help {
             let pw = (sw * 0.6).min(600.0);
+            let ph = (sh * 0.75).min(500.0);
             let px = (sw - pw) * 0.5;
-            let py = (sh - (sh * 0.75).min(500.0)) * 0.5;
-            if mx >= px + pw - 30.0 && mx <= px + pw && my >= py && my <= py + 25.0 {
-                state.show_help = false;
-            }
+            let py = (sh - ph) * 0.5;
+            if hit_x(px, py, pw) { state.show_help = false; consumed = true; }
         }
-        // Recipe browser X.
         if state.show_recipes {
             let pw = (sw * 0.75).min(800.0);
+            let ph = (sh * 0.85).min(700.0);
             let px = (sw - pw) * 0.5;
-            let py = (sh - (sh * 0.85).min(700.0)) * 0.5;
-            if mx >= px + pw - 30.0 && mx <= px + pw && my >= py && my <= py + 25.0 {
-                state.show_recipes = false;
-            }
+            let py = (sh - ph) * 0.5;
+            if hit_x(px, py, pw) { state.show_recipes = false; consumed = true; }
         }
-        // Research screen X.
         if state.show_research {
             let pw = (sw * 0.7).min(700.0);
+            let ph = (sh * 0.8).min(600.0);
             let px = (sw - pw) * 0.5;
-            let py = (sh - (sh * 0.8).min(600.0)) * 0.5;
-            if mx >= px + pw - 30.0 && mx <= px + pw && my >= py && my <= py + 25.0 {
-                state.show_research = false;
-            }
+            let py = (sh - ph) * 0.5;
+            if hit_x(px, py, pw) { state.show_research = false; consumed = true; }
         }
+        if state.show_achievements {
+            let pw = (sw * 0.5).min(500.0);
+            let ph = (sh * 0.7).min(450.0);
+            let px = (sw - pw) * 0.5;
+            let py = (sh - ph) * 0.5;
+            if hit_x(px, py, pw) { state.show_achievements = false; consumed = true; }
+        }
+        if state.show_stats {
+            let pw = (sw * 0.5).min(480.0);
+            let ph = (sh * 0.6).min(400.0);
+            let px = (sw - pw) * 0.5;
+            let py = (sh - ph) * 0.5;
+            if hit_x(px, py, pw) { state.show_stats = false; consumed = true; }
+        }
+        if consumed { return; }
     }
 
     // Escape: close the topmost overlay, or deselect building.
@@ -795,16 +817,35 @@ fn handle_input(state: &mut GameState) {
             }
 
             // Auto-rotate belts during drag-placement based on movement direction.
+            // When direction changes (corner), retroactively update the previous belt
+            // to face the new direction so items flow through the corner correctly.
             if kind.is_belt() {
                 if let Some(last_pos) = state.last_belt_pos {
                     if last_pos != grid_pos {
                         let dx = grid_pos.x - last_pos.x;
                         let dy = grid_pos.y - last_pos.y;
-                        if dx.abs() >= dy.abs() {
-                            state.placement_direction = if dx > 0 { types::Direction::East } else { types::Direction::West };
+                        let new_dir = if dx.abs() >= dy.abs() {
+                            if dx > 0 { types::Direction::East } else { types::Direction::West }
                         } else {
-                            state.placement_direction = if dy > 0 { types::Direction::South } else { types::Direction::North };
+                            if dy > 0 { types::Direction::South } else { types::Direction::North }
+                        };
+
+                        // If direction changed, update the PREVIOUS belt to face the new
+                        // direction (creating a proper corner where items enter from the
+                        // side and exit in the new direction).
+                        if new_dir != state.placement_direction {
+                            if let Some(tile) = state.grid.get_tile(last_pos) {
+                                if let Some(bid) = tile.building {
+                                    if let Some(prev_belt) = state.buildings.get_mut(bid) {
+                                        if prev_belt.kind.is_belt() {
+                                            prev_belt.direction = new_dir;
+                                        }
+                                    }
+                                }
+                            }
                         }
+
+                        state.placement_direction = new_dir;
                     }
                 }
             }
@@ -1488,22 +1529,22 @@ fn draw_ui(state: &GameState, atlas: &SpriteAtlas) {
     let toolbar_y = screen_height() - toolbar_h;
     draw_panel(0.0, toolbar_y, screen_width(), toolbar_h, None, false);
 
-    // Toolbar items: (hotkey label, display name, kind, texture)
-    let toolbar_items: Vec<(&str, &str, types::BuildingKind, &Texture2D)> = vec![
-        ("1", "Belt", types::BuildingKind::BeltYellow, &atlas.belt_yellow[0]),
-        ("2", "Miner", types::BuildingKind::Miner, &atlas.miner),
-        ("3", "Furnace", types::BuildingKind::StoneFurnace, &atlas.stone_furnace),
-        ("4", "Inserter", types::BuildingKind::InserterRegular, &atlas.inserter),
-        ("5", "Assembler", types::BuildingKind::AssemblerT1, &atlas.assembler),
-        ("6", "Boiler", types::BuildingKind::Boiler, &atlas.boiler),
-        ("7", "Engine", types::BuildingKind::SteamEngine, &atlas.steam_engine),
-        ("8", "Lab", types::BuildingKind::Lab, &atlas.lab),
-        ("9", "Chest", types::BuildingKind::StorageChest, &atlas.chest),
-        ("0", "Splitter", types::BuildingKind::Splitter, &atlas.chest),
-        ("T", "Turret", types::BuildingKind::GunTurret, &atlas.gun_turret),
-        ("G", "Wall", types::BuildingKind::Wall, &atlas.wall),
-        ("C", "Chemical", types::BuildingKind::ChemicalPlant, &atlas.assembler),
-        ("P", "Solar", types::BuildingKind::SolarPanel, &atlas.solar_panel),
+    // Toolbar items: (hotkey label, display name, kind, atlas source rect)
+    let toolbar_items: Vec<(&str, &str, types::BuildingKind, Rect)> = vec![
+        ("1", "Belt", types::BuildingKind::BeltYellow, atlas.r_belt_yellow[0]),
+        ("2", "Miner", types::BuildingKind::Miner, atlas.r_miner),
+        ("3", "Furnace", types::BuildingKind::StoneFurnace, atlas.r_stone_furnace),
+        ("4", "Inserter", types::BuildingKind::InserterRegular, atlas.r_inserter),
+        ("5", "Assembler", types::BuildingKind::AssemblerT1, atlas.r_assembler),
+        ("6", "Boiler", types::BuildingKind::Boiler, atlas.r_boiler),
+        ("7", "Engine", types::BuildingKind::SteamEngine, atlas.r_steam_engine),
+        ("8", "Lab", types::BuildingKind::Lab, atlas.r_lab),
+        ("9", "Chest", types::BuildingKind::StorageChest, atlas.r_chest),
+        ("0", "Splitter", types::BuildingKind::Splitter, atlas.r_splitter),
+        ("T", "Turret", types::BuildingKind::GunTurret, atlas.r_gun_turret),
+        ("G", "Wall", types::BuildingKind::Wall, atlas.r_wall),
+        ("C", "Chemical", types::BuildingKind::ChemicalPlant, atlas.r_chemical_plant),
+        ("P", "Solar", types::BuildingKind::SolarPanel, atlas.r_solar_panel),
     ];
 
     let slot_w = 76.0;
@@ -1511,7 +1552,7 @@ fn draw_ui(state: &GameState, atlas: &SpriteAtlas) {
     let total_w = toolbar_items.len() as f32 * slot_w;
     let start_x = (screen_width() - total_w) * 0.5; // center the toolbar
 
-    for (i, (hotkey, name, kind, tex)) in toolbar_items.iter().enumerate() {
+    for (i, (hotkey, name, kind, src_rect)) in toolbar_items.iter().enumerate() {
         let x = start_x + i as f32 * slot_w;
         let y = toolbar_y + 5.0;
         let is_selected = state.selected_building == Some(*kind);
@@ -1530,11 +1571,12 @@ fn draw_ui(state: &GameState, atlas: &SpriteAtlas) {
         let icon_x = x + (slot_w - icon_size) * 0.5;
         let icon_y = y + 3.0;
         draw_texture_ex(
-            tex,
+            &atlas.tex,
             icon_x,
             icon_y,
             WHITE,
             DrawTextureParams {
+                source: Some(*src_rect),
                 dest_size: Some(Vec2::splat(icon_size)),
                 ..Default::default()
             },
