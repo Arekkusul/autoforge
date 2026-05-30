@@ -192,7 +192,7 @@ pub const TREE_PATCH_COUNT: u32 = 40;
 /// Number of enemy nests at map start.
 pub const INITIAL_NEST_COUNT: u32 = 20;
 /// Minimum distance (tiles) from map center for nests to spawn.
-pub const NEST_MIN_DISTANCE: f32 = 80.0;
+pub const NEST_MIN_DISTANCE: f32 = 120.0;
 
 // ---------------------------------------------------------------------------
 // Animation

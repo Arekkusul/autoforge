@@ -249,7 +249,7 @@ pub static TECHNOLOGIES: &[Technology] = &[
     Technology {
         name: "FORGE Consciousness",
         science_cost: &[Resource::ScienceRed, Resource::ScienceGreen, Resource::ScienceBlue],
-        units_needed: 500,
+        units_needed: 200,
         description: "Restore full consciousness. The final goal.",
         prerequisites: &[19, 20],
     },

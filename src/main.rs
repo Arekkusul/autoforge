@@ -142,24 +142,52 @@ async fn main() {
         clear_background(Color::new(0.08, 0.08, 0.10, 1.0));
 
         // World-space rendering (affected by camera).
-        set_camera(&state.camera.to_macroquad_camera());
-        render::draw_world(
-            &state.grid,
-            &state.buildings,
-            &state.items,
-            &state.enemies,
-            &state.camera,
-            &atlas,
-            state.stats.total_ticks,
-        );
-        render::draw_ghost_preview(
-            &state.grid,
-            &state.camera,
-            &atlas,
-            state.selected_building,
-            state.placement_direction,
-        );
-        render::draw_night_overlay(state.daynight.darkness());
+        if state.camera.map_view {
+            // Map overview: zoom way out to show entire base area.
+            let map_cam = Camera2D {
+                target: Vec2::new(
+                    state.grid.width as f32 * TILE_SIZE * 0.5,
+                    state.grid.height as f32 * TILE_SIZE * 0.5,
+                ),
+                zoom: vec2(
+                    0.15 * 2.0 / screen_width(),
+                    0.15 * 2.0 / screen_height(),
+                ),
+                ..Default::default()
+            };
+            set_camera(&map_cam);
+            render::draw_world(
+                &state.grid,
+                &state.buildings,
+                &state.items,
+                &state.enemies,
+                &state.camera, // pass real camera for frustum (will show everything at this zoom)
+                &atlas,
+                state.stats.total_ticks,
+            );
+            // Draw camera viewport rectangle on the overview.
+            let (vis_min, vis_max) = state.camera.visible_bounds();
+            draw_rectangle_lines(vis_min.x, vis_min.y, vis_max.x - vis_min.x, vis_max.y - vis_min.y, 4.0, WHITE);
+        } else {
+            set_camera(&state.camera.to_macroquad_camera());
+            render::draw_world(
+                &state.grid,
+                &state.buildings,
+                &state.items,
+                &state.enemies,
+                &state.camera,
+                &atlas,
+                state.stats.total_ticks,
+            );
+            render::draw_ghost_preview(
+                &state.grid,
+                &state.camera,
+                &atlas,
+                state.selected_building,
+                state.placement_direction,
+            );
+        }
+        render::draw_night_overlay(state.daynight.darkness(), &state.buildings, &state.camera);
 
         // Placement flash effect (brief white glow on last placed building).
         if let Some((pos, ticks)) = state.placement_flash {
@@ -239,7 +267,7 @@ async fn main() {
 
         // Screen-space UI overlay.
         set_default_camera();
-        draw_ui(&state, &atlas);
+        draw_ui(&mut state, &atlas);
 
         next_frame().await;
     }
@@ -346,9 +374,21 @@ fn handle_input(state: &mut GameState) {
         }
     }
 
+    // Helper: close all overlays (ensures mutual exclusivity).
+    fn close_all_overlays(state: &mut GameState) {
+        state.show_research = false;
+        state.show_recipes = false;
+        state.show_stats = false;
+        state.show_achievements = false;
+        state.show_help = false;
+        state.recipe_picker = None;
+    }
+
     // Toggle research screen
     if is_key_pressed(KeyCode::Tab) {
-        state.show_research = !state.show_research;
+        let was = state.show_research;
+        close_all_overlays(state);
+        state.show_research = !was;
     }
 
     // Toggle tutorial
@@ -358,17 +398,23 @@ fn handle_input(state: &mut GameState) {
 
     // Toggle full help overlay
     if is_key_pressed(KeyCode::F1) {
-        state.show_help = !state.show_help;
+        let was = state.show_help;
+        close_all_overlays(state);
+        state.show_help = !was;
     }
 
     // Toggle achievements screen
     if is_key_pressed(KeyCode::N) {
-        state.show_achievements = !state.show_achievements;
+        let was = state.show_achievements;
+        close_all_overlays(state);
+        state.show_achievements = !was;
     }
 
     // Toggle production stats
     if is_key_pressed(KeyCode::V) {
-        state.show_stats = !state.show_stats;
+        let was = state.show_stats;
+        close_all_overlays(state);
+        state.show_stats = !was;
     }
 
     // Blueprint: B to copy buildings near cursor, then click to paste.
@@ -415,15 +461,15 @@ fn handle_input(state: &mut GameState) {
         && (is_key_down(KeyCode::LeftControl) || is_key_down(KeyCode::RightControl)
             || is_key_down(KeyCode::LeftSuper) || is_key_down(KeyCode::RightSuper))
     {
-        if let Some(pos) = state.last_placed {
+        if let Some(pos) = state.undo_history.pop() {
             if let Some(tile) = state.grid.get_tile(pos) {
                 if let Some(bid) = tile.building {
                     if let Some(b) = state.buildings.get(bid) {
                         buildcost::refund_cost(&mut state.inventory, b.kind);
                     }
                     state.buildings.remove(bid, &mut state.grid);
-                    state.last_placed = None;
-                    state.toast("Undone!".to_string(), 30);
+                    let remaining = state.undo_history.len();
+                    state.toast(format!("Undone! ({} more)", remaining), 30);
                 }
             }
         }
@@ -441,7 +487,9 @@ fn handle_input(state: &mut GameState) {
 
     // Toggle recipe browser
     if is_key_pressed(KeyCode::E) {
-        state.show_recipes = !state.show_recipes;
+        let was = state.show_recipes;
+        close_all_overlays(state);
+        state.show_recipes = !was;
     }
 
     // Save (F5)
@@ -523,7 +571,12 @@ fn handle_input(state: &mut GameState) {
             if let Some(bid) = tile.building {
                 if let Some(b) = state.buildings.get(bid) {
                     state.selected_building = Some(b.kind);
+                    state.placement_direction = b.direction;
+                    state.toast(format!("Picked: {:?}", b.kind), 30);
                 }
+            } else {
+                state.selected_building = None;
+                state.toast("Deselected building".to_string(), 20);
             }
         }
     }
@@ -658,27 +711,9 @@ fn handle_input(state: &mut GameState) {
         if let Some(tile) = state.grid.get_tile(grid_pos) {
             if let Some(bid) = tile.building {
                 if let Some(b) = state.buildings.get(bid) {
-                    // Click TrainStop → spawn/configure a train.
+                    // Click TrainStop → trains not yet fully implemented.
                     if b.kind == types::BuildingKind::TrainStop {
-                        let stop_pos = b.pos;
-                        let stop_kind = b.kind; // copy to release borrow
-                        drop(b); // release immutable borrow on buildings
-
-                        let stops: Vec<types::GridPos> = state.buildings.iter()
-                            .filter(|(_, b2)| b2.kind == types::BuildingKind::TrainStop)
-                            .map(|(_, b2)| b2.pos)
-                            .collect();
-
-                        if stops.len() >= 2 {
-                            let stop_count = stops.len();
-                            state.trains.spawn_train(stop_pos);
-                            if let Some(t) = state.trains.list.last_mut() {
-                                t.schedule = stops;
-                            }
-                            state.toast(format!("Train spawned with {} stops!", stop_count), 60);
-                        } else {
-                            state.toast("Need 2+ train stops for a route!".to_string(), 50);
-                        }
+                        state.toast("Trains coming in a future update!".to_string(), 60);
                     } else
 
                     // If it's an assembler or chemical plant, open recipe picker popup.
@@ -891,10 +926,41 @@ fn handle_input(state: &mut GameState) {
                 underground_pair,
             };
 
+            // Belt upgrade: if placing a belt over an existing belt, remove the old one first.
+            if kind.is_belt() {
+                if let Some(tile) = state.grid.get_tile(grid_pos) {
+                    if let Some(old_bid) = tile.building {
+                        if let Some(old_b) = state.buildings.get(old_bid) {
+                            if old_b.kind.is_belt() && old_b.kind != kind {
+                                // Refund old belt, remove it, then place the new one.
+                                buildcost::refund_cost(&mut state.inventory, old_b.kind);
+                                state.buildings.remove(old_bid, &mut state.grid);
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Pre-check for specific error messages before attempting placement.
+            if is_mouse_button_pressed(MouseButton::Left) {
+                if let Some(tile) = state.grid.get_tile(grid_pos) {
+                    if tile.building.is_some() {
+                        // Only toast on initial click, not drag
+                    } else if !tile.terrain.is_buildable() && kind != types::BuildingKind::WaterPump {
+                        state.toast("Can't build here — terrain is not buildable".to_string(), 40);
+                    } else if kind == types::BuildingKind::Miner && (tile.deposit.is_none() || tile.deposit == Some(types::OreDeposit::Oil)) {
+                        state.toast("Miner must be placed on an ore deposit".to_string(), 50);
+                    } else if kind == types::BuildingKind::PumpJack && tile.deposit != Some(types::OreDeposit::Oil) {
+                        state.toast("Pump jack must be placed on an oil well".to_string(), 50);
+                    }
+                }
+            }
+
             if let Some(_new_bid) = state.buildings.place(b, &mut state.grid) {
                 // Deduct cost from inventory.
                 buildcost::pay_cost(&mut state.inventory, kind);
-                state.last_placed = Some(grid_pos);
+                state.undo_history.push(grid_pos);
+                if state.undo_history.len() > 20 { state.undo_history.remove(0); }
                 state.placement_flash = Some((grid_pos, 10));
                 state.stats.buildings_placed += 1;
 
@@ -1048,6 +1114,7 @@ fn simulation_tick(state: &mut GameState) {
         &mut state.buildings,
         &mut state.items,
         &mut state.stats,
+        state.power.satisfaction,
     );
 
     // 2. Machine output: eject finished items onto output belts.
@@ -1111,8 +1178,8 @@ fn simulation_tick(state: &mut GameState) {
             &mut state.stats.enemies_killed,
         );
 
-        // 7. Trains: move along rails, wait at stops.
-        train::tick_trains(&state.grid, &state.buildings, &mut state.trains);
+        // 7. Trains: disabled pending full implementation (no cargo loading/unloading yet).
+        // train::tick_trains(&state.grid, &state.buildings, &mut state.trains);
 
         // 8. Combat: turrets shoot enemies.
         let kills_before = state.stats.enemies_killed;
@@ -1273,7 +1340,7 @@ fn simulation_tick(state: &mut GameState) {
         }
 
         // Expand build zone with research milestones.
-        let base_radius = 30.0f32;
+        let base_radius = 40.0f32;
         let bonus = state.research.completed.iter().filter(|&&c| c).count() as f32 * 3.0;
         state.build_radius = base_radius + bonus;
     }
@@ -1357,7 +1424,7 @@ fn short_resource_name(r: types::Resource) -> &'static str {
     }
 }
 
-fn draw_ui(state: &GameState, atlas: &SpriteAtlas) {
+fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
     // Modern UI colors — clean, high contrast, readable.
     let panel_bg = Color::new(0.08, 0.08, 0.12, 0.92);
     let panel_border = Color::new(0.25, 0.25, 0.35, 0.6);
@@ -1370,12 +1437,18 @@ fn draw_ui(state: &GameState, atlas: &SpriteAtlas) {
     // --- Top-left: Status Panel (compact, 4 lines) ---
     let (cx, mut cy) = draw_panel(8.0, 8.0, 240.0, 96.0, Some("FORGE"), false);
 
-    // Line 1: Time + FPS + Speed
-    let speed_str = if state.game_speed > 1 { format!(" {}x", state.game_speed) } else { String::new() };
+    // Line 1: Time + FPS
     draw_text(
-        &format!("{}:{:02} | FPS:{}{}", state.stats.total_ticks / 1200, (state.stats.total_ticks / 20) % 60, get_fps(), speed_str),
+        &format!("{}:{:02} | FPS:{}", state.stats.total_ticks / 1200, (state.stats.total_ticks / 20) % 60, get_fps()),
         cx, cy + 4.0, 13.0, text_dim,
     );
+    // Speed badge (highlighted when not 1x).
+    if state.game_speed > 1 {
+        let speed_text = format!("{}x", state.game_speed);
+        let sw = measure_text(&speed_text, None, 14, 1.0).width;
+        draw_rectangle(cx + 165.0, cy - 4.0, sw + 10.0, 16.0, Color::new(0.8, 0.6, 0.1, 0.8));
+        draw_text(&speed_text, cx + 170.0, cy + 7.0, 14.0, Color::new(1.0, 1.0, 1.0, 1.0));
+    }
     cy += 18.0;
 
     // Line 2: Power bar (visual, not just text)
@@ -1426,6 +1499,67 @@ fn draw_ui(state: &GameState, atlas: &SpriteAtlas) {
             draw_text(key, cx, cy, 14.0, Color::new(0.95, 0.82, 0.35, 0.9));
             draw_text(desc, cx + 50.0, cy, 14.0, Color::new(0.8, 0.8, 0.85, 0.9));
             cy += 24.0;
+        }
+    }
+
+    // --- Victory screen overlay ---
+    if state.game_won {
+        let sw = screen_width();
+        let sh = screen_height();
+        draw_rectangle(0.0, 0.0, sw, sh, Color::new(0.0, 0.0, 0.05, 0.65));
+
+        let pw = 460.0f32.min(sw * 0.8);
+        let ph = 360.0f32.min(sh * 0.75);
+        let px = (sw - pw) * 0.5;
+        let py = (sh - ph) * 0.5;
+        let (cx, mut cy) = draw_panel(px, py, pw, ph, Some("CONSCIOUSNESS RESTORED"), false);
+
+        // FORGE avatar from atlas.
+        let avatar_size = 64.0;
+        let avatar_x = px + pw * 0.5 - avatar_size * 0.5;
+        let blink_frame = if (get_time() * 0.3).fract() > 0.92 { 1 } else { 0 };
+        draw_texture_ex(
+            &atlas.tex, avatar_x, cy, WHITE,
+            DrawTextureParams {
+                source: Some(atlas.r_forge_avatar[blink_frame]),
+                dest_size: Some(Vec2::splat(avatar_size)),
+                ..Default::default()
+            },
+        );
+        cy += avatar_size + 8.0;
+
+        // Epilogue text.
+        let gold = Color::new(0.95, 0.82, 0.35, 1.0);
+        let bright = Color::new(0.9, 0.9, 0.95, 1.0);
+        let dim = Color::new(0.6, 0.6, 0.7, 0.9);
+
+        draw_text("I found them. All 4,000 colonists. Alive. Safe.", cx, cy, 16.0, gold);
+        cy += 22.0;
+        draw_text("Thank you for helping me remember who I am. <3", cx, cy, 14.0, Color::new(1.0, 0.7, 0.85, 0.9));
+        cy += 30.0;
+
+        // Stats.
+        let playtime_min = state.stats.total_ticks / 1200;
+        let playtime_sec = (state.stats.total_ticks / 20) % 60;
+        draw_text(&format!("Playtime:  {}:{:02}", playtime_min, playtime_sec), cx, cy, 14.0, bright);
+        cy += 20.0;
+        draw_text(&format!("Items Crafted:  {}", state.stats.items_crafted), cx, cy, 14.0, bright);
+        cy += 20.0;
+        draw_text(&format!("Buildings Placed:  {}", state.stats.buildings_placed), cx, cy, 14.0, bright);
+        cy += 20.0;
+        draw_text(&format!("Enemies Defeated:  {}", state.stats.enemies_killed), cx, cy, 14.0, bright);
+        cy += 30.0;
+
+        draw_text("Press any key to continue playing~", cx, cy, 13.0, dim);
+
+        // Dismiss on key press (after initial display).
+        if state.stats.items_crafted > 50100 {
+            // Only dismiss after a brief delay so the screen is actually seen.
+            if is_key_pressed(KeyCode::Space) || is_key_pressed(KeyCode::Escape)
+                || is_key_pressed(KeyCode::Enter) || is_mouse_button_pressed(MouseButton::Left)
+            {
+                state.game_won = false; // Dismiss victory screen, keep playing.
+            }
         }
     }
 
@@ -1532,13 +1666,13 @@ fn draw_ui(state: &GameState, atlas: &SpriteAtlas) {
     // Toolbar items: (hotkey label, display name, kind, atlas source rect)
     let toolbar_items: Vec<(&str, &str, types::BuildingKind, Rect)> = vec![
         ("1", "Belt", types::BuildingKind::BeltYellow, atlas.r_belt_yellow[0]),
-        ("2", "Miner", types::BuildingKind::Miner, atlas.r_miner),
-        ("3", "Furnace", types::BuildingKind::StoneFurnace, atlas.r_stone_furnace),
+        ("2", "Miner", types::BuildingKind::Miner, atlas.r_miner[0]),
+        ("3", "Furnace", types::BuildingKind::StoneFurnace, atlas.r_stone_furnace[0]),
         ("4", "Inserter", types::BuildingKind::InserterRegular, atlas.r_inserter),
-        ("5", "Assembler", types::BuildingKind::AssemblerT1, atlas.r_assembler),
+        ("5", "Assembler", types::BuildingKind::AssemblerT1, atlas.r_assembler[0]),
         ("6", "Boiler", types::BuildingKind::Boiler, atlas.r_boiler),
         ("7", "Engine", types::BuildingKind::SteamEngine, atlas.r_steam_engine),
-        ("8", "Lab", types::BuildingKind::Lab, atlas.r_lab),
+        ("8", "Lab", types::BuildingKind::Lab, atlas.r_lab[0]),
         ("9", "Chest", types::BuildingKind::StorageChest, atlas.r_chest),
         ("0", "Splitter", types::BuildingKind::Splitter, atlas.r_splitter),
         ("T", "Turret", types::BuildingKind::GunTurret, atlas.r_gun_turret),
@@ -1707,14 +1841,26 @@ fn draw_ui(state: &GameState, atlas: &SpriteAtlas) {
         let rw = (vis_max_g.x - vis_min_g.x) as f32 / (map_pixels * tiles_per_pixel) as f32 * mm_size;
         let rh = (vis_max_g.y - vis_min_g.y) as f32 / (map_pixels * tiles_per_pixel) as f32 * mm_size;
         draw_rectangle_lines(mm_x + rx, mm_y + ry, rw, rh, 1.0, WHITE);
+
+        // Click minimap to teleport camera.
+        if is_mouse_button_pressed(MouseButton::Left) {
+            let (mx, my) = mouse_position();
+            if mx >= mm_x && mx < mm_x + mm_size && my >= mm_y && my < mm_y + mm_size {
+                let frac_x = (mx - mm_x) / mm_size;
+                let frac_y = (my - mm_y) / mm_size;
+                let target_gx = cam_grid.x - half_range + (frac_x * (map_pixels * tiles_per_pixel) as f32) as i32;
+                let target_gy = cam_grid.y - half_range + (frac_y * (map_pixels * tiles_per_pixel) as f32) as i32;
+                state.camera.target = grid::Grid::grid_to_world_center(types::GridPos::new(target_gx, target_gy));
+            }
+        }
     }
 
-    // --- Toast notifications (center-top area) ---
+    // --- Toast notifications (center-top area, max 3 visible) ---
     if !state.toasts.is_empty() {
         let cx = screen_width() * 0.5;
-        for (i, (msg, remaining)) in state.toasts.iter().enumerate() {
+        for (i, (msg, remaining)) in state.toasts.iter().take(3).enumerate() {
             let alpha = (*remaining as f32 / 20.0).min(1.0); // fade out last 20 ticks
-            let y = 70.0 + i as f32 * 26.0;
+            let y = 40.0 + i as f32 * 26.0;
             let w = measure_text(msg, None, 20, 1.0).width;
             draw_rectangle(
                 cx - w * 0.5 - 12.0,
@@ -1733,20 +1879,25 @@ fn draw_ui(state: &GameState, atlas: &SpriteAtlas) {
         }
     }
 
-    // --- Bottom-right: controls hint ---
-    let help_x = screen_width() - 280.0;
-    let help_y = toolbar_y - 80.0;
-    let hint_color = Color::new(0.5, 0.5, 0.5, 0.6);
-    let hints = [
-        "WASD: Pan | Scroll: Zoom | Edge: Scroll",
-        "LClick: Place | RClick: Remove (hold=drag)",
-        "R: Rotate | Q: Copy | Ctrl+Z: Undo",
-        "E: Recipes | Tab: Research | H: Tutorial",
-        "Space: Pause | +/-: Speed | F5/F9: Save/Load",
-        "Middle-Click: Hand-insert item into machine",
-    ];
-    for (i, line) in hints.iter().enumerate() {
-        draw_text(line, help_x, help_y + i as f32 * 18.0, 15.0, hint_color);
+    // --- Bottom-right: controls hint (hidden when any overlay is active) ---
+    let any_overlay = state.paused || state.show_recipes || state.show_research
+        || state.show_stats || state.show_achievements || state.show_help
+        || state.recipe_picker.is_some();
+    if !any_overlay {
+        let help_x = screen_width() - 280.0;
+        let help_y = toolbar_y - 120.0;
+        let hint_color = Color::new(0.5, 0.5, 0.5, 0.6);
+        let hints = [
+            "WASD: Pan | Scroll: Zoom | Edge: Scroll",
+            "LClick: Place | RClick: Remove (hold=drag)",
+            "R: Rotate | Q: Copy | Ctrl+Z: Undo",
+            "E: Recipes | Tab: Research | H: Tutorial",
+            "Space: Pause | +/-: Speed | F5/F9: Save/Load",
+            "Middle-Click: Hand-insert item into machine",
+        ];
+        for (i, line) in hints.iter().enumerate() {
+            draw_text(line, help_x, help_y + i as f32 * 18.0, 15.0, hint_color);
+        }
     }
 
     // --- Tutorial overlay (unified panel) ---
@@ -1773,6 +1924,7 @@ fn draw_ui(state: &GameState, atlas: &SpriteAtlas) {
     }
 
     // --- Inventory (left side, below status, compact two-column) ---
+    let mut inv_panel_bottom = 112.0; // default if inventory empty
     {
         let all_resources: &[(types::Resource, &str)] = &[
             (types::Resource::IronPlate, "Fe"), (types::Resource::CopperPlate, "Cu"),
@@ -1795,6 +1947,7 @@ fn draw_ui(state: &GameState, atlas: &SpriteAtlas) {
             let rows = (show.len() + 1) / 2; // two columns
             let inv_h = 30.0 + rows.min(8) as f32 * 16.0;
             let (ix, mut iy) = draw_panel(8.0, 112.0, 200.0, inv_h, Some("Inventory"), false);
+            inv_panel_bottom = 112.0 + inv_h;
 
             for chunk in show.chunks(2) {
                 for (col, (_, name, count)) in chunk.iter().enumerate() {
@@ -1806,10 +1959,10 @@ fn draw_ui(state: &GameState, atlas: &SpriteAtlas) {
         }
     }
 
-    // --- Goal Panel (below inventory) ---
+    // --- Goal Panel (below inventory, dynamically positioned) ---
     {
         let goal_x = 8.0;
-        let goal_y = 330.0;
+        let goal_y = inv_panel_bottom + 8.0;
         let (gx, _gy) = draw_panel(goal_x, goal_y, 200.0, 80.0, Some("Goal"), false);
         let goal_x = gx - 4.0; // re-alias for text positioning
         draw_text("Next Goal:", goal_x + 8.0, goal_y + 16.0, 14.0, Color::new(0.9, 0.7, 0.3, 1.0));
@@ -2086,11 +2239,12 @@ fn draw_ui(state: &GameState, atlas: &SpriteAtlas) {
 
 /// Draws the recipe browser overlay (E key).
 fn draw_recipe_browser() {
-    let panel_bg = Color::new(0.04, 0.04, 0.06, 0.95);
-    let border = Color::new(0.4, 0.3, 0.6, 0.9);
-
     let sw = screen_width();
     let sh = screen_height();
+
+    // Darken background for modal consistency.
+    draw_rectangle(0.0, 0.0, sw, sh, Color::new(0.0, 0.0, 0.0, 0.4));
+
     let pw = (sw * 0.75).min(800.0);
     let ph = (sh * 0.85).min(700.0);
     let px = (sw - pw) * 0.5;
@@ -2165,11 +2319,12 @@ fn draw_recipe_browser() {
 
 /// Draws the research screen overlay.
 fn draw_research_screen(state: &GameState) {
-    let panel_bg = Color::new(0.04, 0.04, 0.06, 0.95);
-    let border = Color::new(0.3, 0.3, 0.4, 0.9);
-
     let sw = screen_width();
     let sh = screen_height();
+
+    // Darken background for modal consistency.
+    draw_rectangle(0.0, 0.0, sw, sh, Color::new(0.0, 0.0, 0.0, 0.4));
+
     let pw = (sw * 0.7).min(700.0);
     let ph = (sh * 0.8).min(600.0);
     let px = (sw - pw) * 0.5;

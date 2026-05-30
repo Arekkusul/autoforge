@@ -78,8 +78,8 @@ pub struct GameState {
     pub show_recipes: bool,
     /// Milestones completed (indexed by milestone ID).
     pub milestones_completed: Vec<bool>,
-    /// Last placed building position (for undo with Ctrl+Z).
-    pub last_placed: Option<GridPos>,
+    /// Undo history stack (most recent placement at the end, max 20).
+    pub undo_history: Vec<GridPos>,
     /// Last belt position placed (for auto-rotate during drag).
     pub last_belt_pos: Option<GridPos>,
     /// Production tracking: items produced in the last 1200 ticks (60 sec).
@@ -173,7 +173,7 @@ impl GameState {
             show_tutorial: true,
             show_recipes: false,
             milestones_completed: vec![false; crate::milestones::MILESTONES.len()],
-            last_placed: None,
+            undo_history: Vec::new(),
             last_belt_pos: None,
             production_log: Vec::new(),
             tick_accumulator: 0.0,

@@ -28,6 +28,29 @@ pub struct SaveData {
     pub tiles: Vec<SaveTile>,
     pub buildings: Vec<SaveBuilding>,
     pub items: Vec<SaveItem>,
+    // v2 fields (optional for backward compat with old saves).
+    #[serde(default)]
+    pub inventory: Vec<(Resource, u32)>,
+    #[serde(default)]
+    pub research_completed: Vec<bool>,
+    #[serde(default)]
+    pub research_current: Option<usize>,
+    #[serde(default)]
+    pub research_progress: u32,
+    #[serde(default)]
+    pub story_triggered: Vec<bool>,
+    #[serde(default)]
+    pub story_first_miner: bool,
+    #[serde(default)]
+    pub story_first_wave: bool,
+    #[serde(default)]
+    pub daynight_time: f32,
+    #[serde(default)]
+    pub game_speed: u32,
+    #[serde(default)]
+    pub build_radius: f32,
+    #[serde(default)]
+    pub game_won: bool,
 }
 
 /// Serialized tile (only non-default tiles are saved for efficiency).
@@ -86,7 +109,7 @@ fn save_path_json() -> PathBuf {
 /// Returns `true` on success.
 pub fn save_game(state: &GameState) -> bool {
     let mut save = SaveData {
-        version: 1,
+        version: 2,
         seed: state.seed,
         grid_width: state.grid.width,
         grid_height: state.grid.height,
@@ -96,6 +119,18 @@ pub fn save_game(state: &GameState) -> bool {
         tiles: Vec::new(),
         buildings: Vec::new(),
         items: Vec::new(),
+        // v2: preserve critical state across save/load.
+        inventory: state.inventory.iter().map(|(r, c)| (*r, *c)).collect(),
+        research_completed: state.research.completed.clone(),
+        research_current: state.research.current_tech,
+        research_progress: state.research.progress,
+        story_triggered: state.story.triggered.clone(),
+        story_first_miner: state.story.first_miner_placed,
+        story_first_wave: state.story.first_wave_arrived,
+        daynight_time: state.daynight.time,
+        game_speed: state.game_speed,
+        build_radius: state.build_radius,
+        game_won: state.game_won,
     };
 
     // Save tiles that differ from default (have deposits, pollution, or non-grass terrain).
@@ -241,6 +276,34 @@ pub fn load_game(state: &mut GameState) -> bool {
     state.evolution = save.evolution;
     state.nests = save.nests.iter().map(|&(x, y)| GridPos::new(x, y)).collect();
     state.seed = save.seed;
+
+    // Restore v2 fields (gracefully handles old saves via serde defaults).
+    if !save.inventory.is_empty() {
+        state.inventory.clear();
+        for (r, c) in &save.inventory {
+            state.inventory.insert(*r, *c);
+        }
+    }
+    if !save.research_completed.is_empty() {
+        state.research.completed = save.research_completed;
+        state.research.current_tech = save.research_current;
+        state.research.progress = save.research_progress;
+    }
+    if !save.story_triggered.is_empty() {
+        state.story.triggered = save.story_triggered;
+        state.story.first_miner_placed = save.story_first_miner;
+        state.story.first_wave_arrived = save.story_first_wave;
+    }
+    if save.daynight_time > 0.0 {
+        state.daynight.time = save.daynight_time;
+    }
+    if save.game_speed > 0 {
+        state.game_speed = save.game_speed;
+    }
+    if save.build_radius > 0.0 {
+        state.build_radius = save.build_radius;
+    }
+    state.game_won = save.game_won;
 
     true
 }

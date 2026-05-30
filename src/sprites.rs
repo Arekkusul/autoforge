@@ -156,12 +156,12 @@ pub struct SpriteAtlas {
     pub r_belt_corner_right_red: [Rect; 2],
     pub r_belt_corner_right_blue: [Rect; 2],
 
-    // Machines & structures (16×16)
-    pub r_miner: Rect,
-    pub r_stone_furnace: Rect,
-    pub r_steel_furnace: Rect,
-    pub r_assembler: Rect,
-    pub r_lab: Rect,
+    // Machines & structures (16×16, animated ones have 2 frames)
+    pub r_miner: [Rect; 2],
+    pub r_stone_furnace: [Rect; 2],
+    pub r_steel_furnace: [Rect; 2],
+    pub r_assembler: [Rect; 2],
+    pub r_lab: [Rect; 2],
     pub r_boiler: Rect,
     pub r_steam_engine: Rect,
     pub r_solar_panel: Rect,
@@ -187,6 +187,9 @@ pub struct SpriteAtlas {
     pub r_electric_furnace: Rect,
     pub r_pump_jack: Rect,
 
+    // FORGE avatar (24×24, 2 expression frames: happy, blink)
+    pub r_forge_avatar: [Rect; 2],
+
     // Items (8×8)
     pub r_item_iron_ore: Rect,
     pub r_item_copper_ore: Rect,
@@ -198,9 +201,29 @@ pub struct SpriteAtlas {
     pub r_item_wire: Rect,
     pub r_item_green_circuit: Rect,
     pub r_item_science_red: Rect,
+    pub r_item_steel_plate: Rect,
+    pub r_item_stone_brick: Rect,
+    pub r_item_pipe: Rect,
+    pub r_item_red_circuit: Rect,
+    pub r_item_blue_circuit: Rect,
+    pub r_item_science_green: Rect,
+    pub r_item_science_blue: Rect,
+    pub r_item_science_purple: Rect,
+    pub r_item_sulfur: Rect,
+    pub r_item_plastic: Rect,
+    pub r_item_battery: Rect,
+    pub r_item_ammo: Rect,
+    pub r_item_grenade: Rect,
+    pub r_item_engine: Rect,
+    pub r_item_rocket_part: Rect,
+    pub r_item_rocket_fuel: Rect,
+    pub r_item_inserter: Rect,
+    pub r_item_iron_stick: Rect,
+    pub r_item_speed_module: Rect,
+    pub r_item_science_yellow: Rect,
 
-    // Enemies & special (variable sizes)
-    pub r_enemy_small_biter: Rect,
+    // Enemies & special (variable sizes, 2-frame walk cycle)
+    pub r_enemy_small_biter: [Rect; 2],
     pub r_crashed_ship: Rect,
 }
 
@@ -269,13 +292,13 @@ impl SpriteAtlas {
         let r_ore_crystal = pack(&mut atlas_img, &make_ore_sprite(19, 5), s*8, y1);
         let r_ore_oil     = pack(&mut atlas_img, &make_oil_sprite(), s*9, y1);
 
-        // Row 2: Machines & structures
+        // Row 2: Machines & structures (frame 0)
         let y2 = 34u32;
-        let r_miner         = pack(&mut atlas_img, &make_miner_sprite(), 0, y2);
-        let r_stone_furnace = pack(&mut atlas_img, &make_stone_furnace_sprite(), s, y2);
-        let r_steel_furnace = pack(&mut atlas_img, &make_steel_furnace_sprite(), s*2, y2);
-        let r_assembler     = pack(&mut atlas_img, &make_assembler_sprite(), s*3, y2);
-        let r_lab           = pack(&mut atlas_img, &make_lab_sprite(), s*4, y2);
+        let r_miner_0         = pack(&mut atlas_img, &make_miner_sprite(0), 0, y2);
+        let r_stone_furnace_0 = pack(&mut atlas_img, &make_stone_furnace_sprite(0), s, y2);
+        let r_steel_furnace_0 = pack(&mut atlas_img, &make_steel_furnace_sprite(0), s*2, y2);
+        let r_assembler_0     = pack(&mut atlas_img, &make_assembler_sprite(0), s*3, y2);
+        let r_lab_0           = pack(&mut atlas_img, &make_lab_sprite(0), s*4, y2);
         let r_boiler        = pack(&mut atlas_img, &make_boiler_sprite(), s*5, y2);
         let r_steam_engine  = pack(&mut atlas_img, &make_steam_engine_sprite(), s*6, y2);
         let r_solar_panel   = pack(&mut atlas_img, &make_solar_panel_sprite(), s*7, y2);
@@ -342,14 +365,38 @@ impl SpriteAtlas {
         let r_item_wire         = pack(&mut atlas_img, &make_wire_item_sprite(), si*7, y6);
         let r_item_green_circuit = pack(&mut atlas_img, &make_circuit_item_sprite(), si*8, y6);
         let r_item_science_red  = pack(&mut atlas_img, &make_flask_item_sprite(10, 11), si*9, y6);
+        // Extra items continued on same row (10+)
+        let r_item_steel_plate  = pack(&mut atlas_img, &make_plate_item_sprite(5, 6), si*10, y6);    // silver
+        let r_item_stone_brick  = pack(&mut atlas_img, &make_item_sprite(47, 48), si*11, y6);        // tan
+        let r_item_pipe         = pack(&mut atlas_img, &make_item_sprite(3, 4), si*12, y6);           // gray
+        let r_item_red_circuit  = pack(&mut atlas_img, &make_circuit_item_sprite_colored(22, 23), si*13, y6);
+        let r_item_blue_circuit = pack(&mut atlas_img, &make_circuit_item_sprite_colored(25, 27), si*14, y6);
+        let r_item_science_green = pack(&mut atlas_img, &make_flask_item_sprite(9, 10), si*15, y6);  // green
+        let r_item_science_blue  = pack(&mut atlas_img, &make_flask_item_sprite(25, 27), si*16, y6); // blue
+        let r_item_science_purple = pack(&mut atlas_img, &make_flask_item_sprite(29, 31), si*17, y6);// purple
+        let r_item_sulfur       = pack(&mut atlas_img, &make_item_sprite(16, 31), si*18, y6);        // yellow
+        let r_item_plastic      = pack(&mut atlas_img, &make_item_sprite(5, 7), si*19, y6);          // white
+        // Row 6b: more items
+        let y6b = y6 + si;
+        let r_item_battery      = pack(&mut atlas_img, &make_item_sprite(9, 10), 0, y6b);            // green cell
+        let r_item_ammo         = pack(&mut atlas_img, &make_item_sprite(16, 17), si, y6b);          // brass
+        let r_item_grenade      = pack(&mut atlas_img, &make_item_sprite(9, 11), si*2, y6b);         // green sphere
+        let r_item_engine       = pack(&mut atlas_img, &make_item_sprite(3, 53), si*3, y6b);         // gray mechanical
+        let r_item_rocket_part  = pack(&mut atlas_img, &make_item_sprite(7, 22), si*4, y6b);         // white+red
+        let r_item_rocket_fuel  = pack(&mut atlas_img, &make_item_sprite(17, 19), si*5, y6b);        // orange
+        let r_item_inserter     = pack(&mut atlas_img, &make_item_sprite(3, 17), si*6, y6b);         // gray+orange
+        let r_item_iron_stick   = pack(&mut atlas_img, &make_item_sprite(3, 5), si*7, y6b);          // thin bar
+        let r_item_speed_module = pack(&mut atlas_img, &make_item_sprite(25, 28), si*8, y6b);        // blue module
+        let r_item_science_yellow = pack(&mut atlas_img, &make_flask_item_sprite(16, 17), si*9, y6b);// yellow
 
-        // Row 7: Enemy + crashed ship
-        let y7 = 111u32;
-        let r_enemy_small_biter = pack(&mut atlas_img, &make_enemy_sprite(23, 24), 0, y7);
-        let r_crashed_ship      = pack(&mut atlas_img, &make_crashed_ship_sprite(), 14, y7);
+        // Row 7: Enemy (2 walk frames) + crashed ship
+        let y7 = 120u32; // pushed down to make room for extra item row
+        let r_enemy_0           = pack(&mut atlas_img, &make_enemy_sprite(23, 24, 0), 0, y7);
+        let r_enemy_1           = pack(&mut atlas_img, &make_enemy_sprite(23, 24, 1), 14, y7);
+        let r_crashed_ship      = pack(&mut atlas_img, &make_crashed_ship_sprite(), 28, y7);
 
         // Row 8-9: Additional buildings (16×16)
-        let y8 = 160u32;
+        let y8 = 170u32;
         let r_underground_belt = pack(&mut atlas_img, &make_underground_belt_sprite(), 0, y8);
         let r_splitter         = pack(&mut atlas_img, &make_splitter_sprite(), s, y8);
         let r_chemical_plant   = pack(&mut atlas_img, &make_chemical_plant_sprite(), s*2, y8);
@@ -361,7 +408,7 @@ impl SpriteAtlas {
         let r_pipe             = pack(&mut atlas_img, &make_pipe_sprite(), s*8, y8);
         let r_roboport         = pack(&mut atlas_img, &make_roboport_sprite(), s*9, y8);
 
-        let y9 = 177u32;
+        let y9 = 187u32;
         let r_rail             = pack(&mut atlas_img, &make_rail_sprite(), 0, y9);
         let r_train_stop       = pack(&mut atlas_img, &make_train_stop_sprite(), s, y9);
         let r_rocket_silo      = pack(&mut atlas_img, &make_rocket_silo_sprite(), s*2, y9);
@@ -369,6 +416,28 @@ impl SpriteAtlas {
         let r_electric_furnace = pack(&mut atlas_img, &make_electric_furnace_sprite(), s*4, y9);
         let r_pump_jack        = pack(&mut atlas_img, &make_pump_jack_sprite(), s*5, y9);
         let r_laser_turret     = pack(&mut atlas_img, &make_laser_turret_sprite(), s*6, y9);
+
+        // Row 10: Machine animation frame 1 (active state variants)
+        let y10 = 204u32;
+        let r_miner_1         = pack(&mut atlas_img, &make_miner_sprite(1), 0, y10);
+        let r_stone_furnace_1 = pack(&mut atlas_img, &make_stone_furnace_sprite(1), s, y10);
+        let r_steel_furnace_1 = pack(&mut atlas_img, &make_steel_furnace_sprite(1), s*2, y10);
+        let r_assembler_1     = pack(&mut atlas_img, &make_assembler_sprite(1), s*3, y10);
+        let r_lab_1           = pack(&mut atlas_img, &make_lab_sprite(1), s*4, y10);
+
+        // Row 11: FORGE avatar (24×24, 2 expressions)
+        let y11 = 221u32;
+        let r_forge_0 = pack(&mut atlas_img, &make_forge_avatar_sprite(0), 0, y11);
+        let r_forge_1 = pack(&mut atlas_img, &make_forge_avatar_sprite(1), 25, y11);
+
+        // Combine into 2-frame arrays.
+        let r_miner = [r_miner_0, r_miner_1];
+        let r_stone_furnace = [r_stone_furnace_0, r_stone_furnace_1];
+        let r_steel_furnace = [r_steel_furnace_0, r_steel_furnace_1];
+        let r_assembler = [r_assembler_0, r_assembler_1];
+        let r_lab = [r_lab_0, r_lab_1];
+        let r_enemy_small_biter = [r_enemy_0, r_enemy_1];
+        let r_forge_avatar = [r_forge_0, r_forge_1];
 
         // Export atlas as PNG for inspection / art replacement.
         atlas_img.export_png("assets/spritesheet.png");
@@ -403,8 +472,17 @@ impl SpriteAtlas {
             r_item_iron_ore, r_item_copper_ore, r_item_coal, r_item_stone,
             r_item_iron_plate, r_item_copper_plate, r_item_gear, r_item_wire,
             r_item_green_circuit, r_item_science_red,
+            r_item_steel_plate, r_item_stone_brick, r_item_pipe,
+            r_item_red_circuit, r_item_blue_circuit,
+            r_item_science_green, r_item_science_blue, r_item_science_purple,
+            r_item_sulfur, r_item_plastic, r_item_battery,
+            r_item_ammo, r_item_grenade, r_item_engine,
+            r_item_rocket_part, r_item_rocket_fuel,
+            r_item_inserter, r_item_iron_stick, r_item_speed_module,
+            r_item_science_yellow,
 
             r_enemy_small_biter, r_crashed_ship,
+            r_forge_avatar,
         }
     }
 }
@@ -412,6 +490,18 @@ impl SpriteAtlas {
 // ===========================================================================
 // Internal sprite generation helpers
 // ===========================================================================
+
+/// Convert palette index to macroquad Color.
+fn pal_color(idx: usize) -> Color {
+    let (r, g, b, a) = PALETTE[idx];
+    Color::new(r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0, a as f32 / 255.0)
+}
+
+/// Check if a Color matches a palette index.
+fn is_pal(c: Color, idx: usize) -> bool {
+    let p = pal_color(idx);
+    (c.r - p.r).abs() < 0.01 && (c.g - p.g).abs() < 0.01 && (c.b - p.b).abs() < 0.01
+}
 
 /// Creates an [`Image`] from a 2D grid of palette indices at the given size.
 fn make_image_rect(pixels: &[&[u8]], width: u16, height: u16) -> Image {
@@ -753,11 +843,10 @@ fn make_belt_corner_sprite(base_color: u8, arrow_color: u8, _frame: u8, mirror: 
 // ===========================================================================
 
 /// Creates the miner sprite — orange body with pickaxe, gear detail, rocky base.
-fn make_miner_sprite() -> Image {
-    // Production quality miner: warm coral body (palette 17-20), metal details (53-56),
-    // proper top-left lighting, ambient occlusion at base, rounded shape.
+/// Frame 1: piston lowered (mining action).
+fn make_miner_sprite(frame: u8) -> Image {
     #[rustfmt::skip]
-    let pixels: &[&[u8]] = &[
+    let pixels: &[&[u8]] = if frame == 0 { &[
         &[0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0],
         &[0, 0, 0, 0, 1, 1,20,20,19,19,19,18, 1, 0, 0, 0],
         &[0, 0, 0, 1,20,20, 8,20,19,19, 8,18,17, 1, 0, 0],
@@ -774,13 +863,31 @@ fn make_miner_sprite() -> Image {
         &[0, 0, 0,45,46,47,46,45,46,47,46,45, 0, 0, 0, 0],
         &[0, 0, 0, 0,45,46,45,45,45,46,45, 0, 0, 0, 0, 0],
         &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    ];
+    ]} else { &[
+        // Frame 1: piston down — body shifts down 1px, gear rotated.
+        &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 1, 1,20,20,19,19,19,18, 1, 0, 0, 0],
+        &[0, 0, 0, 1,20,20, 8,20,19,19, 8,18,17, 1, 0, 0],
+        &[0, 0, 1,20,20, 8,56,55,19,56,55,18,17,17, 1, 0],
+        &[0, 1,20,20,19,55, 5, 4,55, 5, 4,54,17,17, 2, 1],
+        &[0, 1,20,19,19,55,54,54,54,54,54,54,18,17, 2, 1],
+        &[1,19,19,19,55,54, 4, 4, 4, 4, 4,54,18,17, 2, 1],
+        &[1,19,19,18,55,54, 4, 3, 3, 4, 3,54,18, 2, 2, 1],
+        &[1,19,18,18,55, 3, 3, 3, 3, 3, 3,53,17, 2, 2, 1],
+        &[1,18,18,18,54, 3, 3,53,53, 3, 3,53,17, 2, 1, 0],
+        &[0, 1,18,17,53,53,53,53,53,53,53, 2, 2, 1, 0, 0],
+        &[0, 1,17,17, 2, 2, 2, 2, 2, 2, 2, 2, 1, 0, 0, 0],
+        &[0, 0, 1, 1,46,47,46, 2,46,47,46, 1, 0, 0, 0, 0],
+        &[0, 0, 0,45,46,47,46,45,46,47,46,45, 0, 0, 0, 0],
+        &[0, 0, 0, 0,45,46,45,45,45,46,45, 0, 0, 0, 0, 0],
+    ]};
     make_image(pixels, 16)
 }
 
 /// Creates the stone furnace sprite — warm brick oven with amber fire glow.
-/// Uses stone ramp (45-48) for bricks, fire ramp (61, 23, 39) for glow.
-fn make_stone_furnace_sprite() -> Image {
+/// Frame 1: fire flickers (swap fire colors).
+fn make_stone_furnace_sprite(frame: u8) -> Image {
     #[rustfmt::skip]
     let pixels: &[&[u8]] = &[
         &[0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0],
@@ -800,12 +907,25 @@ fn make_stone_furnace_sprite() -> Image {
         &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     ];
-    make_image(pixels, 16)
+    let mut img = make_image(pixels, 16);
+    if frame == 1 {
+        // Flicker fire: swap palette 61↔39 and 23↔40 in the fire region (rows 4-7, cols 4-10).
+        for y in 4..8u32 {
+            for x in 4..11u32 {
+                let c = img.get_pixel(x, y);
+                if is_pal(c, 61) { img.set_pixel(x, y, pal_color(39)); }
+                else if is_pal(c, 39) { img.set_pixel(x, y, pal_color(61)); }
+                else if is_pal(c, 23) { img.set_pixel(x, y, pal_color(40)); }
+                else if is_pal(c, 40) { img.set_pixel(x, y, pal_color(23)); }
+            }
+        }
+    }
+    img
 }
 
 /// Steel furnace — polished metal body (53-56) with bright fire (61, 39-40).
-/// Shinier and more angular than stone furnace.
-fn make_steel_furnace_sprite() -> Image {
+/// Frame 1: fire flickers.
+fn make_steel_furnace_sprite(frame: u8) -> Image {
     #[rustfmt::skip]
     let pixels: &[&[u8]] = &[
         &[0, 0,53,53,53,53,53,53,53,53,53,53,53,53, 0, 0],
@@ -825,12 +945,23 @@ fn make_steel_furnace_sprite() -> Image {
         &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     ];
-    make_image(pixels, 16)
+    let mut img = make_image(pixels, 16);
+    if frame == 1 {
+        for y in 4..8u32 {
+            for x in 4..11u32 {
+                let c = img.get_pixel(x, y);
+                if is_pal(c, 61) { img.set_pixel(x, y, pal_color(40)); }
+                else if is_pal(c, 40) { img.set_pixel(x, y, pal_color(61)); }
+                else if is_pal(c, 23) { img.set_pixel(x, y, pal_color(39)); }
+            }
+        }
+    }
+    img
 }
 
 /// Creates the assembler sprite — periwinkle-blue mechanical box with gear detail.
-/// Uses blue ramp (25-28) with steel accents (53-56).
-fn make_assembler_sprite() -> Image {
+/// Frame 1: gear rotated (swaps 7↔8 in center to simulate rotation).
+fn make_assembler_sprite(frame: u8) -> Image {
     #[rustfmt::skip]
     let pixels: &[&[u8]] = &[
         &[0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0],
@@ -850,13 +981,23 @@ fn make_assembler_sprite() -> Image {
         &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     ];
-    make_image(pixels, 16)
+    let mut img = make_image(pixels, 16);
+    if frame == 1 {
+        // Swap 7↔8 in center gear region to simulate rotation.
+        for y in 6..10u32 {
+            for x in 6..10u32 {
+                let c = img.get_pixel(x, y);
+                if is_pal(c, 7) { img.set_pixel(x, y, pal_color(8)); }
+                else if is_pal(c, 8) { img.set_pixel(x, y, pal_color(7)); }
+            }
+        }
+    }
+    img
 }
 
 /// Creates the lab sprite — purple body with flask/beaker detail.
-/// Lab sprite — purple body (29-32) with green flask detail (57-60).
-/// Rounded shape, indicator "eyes", bubbling flask center.
-fn make_lab_sprite() -> Image {
+/// Frame 1: bubbles shift (swap indicator positions).
+fn make_lab_sprite(frame: u8) -> Image {
     #[rustfmt::skip]
     let pixels: &[&[u8]] = &[
         &[0, 0, 0, 0,29,29,29,29,29,29,29,29, 0, 0, 0, 0],
@@ -876,7 +1017,18 @@ fn make_lab_sprite() -> Image {
         &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     ];
-    make_image(pixels, 16)
+    let mut img = make_image(pixels, 16);
+    if frame == 1 {
+        // Swap flask colors 58↔59 to simulate bubbling.
+        for y in 4..9u32 {
+            for x in 4..9u32 {
+                let c = img.get_pixel(x, y);
+                if is_pal(c, 58) { img.set_pixel(x, y, pal_color(59)); }
+                else if is_pal(c, 59) { img.set_pixel(x, y, pal_color(58)); }
+            }
+        }
+    }
+    img
 }
 
 /// Boiler — teal ramp (33-36) with chimney pipes and fire window (61, 39).
@@ -1161,6 +1313,22 @@ fn make_circuit_item_sprite() -> Image {
     make_image(pixels, 8)
 }
 
+/// Colored circuit board — same shape, different colors (for red/blue circuits).
+fn make_circuit_item_sprite_colored(dark: u8, light: u8) -> Image {
+    #[rustfmt::skip]
+    let pixels: &[&[u8]] = &[
+        &[dark,dark,dark,dark,dark,dark,dark,dark],
+        &[dark, 8,light,light,light,light, 8,dark],
+        &[dark,light, 1,light,light, 1,light,dark],
+        &[dark,light,light,dark,light,light,light,dark],
+        &[dark,light,light,light,dark,light,light,dark],
+        &[dark,light, 1,light,light, 1,light,dark],
+        &[dark, 8,light,light,light,light, 8,dark],
+        &[dark,dark,dark,dark,dark,dark,dark,dark],
+    ];
+    make_image(pixels, 8)
+}
+
 /// Science flask — rounded glass bottle with colored liquid and cork top.
 fn make_flask_item_sprite(dark: u8, light: u8) -> Image {
     #[rustfmt::skip]
@@ -1182,26 +1350,28 @@ fn make_flask_item_sprite(dark: u8, light: u8) -> Image {
 /// Alien guardian — 3-segment insectoid: head with mandibles, thorax, abdomen.
 /// 6 jointed legs, glowing eyes, jagged carapace outline.
 /// Professional pixel art anatomy: distinct body segments, sharp silhouette.
-fn make_enemy_sprite(body: u8, shadow: u8) -> Image {
-    #[rustfmt::skip]
-    let pixels: &[&[u8]] = &[
+fn make_enemy_sprite(body: u8, shadow: u8, frame: u8) -> Image {
+    // Frame 0: legs extended left. Frame 1: legs extended right (walk cycle).
+    let (l0, l1) = if frame == 0 { (shadow, 0u8) } else { (0u8, shadow) };
+    let pixels: Vec<Vec<u8>> = vec![
         //     mandibles    head     mandibles
-        &[shadow, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,shadow],
-        &[0,shadow, 0, 0,shadow,shadow,shadow,shadow, 0, 0,shadow, 0],
-        &[0, 0, 0,shadow,body,63, 8,63,body,shadow, 0, 0],  // HEAD: glowing eyes (63=red, 8=white pupil)
-        &[0, 0,shadow,body,body,shadow,shadow,body,body,shadow, 0, 0],
-        //     legs  thorax(armored)  legs
-        &[shadow, 0,shadow,body,body,body,body,body,body,shadow, 0,shadow],
-        &[0,shadow,body,body,shadow,body,body,shadow,body,body,shadow, 0],  // THORAX: armored plates
-        &[shadow, 0,shadow,body,body,body,body,body,body,shadow, 0,shadow],
-        //     legs   abdomen    legs
-        &[0,shadow, 0,shadow,body,body,body,body,shadow, 0,shadow, 0],
-        &[shadow, 0, 0,shadow,shadow,body,body,shadow,shadow, 0, 0,shadow],  // ABDOMEN: tapered
-        &[0, 0, 0, 0,shadow,shadow,shadow,shadow, 0, 0, 0, 0],
-        &[0, 0, 0, 0, 0,shadow,shadow, 0, 0, 0, 0, 0],  // tail spike
-        &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        vec![shadow, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,shadow],
+        vec![0,shadow, 0, 0,shadow,shadow,shadow,shadow, 0, 0,shadow, 0],
+        vec![0, 0, 0,shadow,body,63, 8,63,body,shadow, 0, 0],
+        vec![0, 0,shadow,body,body,shadow,shadow,body,body,shadow, 0, 0],
+        // legs alternate per frame
+        vec![l0, l1,shadow,body,body,body,body,body,body,shadow, l1, l0],
+        vec![l1,shadow,body,body,shadow,body,body,shadow,body,body,shadow, l1],
+        vec![l0, l1,shadow,body,body,body,body,body,body,shadow, l1, l0],
+        // abdomen
+        vec![l1,shadow, l0,shadow,body,body,body,body,shadow, l0,shadow, l1],
+        vec![l0, l1, 0,shadow,shadow,body,body,shadow,shadow, 0, l1, l0],
+        vec![0, 0, 0, 0,shadow,shadow,shadow,shadow, 0, 0, 0, 0],
+        vec![0, 0, 0, 0, 0,shadow,shadow, 0, 0, 0, 0, 0],
+        vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     ];
-    make_image(pixels, 12)
+    let refs: Vec<&[u8]> = pixels.iter().map(|r| r.as_slice()).collect();
+    make_image(&refs, 12)
 }
 
 /// 80x48 pixel art crashed colony ship "Horizon's Promise".
@@ -1684,4 +1854,68 @@ fn make_laser_turret_sprite() -> Image {
         &[0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0],
     ];
     make_image(pixels, 16)
+}
+
+/// FORGE avatar — cute round robot AI face (24×24).
+/// Purple body, big white eyes with pupils, antenna with glowing tip, smile.
+/// Frame 0: happy (open eyes). Frame 1: blink (^_^ face).
+fn make_forge_avatar_sprite(frame: u8) -> Image {
+    #[rustfmt::skip]
+    let base: Vec<Vec<u8>> = vec![
+        // Row 0-2: antenna
+        vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,19, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,30, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,30, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        // Row 3-4: top of head
+        vec![0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
+        vec![0, 0, 0, 0, 0, 1,31,31,32,32,32,32,32,32,32,31,31, 1, 0, 0, 0, 0, 0, 0],
+        // Row 5-6: forehead
+        vec![0, 0, 0, 0, 1,31,32,32,32,32,32,32,32,32,32,32,32,31, 1, 0, 0, 0, 0, 0],
+        vec![0, 0, 0, 1,31,32,32,32,32,32,32,32,32,32,32,32,32,32,31, 1, 0, 0, 0, 0],
+        // Row 7-10: eyes region
+        vec![0, 0, 0, 1,30,32,32, 7, 7, 8, 7,32,32, 7, 7, 8, 7,32,30, 1, 0, 0, 0, 0],
+        vec![0, 0, 0, 1,30,32, 7, 8, 8, 8, 8, 7,32, 8, 8, 8, 8, 7,30, 1, 0, 0, 0, 0],
+        vec![0, 0, 0, 1,30,32, 7, 8,29, 1, 8, 7,32, 8,29, 1, 8, 7,30, 1, 0, 0, 0, 0],
+        vec![0, 0, 0, 1,30,32, 7, 8, 1, 1, 8, 7,32, 8, 1, 1, 8, 7,30, 1, 0, 0, 0, 0],
+        // Row 11-12: cheeks + blush
+        vec![0, 0, 0, 1,30,32,32, 7, 7, 7, 7,32,32, 7, 7, 7, 7,32,30, 1, 0, 0, 0, 0],
+        vec![0, 0, 0, 1,30,32,23,32,32,32,32,32,32,32,32,32,32,23,30, 1, 0, 0, 0, 0],
+        // Row 13-14: mouth (happy smile)
+        vec![0, 0, 0, 1,30,32,32,32,32, 1, 1, 1, 1, 1, 1,32,32,32,30, 1, 0, 0, 0, 0],
+        vec![0, 0, 0, 1,30,32,32,32,32,32, 1,30,30, 1,32,32,32,32,30, 1, 0, 0, 0, 0],
+        // Row 15-17: chin + body top
+        vec![0, 0, 0, 0, 1,31,32,32,32,32,32,32,32,32,32,32,32,31, 1, 0, 0, 0, 0, 0],
+        vec![0, 0, 0, 0, 0, 1,31,31,31,30,30,30,30,30,31,31,31, 1, 0, 0, 0, 0, 0, 0],
+        vec![0, 0, 0, 0, 0, 0, 1,30,30,29,29,29,29,29,30,30, 1, 0, 0, 0, 0, 0, 0, 0],
+        // Row 18-19: body middle with chest light
+        vec![0, 0, 0, 0, 0, 1,30,29,29,29, 5, 6, 5,29,29,29,30, 1, 0, 0, 0, 0, 0, 0],
+        vec![0, 0, 0, 0, 0, 1,30,29,29, 5, 6, 8, 6, 5,29,29,30, 1, 0, 0, 0, 0, 0, 0],
+        // Row 20-21: arms
+        vec![0, 0, 0, 0, 1,30,29, 1,29,29, 5, 6, 5,29,29, 1,29,30, 1, 0, 0, 0, 0, 0],
+        vec![0, 0, 0, 1,30, 1, 0, 0, 1,29,29,29,29,29, 1, 0, 0, 1,30, 1, 0, 0, 0, 0],
+        // Row 22-23: feet
+        vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 1,29,29,29,29, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        vec![0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+    ];
+
+    let refs: Vec<&[u8]> = base.iter().map(|r| r.as_slice()).collect();
+    let mut img = make_image_rect(&refs, 24, 24);
+
+    if frame == 1 {
+        // Blink frame: replace eye region with closed ^_^ lines.
+        for y in 8..11u32 {
+            for x in 7..11u32 { img.set_pixel(x, y, pal_color(32)); }
+            for x in 13..17u32 { img.set_pixel(x, y, pal_color(32)); }
+        }
+        // Draw ^_^ (left eye)
+        img.set_pixel(7, 9, pal_color(1));
+        img.set_pixel(8, 8, pal_color(1));
+        img.set_pixel(9, 9, pal_color(1));
+        // Draw ^_^ (right eye)
+        img.set_pixel(13, 9, pal_color(1));
+        img.set_pixel(14, 8, pal_color(1));
+        img.set_pixel(15, 9, pal_color(1));
+    }
+
+    img
 }
