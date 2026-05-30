@@ -41,6 +41,7 @@ pub fn draw_world(
     let y_end = (max_tile.y + 1).min(grid.height - 1);
 
     let _anim_frame = ((tick / BELT_ANIM_SPEED as u64) % 2) as usize;
+    let _machine_anim = ((tick / 10) % 2) as usize; // Machines cycle every 10 ticks
 
     // LOD levels based on zoom + aggressive FPS-based quality reduction.
     let fps = get_fps();
@@ -190,6 +191,11 @@ pub fn draw_world(
         let world = Grid::grid_to_world(bpos);
 
         if lod <= 1 {
+            // Machine animation: active machines cycle between frames.
+            let mf = if building.machine_state.as_ref().map(|ms| ms.progress_ticks > 0).unwrap_or(false) {
+                _machine_anim
+            } else { 0 };
+
             // Full sprite rendering from unified atlas.
             // For belts at LOD 0: detect corners for corner sprite.
             // At LOD 1: skip corner detection (3 neighbor lookups per belt is expensive).
@@ -236,10 +242,10 @@ pub fn draw_world(
                     };
                     (corner_src, direction_to_rotation(dir))
                 } else {
-                    (building_src_rect(building.kind, atlas, _anim_frame), direction_to_rotation(dir))
+                    (building_src_rect(building.kind, atlas, _anim_frame, mf), direction_to_rotation(dir))
                 }
             } else {
-                (building_src_rect(building.kind, atlas, _anim_frame), direction_to_rotation(building.direction))
+                (building_src_rect(building.kind, atlas, _anim_frame, mf), direction_to_rotation(building.direction))
             };
 
             // Damage tint: red when HP < 50%, flash when < 25%.
@@ -265,6 +271,24 @@ pub fn draw_world(
                 WHITE
             };
 
+            // Inserter arm swing: add rotation offset based on progress.
+            let final_rotation = if building.kind.is_inserter() {
+                if let Some(ref ms) = building.machine_state {
+                    if ms.total_ticks > 0 && ms.progress_ticks > 0 {
+                        let progress = 1.0 - (ms.progress_ticks as f32 / ms.total_ticks as f32);
+                        // Swing from -PI/3 (behind) through 0 (neutral) to +PI/3 (front).
+                        let swing = (progress * 2.0 - 1.0) * std::f32::consts::FRAC_PI_3;
+                        rotation + swing
+                    } else {
+                        rotation
+                    }
+                } else {
+                    rotation
+                }
+            } else {
+                rotation
+            };
+
             draw_texture_ex(
                 &atlas.tex,
                 world.x,
@@ -273,7 +297,7 @@ pub fn draw_world(
                 DrawTextureParams {
                     source: Some(src_rect),
                     dest_size: Some(Vec2::splat(TILE_SIZE)),
-                    rotation,
+                    rotation: final_rotation,
                     pivot: Some(Vec2::new(world.x + TILE_SIZE * 0.5, world.y + TILE_SIZE * 0.5)),
                     ..Default::default()
                 },
@@ -532,7 +556,7 @@ pub fn draw_world(
                 ey,
                 tint,
                 DrawTextureParams {
-                    source: Some(atlas.r_enemy_small_biter),
+                    source: Some(atlas.r_enemy_small_biter[_anim_frame]),
                     dest_size: Some(Vec2::splat(size)),
                     rotation,
                     pivot: Some(Vec2::new(enemy.x, enemy.y)),
@@ -638,20 +662,82 @@ pub fn draw_world(
     // never individual draw calls.
 }
 
-/// Draws a darkness overlay for the night cycle.
+/// Draws a darkness overlay for the night cycle with light pools around buildings.
 ///
 /// Call after `draw_world` while still in camera space.
-pub fn draw_night_overlay(darkness: f32) {
-    if darkness > 0.01 {
-        // Draw a large dark rectangle covering the visible area.
-        // Using a very large rect since we're in world space under camera.
-        draw_rectangle(
-            -100000.0,
-            -100000.0,
-            200000.0,
-            200000.0,
-            Color::new(0.0, 0.0, 0.05, darkness),
-        );
+pub fn draw_night_overlay(darkness: f32, buildings: &Buildings, camera: &GameCamera) {
+    if darkness < 0.01 {
+        return;
+    }
+    // Global darkness.
+    draw_rectangle(
+        -100000.0,
+        -100000.0,
+        200000.0,
+        200000.0,
+        Color::new(0.0, 0.0, 0.05, darkness),
+    );
+
+    // Light pools around active buildings (additive circles that punch through darkness).
+    if darkness > 0.05 {
+        let (min_vis, max_vis) = camera.visible_bounds();
+        let light_alpha = (darkness * 0.6).min(0.35); // brighter as night gets darker
+
+        for (_bid, building) in buildings.iter() {
+            let bpos = building.pos;
+            let wx = bpos.x as f32 * TILE_SIZE + TILE_SIZE * 0.5;
+            let wy = bpos.y as f32 * TILE_SIZE + TILE_SIZE * 0.5;
+
+            // Frustum cull lights.
+            if wx < min_vis.x - TILE_SIZE * 4.0 || wx > max_vis.x + TILE_SIZE * 4.0
+                || wy < min_vis.y - TILE_SIZE * 4.0 || wy > max_vis.y + TILE_SIZE * 4.0
+            {
+                continue;
+            }
+
+            // Determine light color and radius based on building type.
+            let (color, radius) = match building.kind {
+                // Furnaces: warm orange fire glow.
+                BuildingKind::StoneFurnace | BuildingKind::SteelFurnace => {
+                    let active = building.machine_state.as_ref().map(|ms| ms.progress_ticks > 0).unwrap_or(false);
+                    if active {
+                        (Color::new(1.0, 0.7, 0.3, light_alpha), TILE_SIZE * 3.0)
+                    } else { continue; }
+                }
+                // Labs: blue-purple glow.
+                BuildingKind::Lab => {
+                    let active = building.machine_state.as_ref().map(|ms| ms.progress_ticks > 0).unwrap_or(false);
+                    if active {
+                        (Color::new(0.5, 0.4, 1.0, light_alpha), TILE_SIZE * 2.5)
+                    } else { continue; }
+                }
+                // Steam engines, solar: white glow (always on if placed).
+                BuildingKind::SteamEngine => {
+                    (Color::new(0.9, 0.9, 1.0, light_alpha * 0.7), TILE_SIZE * 2.0)
+                }
+                // Laser turrets: blue glow.
+                BuildingKind::LaserTurret => {
+                    (Color::new(0.3, 0.5, 1.0, light_alpha * 0.6), TILE_SIZE * 2.5)
+                }
+                // Nuclear reactor: green glow.
+                BuildingKind::NuclearReactor => {
+                    (Color::new(0.3, 1.0, 0.5, light_alpha), TILE_SIZE * 5.0)
+                }
+                // Assemblers when active: dim blue.
+                BuildingKind::AssemblerT1 | BuildingKind::AssemblerT2 | BuildingKind::AssemblerT3 => {
+                    let active = building.machine_state.as_ref().map(|ms| ms.progress_ticks > 0).unwrap_or(false);
+                    if active {
+                        (Color::new(0.6, 0.6, 0.9, light_alpha * 0.4), TILE_SIZE * 1.5)
+                    } else { continue; }
+                }
+                _ => continue,
+            };
+
+            // Draw concentric circles for soft light falloff.
+            draw_circle(wx, wy, radius, Color::new(color.r, color.g, color.b, color.a * 0.3));
+            draw_circle(wx, wy, radius * 0.6, Color::new(color.r, color.g, color.b, color.a * 0.5));
+            draw_circle(wx, wy, radius * 0.3, Color::new(color.r, color.g, color.b, color.a * 0.7));
+        }
     }
 }
 
@@ -687,7 +773,7 @@ pub fn draw_ghost_preview(
             Color::new(1.0, 0.3, 0.3, 0.5)
         };
 
-        let src_rect = building_src_rect(kind, atlas, 0);
+        let src_rect = building_src_rect(kind, atlas, 0, 0);
         let rotation = direction_to_rotation(direction);
 
         draw_texture_ex(
@@ -725,22 +811,24 @@ fn direction_to_rotation(dir: Direction) -> f32 {
 }
 
 /// Returns the atlas source rect for a building kind.
-fn building_src_rect(kind: BuildingKind, atlas: &SpriteAtlas, anim_frame: usize) -> Rect {
+/// `anim_frame` cycles belt animation; `machine_frame` cycles machine animation (0=idle, 1=active).
+fn building_src_rect(kind: BuildingKind, atlas: &SpriteAtlas, anim_frame: usize, machine_frame: usize) -> Rect {
+    let mf = machine_frame.min(1);
     match kind {
         BuildingKind::BeltYellow => atlas.r_belt_yellow[anim_frame],
         BuildingKind::BeltRed => atlas.r_belt_red[anim_frame],
         BuildingKind::BeltBlue => atlas.r_belt_blue[anim_frame],
-        BuildingKind::Miner => atlas.r_miner,
+        BuildingKind::Miner => atlas.r_miner[mf],
         BuildingKind::PumpJack => atlas.r_pump_jack,
-        BuildingKind::StoneFurnace => atlas.r_stone_furnace,
-        BuildingKind::SteelFurnace => atlas.r_steel_furnace,
+        BuildingKind::StoneFurnace => atlas.r_stone_furnace[mf],
+        BuildingKind::SteelFurnace => atlas.r_steel_furnace[mf],
         BuildingKind::ElectricFurnace => atlas.r_electric_furnace,
         BuildingKind::AssemblerT1 | BuildingKind::AssemblerT2 | BuildingKind::AssemblerT3 => {
-            atlas.r_assembler
+            atlas.r_assembler[mf]
         }
         BuildingKind::ChemicalPlant => atlas.r_chemical_plant,
         BuildingKind::OilRefinery => atlas.r_oil_refinery,
-        BuildingKind::Lab => atlas.r_lab,
+        BuildingKind::Lab => atlas.r_lab[mf],
         BuildingKind::Boiler => atlas.r_boiler,
         BuildingKind::SteamEngine => atlas.r_steam_engine,
         BuildingKind::SolarPanel => atlas.r_solar_panel,
@@ -780,11 +868,31 @@ fn item_src_rect(resource: Resource, atlas: &SpriteAtlas) -> Rect {
         Resource::Stone => atlas.r_item_stone,
         Resource::IronPlate => atlas.r_item_iron_plate,
         Resource::CopperPlate => atlas.r_item_copper_plate,
+        Resource::SteelPlate => atlas.r_item_steel_plate,
+        Resource::StoneBrick => atlas.r_item_stone_brick,
         Resource::Gear => atlas.r_item_gear,
         Resource::Wire => atlas.r_item_wire,
+        Resource::Pipe => atlas.r_item_pipe,
+        Resource::IronStick => atlas.r_item_iron_stick,
         Resource::GreenCircuit => atlas.r_item_green_circuit,
+        Resource::RedCircuit => atlas.r_item_red_circuit,
+        Resource::BlueCircuit => atlas.r_item_blue_circuit,
         Resource::ScienceRed => atlas.r_item_science_red,
-        _ => atlas.r_item_iron_ore, // fallback for items without sprites yet
+        Resource::ScienceGreen => atlas.r_item_science_green,
+        Resource::ScienceBlue => atlas.r_item_science_blue,
+        Resource::SciencePurple => atlas.r_item_science_purple,
+        Resource::ScienceYellow => atlas.r_item_science_yellow,
+        Resource::Sulfur => atlas.r_item_sulfur,
+        Resource::Plastic => atlas.r_item_plastic,
+        Resource::Battery => atlas.r_item_battery,
+        Resource::BasicAmmo | Resource::PiercingAmmo => atlas.r_item_ammo,
+        Resource::Grenade => atlas.r_item_grenade,
+        Resource::EngineUnit | Resource::ElectricEngine => atlas.r_item_engine,
+        Resource::RocketPart => atlas.r_item_rocket_part,
+        Resource::RocketFuel => atlas.r_item_rocket_fuel,
+        Resource::Inserter => atlas.r_item_inserter,
+        Resource::SpeedModule | Resource::EfficiencyModule | Resource::ProductivityModule => atlas.r_item_speed_module,
+        _ => atlas.r_item_iron_ore, // fallback for remaining items
     }
 }
 

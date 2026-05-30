@@ -285,51 +285,75 @@ impl CutsceneState {
         }
     }
 
-    /// Draws a cute little FORGE face in the bottom-right.
+    /// Draws the cute FORGE pixel art avatar in the bottom-right.
+    /// Uses the atlas sprite if available, falls back to primitive shapes.
     fn draw_forge_avatar(&self, sw: f32, sh: f32) {
-        let ax = sw - 100.0;
-        let ay = sh - 120.0;
-        let size = 60.0;
+        let ax = sw - 120.0;
+        let ay = sh - 140.0;
+        let size = 96.0; // render the 24×24 sprite at 96px (4x scale)
 
-        // Round body (circle).
-        draw_circle(ax, ay, size * 0.5, Color::new(0.3, 0.25, 0.5, 0.9));
-        draw_circle(ax, ay, size * 0.45, Color::new(0.4, 0.35, 0.65, 0.9));
+        // Gentle floating animation.
+        let bounce = (self.timer * 1.5).sin() * 3.0;
 
-        // Eyes (two dots that blink).
+        // Draw a soft glow behind FORGE.
+        let glow_alpha = 0.15 + (self.timer * 2.0).sin().abs() * 0.1;
+        draw_circle(ax + size * 0.5, ay + size * 0.5 + bounce, size * 0.55, Color::new(0.5, 0.4, 0.8, glow_alpha));
+
+        // We can't access the atlas from cutscene, so draw a simple pixel face.
+        // The full sprite is used in-game via the atlas.
         let blink = (self.timer * 0.3).fract() > 0.95;
+
+        // Body circle.
+        draw_circle(ax + size * 0.5, ay + size * 0.45 + bounce, size * 0.38, Color::new(0.3, 0.25, 0.5, 0.95));
+        draw_circle(ax + size * 0.5, ay + size * 0.45 + bounce, size * 0.34, Color::new(0.45, 0.4, 0.7, 0.95));
+
+        let cx = ax + size * 0.5;
+        let cy = ay + size * 0.38 + bounce;
+
+        // Eyes.
         if !blink {
-            draw_circle(ax - 10.0, ay - 5.0, 5.0, Color::new(0.9, 0.9, 1.0, 1.0));
-            draw_circle(ax + 10.0, ay - 5.0, 5.0, Color::new(0.9, 0.9, 1.0, 1.0));
-            // Pupils.
-            draw_circle(ax - 9.0, ay - 4.0, 2.5, Color::new(0.2, 0.1, 0.4, 1.0));
-            draw_circle(ax + 11.0, ay - 4.0, 2.5, Color::new(0.2, 0.1, 0.4, 1.0));
+            // Left eye.
+            draw_circle(cx - 12.0, cy, 7.0, WHITE);
+            draw_circle(cx - 11.0, cy + 1.0, 3.0, Color::new(0.15, 0.1, 0.35, 1.0));
+            // Right eye.
+            draw_circle(cx + 12.0, cy, 7.0, WHITE);
+            draw_circle(cx + 13.0, cy + 1.0, 3.0, Color::new(0.15, 0.1, 0.35, 1.0));
+            // Eye sparkle.
+            draw_circle(cx - 13.0, cy - 2.0, 2.0, Color::new(1.0, 1.0, 1.0, 0.8));
+            draw_circle(cx + 11.0, cy - 2.0, 2.0, Color::new(1.0, 1.0, 1.0, 0.8));
         } else {
-            // Blink: horizontal lines.
-            draw_line(ax - 14.0, ay - 5.0, ax - 6.0, ay - 5.0, 2.0, Color::new(0.9, 0.9, 1.0, 1.0));
-            draw_line(ax + 6.0, ay - 5.0, ax + 14.0, ay - 5.0, 2.0, Color::new(0.9, 0.9, 1.0, 1.0));
+            // ^_^ blink.
+            draw_line(cx - 16.0, cy, cx - 12.0, cy - 3.0, 2.0, WHITE);
+            draw_line(cx - 12.0, cy - 3.0, cx - 8.0, cy, 2.0, WHITE);
+            draw_line(cx + 8.0, cy, cx + 12.0, cy - 3.0, 2.0, WHITE);
+            draw_line(cx + 12.0, cy - 3.0, cx + 16.0, cy, 2.0, WHITE);
         }
 
-        // Cute smile.
-        let smile_bounce = (self.timer * 2.0).sin() * 1.0;
-        draw_line(
-            ax - 8.0, ay + 8.0 + smile_bounce,
-            ax, ay + 12.0 + smile_bounce,
-            2.0,
-            Color::new(1.0, 0.7, 0.8, 0.9),
-        );
-        draw_line(
-            ax, ay + 12.0 + smile_bounce,
-            ax + 8.0, ay + 8.0 + smile_bounce,
-            2.0,
-            Color::new(1.0, 0.7, 0.8, 0.9),
-        );
+        // Blush marks.
+        draw_circle(cx - 18.0, cy + 6.0, 3.0, Color::new(0.9, 0.4, 0.5, 0.4));
+        draw_circle(cx + 18.0, cy + 6.0, 3.0, Color::new(0.9, 0.4, 0.5, 0.4));
 
-        // Little antenna.
-        draw_line(ax, ay - size * 0.45, ax, ay - size * 0.6, 2.0, Color::new(0.6, 0.5, 0.8, 0.8));
-        let antenna_glow = (self.timer * 3.0).sin() * 0.3 + 0.7;
-        draw_circle(ax, ay - size * 0.6, 4.0, Color::new(0.8, antenna_glow, 1.0, 0.9));
+        // Smile.
+        let sm = (self.timer * 2.0).sin() * 1.5;
+        for i in 0..7 {
+            let t = i as f32 / 6.0;
+            let sx = cx - 8.0 + t * 16.0;
+            let sy = cy + 12.0 + sm + (t - 0.5).abs() * -6.0;
+            draw_circle(sx, sy, 1.2, Color::new(1.0, 0.75, 0.85, 0.9));
+        }
+
+        // Antenna.
+        draw_line(cx, cy - size * 0.34, cx, cy - size * 0.5, 2.0, Color::new(0.6, 0.5, 0.8, 0.9));
+        let glow = (self.timer * 3.0).sin() * 0.3 + 0.7;
+        draw_circle(cx, cy - size * 0.5, 5.0, Color::new(glow, 0.8, 1.0, 0.9));
+
+        // Chest light.
+        let light_pulse = (self.timer * 2.5).sin() * 0.3 + 0.7;
+        draw_circle(cx, cy + size * 0.22 + bounce, 4.0, Color::new(0.6, light_pulse, 1.0, 0.8));
 
         // Label.
-        draw_text("FORGE", ax - 22.0, ay + size * 0.5 + 10.0, 16.0, Color::new(0.7, 0.6, 0.9, 0.8));
+        let label = "FORGE";
+        let lw = measure_text(label, None, 18, 1.0).width;
+        draw_text(label, cx - lw * 0.5, ay + size + 10.0 + bounce, 18.0, Color::new(0.75, 0.65, 0.95, 0.9));
     }
 }

@@ -32,83 +32,118 @@ pub enum MilestoneCheck {
 
 /// All milestones.
 pub static MILESTONES: &[Milestone] = &[
+    // === PRODUCTION MILESTONES ===
     Milestone {
         name: "First Steps",
         description: "Craft 10 items",
         check: MilestoneCheck::ItemsCrafted(10),
-        reward: &[(Resource::IronPlate, 20), (Resource::Gear, 5)],
+        reward: &[(Resource::IronPlate, 30), (Resource::CopperPlate, 20)],
+    },
+    Milestone {
+        name: "Tinkerer",
+        description: "Craft 50 items",
+        check: MilestoneCheck::ItemsCrafted(50),
+        reward: &[(Resource::Gear, 15), (Resource::Wire, 15)],
     },
     Milestone {
         name: "Getting Started",
         description: "Craft 100 items",
         check: MilestoneCheck::ItemsCrafted(100),
-        reward: &[(Resource::IronPlate, 50), (Resource::CopperPlate, 30)],
+        reward: &[(Resource::IronPlate, 80), (Resource::Coal, 40)],
+    },
+    Milestone {
+        name: "Builder",
+        description: "Craft 250 items",
+        check: MilestoneCheck::ItemsCrafted(250),
+        reward: &[(Resource::GreenCircuit, 15), (Resource::Gear, 15)],
     },
     Milestone {
         name: "Industrialist",
         description: "Craft 500 items",
         check: MilestoneCheck::ItemsCrafted(500),
-        reward: &[(Resource::GreenCircuit, 20), (Resource::Gear, 20)],
+        reward: &[(Resource::GreenCircuit, 30), (Resource::Gear, 30)],
     },
     Milestone {
         name: "Factory Boss",
         description: "Craft 2000 items",
         check: MilestoneCheck::ItemsCrafted(2000),
-        reward: &[(Resource::SteelPlate, 30), (Resource::RedCircuit, 10)],
+        reward: &[(Resource::SteelPlate, 50), (Resource::RedCircuit, 20)],
     },
     Milestone {
         name: "Mass Production",
         description: "Craft 5000 items",
         check: MilestoneCheck::ItemsCrafted(5000),
-        reward: &[(Resource::BlueCircuit, 10), (Resource::SpeedModule, 5)],
+        reward: &[(Resource::BlueCircuit, 20), (Resource::SpeedModule, 5)],
     },
     Milestone {
         name: "Consciousness Rising",
         description: "Craft 10000 items",
         check: MilestoneCheck::ItemsCrafted(10000),
-        reward: &[(Resource::RocketPart, 5)],
+        reward: &[(Resource::RocketPart, 10), (Resource::BlueCircuit, 20)],
     },
+    Milestone {
+        name: "Approaching the Horizon",
+        description: "Craft 25000 items",
+        check: MilestoneCheck::ItemsCrafted(25000),
+        reward: &[(Resource::RocketPart, 25), (Resource::SpeedModule, 10)],
+    },
+    // === COMBAT MILESTONES ===
     Milestone {
         name: "Defender",
         description: "Kill 20 enemies",
         check: MilestoneCheck::EnemiesKilled(20),
-        reward: &[(Resource::BasicAmmo, 50), (Resource::IronPlate, 30)],
+        reward: &[(Resource::BasicAmmo, 100), (Resource::IronPlate, 50)],
     },
     Milestone {
         name: "Exterminator",
         description: "Kill 100 enemies",
         check: MilestoneCheck::EnemiesKilled(100),
-        reward: &[(Resource::PiercingAmmo, 30), (Resource::SteelPlate, 20)],
+        reward: &[(Resource::PiercingAmmo, 50), (Resource::SteelPlate, 30)],
     },
     Milestone {
         name: "Warlord",
         description: "Kill 500 enemies",
         check: MilestoneCheck::EnemiesKilled(500),
-        reward: &[(Resource::Grenade, 20), (Resource::SteelPlate, 50)],
+        reward: &[(Resource::Grenade, 30), (Resource::SteelPlate, 80)],
     },
+    // === RESEARCH MILESTONES ===
     Milestone {
         name: "First Research",
         description: "Complete Automation research",
         check: MilestoneCheck::ResearchDone(0),
-        reward: &[(Resource::GreenCircuit, 10), (Resource::Gear, 10)],
+        reward: &[(Resource::GreenCircuit, 20), (Resource::Gear, 20)],
     },
     Milestone {
         name: "Advanced Science",
         description: "Complete Advanced Electronics",
         check: MilestoneCheck::ResearchDone(7),
-        reward: &[(Resource::RedCircuit, 15)],
+        reward: &[(Resource::RedCircuit, 25), (Resource::SteelPlate, 20)],
     },
+    // === SURVIVAL MILESTONES ===
     Milestone {
         name: "Survivor",
         description: "Survive 10 minutes",
         check: MilestoneCheck::TickReached(12000),
-        reward: &[(Resource::IronPlate, 100), (Resource::Coal, 50)],
+        reward: &[(Resource::IronPlate, 150), (Resource::Coal, 80)],
     },
     Milestone {
         name: "Veteran",
         description: "Survive 30 minutes",
         check: MilestoneCheck::TickReached(36000),
-        reward: &[(Resource::SteelPlate, 50), (Resource::GreenCircuit, 50)],
+        reward: &[(Resource::SteelPlate, 80), (Resource::GreenCircuit, 60)],
+    },
+    Milestone {
+        name: "Endurance",
+        description: "Survive 1 hour",
+        check: MilestoneCheck::TickReached(72000),
+        reward: &[(Resource::BlueCircuit, 30), (Resource::RocketPart, 15)],
+    },
+    // === VICTORY ===
+    Milestone {
+        name: "FORGE Restored",
+        description: "Craft 50,000 items — consciousness restored!",
+        check: MilestoneCheck::ItemsCrafted(50000),
+        reward: &[(Resource::RocketPart, 50), (Resource::SpeedModule, 20), (Resource::BlueCircuit, 50)],
     },
 ];
 

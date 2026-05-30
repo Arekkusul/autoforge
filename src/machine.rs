@@ -21,6 +21,7 @@ pub fn tick_machines(
     buildings: &mut Buildings,
     items: &mut ItemPool,
     stats: &mut GameStats,
+    power_satisfaction: f32,
 ) {
     let ids = buildings.alive_ids();
 
@@ -54,6 +55,16 @@ pub fn tick_machines(
 
         // STEP 1: If currently processing, count down.
         if ms.progress_ticks > 0 {
+            // Electric machines (non-fuel, non-miner): require power to operate.
+            // If power satisfaction < 100%, randomly skip ticks proportionally.
+            if !kind.needs_fuel() && power_satisfaction < 0.99 {
+                // At 50% power, skip ~50% of ticks. At 0%, skip all.
+                let hash = ((bid.index as u64).wrapping_mul(7) + ms.progress_ticks as u64) % 100;
+                if (hash as f32) >= power_satisfaction * 100.0 {
+                    continue; // Brownout — machine pauses this tick.
+                }
+            }
+
             // Fuel-based machines: consume fuel each tick. If out, try to refuel.
             // If no coal available, PAUSE (don't lose progress) — resume when coal arrives.
             if kind.needs_fuel() {

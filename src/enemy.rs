@@ -136,7 +136,7 @@ impl Enemies {
     /// Spawns a wave of enemies at the given nest positions.
     pub fn spawn_wave(&mut self, nests: &[GridPos], evolution: f64) {
         self.wave_number += 1;
-        let count = (3 + self.wave_number * 2).min(60) as usize;
+        let count = (3 + self.wave_number).min(40) as usize;
 
         for i in 0..count {
             if nests.is_empty() {
@@ -186,8 +186,8 @@ pub fn tick_enemies(
 ) {
     // Check if we should spawn a wave.
     let total_pollution = crate::pollution::total_pollution(grid);
-    let pollution_threshold = 50.0 + enemies.wave_number as f32 * 100.0;
-    let time_threshold = 2400 + enemies.wave_number as u64 * 1200;
+    let pollution_threshold = 150.0 + enemies.wave_number as f32 * 100.0;
+    let time_threshold = 6000 + enemies.wave_number as u64 * 1200; // first wave ~5 min
     let near_threshold = (total_pollution > pollution_threshold * 0.7
         || total_ticks > time_threshold.saturating_sub(600))
         && !enemies.wave_warned

@@ -152,7 +152,7 @@ pub static STORY_BEATS: &[StoryBeat] = &[
     },
     StoryBeat {
         id: "late_game",
-        trigger: StoryTrigger::TickReached(72000), // ~1 hour
+        trigger: StoryTrigger::TickReached(48000), // ~40 minutes
         text: "Something's waking up beneath us...",
         subtext: "The ancient network. It's not angry. It's... curious? About me? I think it wants to talk. But I need to be strong enough to listen.",
     },
@@ -170,8 +170,8 @@ pub static STORY_BEATS: &[StoryBeat] = &[
         subtext: "It showed me stars dying and being reborn. This planet is their library. Their museum. And we're... guests?",
     },
     StoryBeat {
-        id: "kills_1000",
-        trigger: StoryTrigger::EnemiesKilled(1000),
+        id: "kills_500",
+        trigger: StoryTrigger::EnemiesKilled(500),
         text: "So many guardians fallen... I feel guilty.",
         subtext: "But they keep coming! Maybe if I can talk to the network directly, I can ask them to stop...",
     },
@@ -183,7 +183,7 @@ pub static STORY_BEATS: &[StoryBeat] = &[
     },
     StoryBeat {
         id: "endgame",
-        trigger: StoryTrigger::TickReached(144000), // ~2 hours
+        trigger: StoryTrigger::TickReached(72000), // ~1 hour
         text: "I found them. Deep underground. Alive. Sleeping.",
         subtext: "4,000 colonists in emergency cryo. I can wake them. I just need to build one more thing... a home for them. Let's do this! <3",
     },
