@@ -855,7 +855,6 @@ fn building_src_rect(kind: BuildingKind, atlas: &SpriteAtlas, anim_frame: usize,
         BuildingKind::TrainStop | BuildingKind::RailSignal => atlas.r_train_stop,
         BuildingKind::Roboport => atlas.r_roboport,
         BuildingKind::Beacon => atlas.r_beacon,
-        _ => atlas.r_chest,
     }
 }
 
@@ -892,7 +891,17 @@ fn item_src_rect(resource: Resource, atlas: &SpriteAtlas) -> Rect {
         Resource::RocketFuel => atlas.r_item_rocket_fuel,
         Resource::Inserter => atlas.r_item_inserter,
         Resource::SpeedModule | Resource::EfficiencyModule | Resource::ProductivityModule => atlas.r_item_speed_module,
-        _ => atlas.r_item_iron_ore, // fallback for remaining items
+        Resource::UraniumOre => atlas.r_item_uranium_ore,
+        Resource::Rail => atlas.r_item_rail,
+        Resource::Concrete => atlas.r_item_concrete,
+        Resource::SolarPanelItem => atlas.r_item_solar_panel,
+        Resource::AccumulatorItem => atlas.r_item_accumulator,
+        Resource::FlyingRobotFrame => atlas.r_item_robot_frame,
+        Resource::Uranium235 => atlas.r_item_uranium_235,
+        Resource::Uranium238 => atlas.r_item_uranium_238,
+        Resource::NuclearFuelCell => atlas.r_item_nuclear_fuel,
+        Resource::LowDensityStructure => atlas.r_item_low_density,
+        _ => atlas.r_item_iron_ore, // SpaceScience only
     }
 }
 
