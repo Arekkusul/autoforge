@@ -64,6 +64,7 @@ mod render;
 #[allow(dead_code)]
 mod research;
 mod save;
+mod sound;
 mod splitter;
 #[allow(dead_code)]
 mod story;
@@ -96,6 +97,7 @@ async fn main() {
     // Request VSync to cap frame rate and reduce power usage on low-end devices.
     // macroquad respects the display refresh rate by default (60Hz typically).
     let atlas = SpriteAtlas::generate();
+    let sfx = sound::SoundEffects::generate().await;
     let mut intro = cutscene::CutsceneState::new();
 
     // --- Intro cutscene loop ---
@@ -138,7 +140,7 @@ async fn main() {
         }
 
         // 1. Input (every frame, independent of simulation tick rate).
-        handle_input(&mut state);
+        handle_input(&mut state, &sfx);
         state.camera.update(get_frame_time());
 
         // 2. Fixed-timestep simulation (with game speed multiplier).
@@ -148,7 +150,7 @@ async fn main() {
                 state.tick_accumulator = MAX_ACCUMULATOR;
             }
             while state.tick_accumulator >= TICK_DURATION {
-                simulation_tick(&mut state);
+                simulation_tick(&mut state, &sfx);
                 state.tick_accumulator -= TICK_DURATION;
             }
         }
@@ -289,7 +291,7 @@ async fn main() {
 }
 
 /// Handles player input for building selection, placement, and hotkeys.
-fn handle_input(state: &mut GameState) {
+fn handle_input(state: &mut GameState, sfx: &sound::SoundEffects) {
     // Pause toggle
     if is_key_pressed(KeyCode::Space) {
         state.paused = !state.paused;
@@ -483,6 +485,7 @@ fn handle_input(state: &mut GameState) {
                         buildcost::refund_cost(&mut state.inventory, b.kind);
                     }
                     state.buildings.remove(bid, &mut state.grid);
+                    sfx.play(&sfx.remove);
                     let remaining = state.undo_history.len();
                     state.toast(format!("Undone! ({} more)", remaining), 30);
                 }
@@ -862,6 +865,7 @@ fn handle_input(state: &mut GameState) {
             if !buildcost::can_afford(&state.inventory, kind) {
                 if is_mouse_button_pressed(MouseButton::Left) {
                     state.toast("Not enough resources!".to_string(), 40);
+                    sfx.play(&sfx.error);
                 }
                 return;
             }
@@ -978,6 +982,7 @@ fn handle_input(state: &mut GameState) {
                 if state.undo_history.len() > 20 { state.undo_history.remove(0); }
                 state.placement_flash = Some((grid_pos, 10));
                 state.stats.buildings_placed += 1;
+                sfx.play(&sfx.place);
 
                 // Spawn robot worker from ship to placement site.
                 let ship_center = macroquad::prelude::Vec2::new(
@@ -1032,6 +1037,7 @@ fn handle_input(state: &mut GameState) {
                     buildcost::refund_cost(&mut state.inventory, b.kind);
                 }
                 state.buildings.remove(bid, &mut state.grid);
+                sfx.play(&sfx.remove);
                 // Also despawn any items on that tile.
                 let item_ids: Vec<types::ItemId> = state.grid.items_at(grid_pos).to_vec();
                 for item_id in item_ids {
@@ -1096,7 +1102,7 @@ fn find_underground_pair(
     None
 }
 
-fn simulation_tick(state: &mut GameState) {
+fn simulation_tick(state: &mut GameState, sfx: &sound::SoundEffects) {
     state.stats.total_ticks += 1;
     let tick = state.stats.total_ticks;
 
@@ -1151,7 +1157,12 @@ fn simulation_tick(state: &mut GameState) {
 
     if tick % 2 == 0 {
         // 5. Labs: consume science packs, advance research.
+        let techs_before = state.research.completed.iter().filter(|&&c| c).count();
         research::tick_labs(&mut state.buildings, &mut state.research);
+        let techs_after = state.research.completed.iter().filter(|&&c| c).count();
+        if techs_after > techs_before {
+            sfx.play(&sfx.research_done);
+        }
 
         // 5b. Storage chests feed player inventory (the key progression mechanic).
         // Any items in a StorageChest's input_buffer are added to the player's inventory.
@@ -1183,6 +1194,7 @@ fn simulation_tick(state: &mut GameState) {
         }
 
         // 6. Enemy AI: movement, attacking buildings.
+        let wave_before = state.enemies.wave_number;
         enemy::tick_enemies(
             &mut state.grid,
             &mut state.buildings,
@@ -1192,6 +1204,10 @@ fn simulation_tick(state: &mut GameState) {
             tick,
             &mut state.stats.enemies_killed,
         );
+
+        if state.enemies.wave_number > wave_before {
+            sfx.play(&sfx.wave_warning);
+        }
 
         // 7. Trains: disabled pending full implementation (no cargo loading/unloading yet).
         // train::tick_trains(&state.grid, &state.buildings, &mut state.trains);
@@ -1204,9 +1220,10 @@ fn simulation_tick(state: &mut GameState) {
             &mut state.enemies,
             &mut state.stats.enemies_killed,
         );
-        // Loot drops: enemies drop resources based on evolution level.
+        // Loot drops + death sound.
         let new_kills = state.stats.enemies_killed - kills_before;
         if new_kills > 0 {
+            sfx.play(&sfx.enemy_death);
             let n = new_kills as u32;
             *state.inventory.entry(types::Resource::IronPlate).or_insert(0) += n * 2;
             *state.inventory.entry(types::Resource::Coal).or_insert(0) += n;
