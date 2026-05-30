@@ -52,11 +52,15 @@ A narrative-driven 2D factory automation game built in Rust. You are **FORGE** �
 
 ### Technical
 - **100% offline** — single binary, no network code, no internet required
-- **~1.1 MB** release binary (LTO + strip)
+- **~1.2 MB** release binary (LTO + strip)
 - **60 FPS** with adaptive LOD (auto-degrades if FPS drops)
-- **Unified texture atlas** for ground rendering (1 GPU draw call)
+- **Unified sprite atlas** — ALL sprites packed into single 512×512 texture (zero texture switches)
+- **Animated sprites** — machines pulse when active, inserter arms swing, enemies walk, furnaces flicker
+- **Night lighting** — active buildings emit colored light pools (furnaces glow orange, labs glow blue)
+- **Full save/load** — preserves research, story, inventory, power, day/night, build radius
 - **Bincode save format** (10x smaller than JSON, loads old JSON saves too)
-- **10,000+ lines** of Rust across 31 modules
+- **Zero compiler warnings** — clean build
+- **Exportable spritesheet** — `assets/spritesheet.png` can be replaced with custom art
 
 ## How to Run
 
