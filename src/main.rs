@@ -28,35 +28,50 @@
 
 use macroquad::prelude::*;
 
-mod atlas;
-mod batcher;
+#[allow(dead_code)]
 mod belt;
 mod buildcost;
+#[allow(dead_code)]
 mod building;
+#[allow(dead_code)]
 mod camera;
 mod combat;
+#[allow(dead_code)]
 mod constants;
+#[allow(dead_code)]
 mod cutscene;
 mod daynight;
+#[allow(dead_code)]
 mod enemy;
+#[allow(dead_code)]
 mod fluid;
+#[allow(dead_code)]
 mod game;
+#[allow(dead_code)]
 mod grid;
 mod inserter;
+#[allow(dead_code)]
 mod item;
 mod machine;
 mod mapgen;
+#[allow(dead_code)]
 mod milestones;
 mod pollution;
+#[allow(dead_code)]
 mod power;
 mod recipe;
 mod render;
+#[allow(dead_code)]
 mod research;
 mod save;
 mod splitter;
+#[allow(dead_code)]
 mod story;
+#[allow(dead_code)]
 mod train;
+#[allow(dead_code, non_snake_case)]
 mod sprites;
+#[allow(dead_code)]
 mod types;
 
 use constants::*;
@@ -1778,7 +1793,7 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
         let mm_size = 140.0;
         let mm_x = screen_width() - mm_size - 10.0;
         let mm_y = screen_height() - 210.0 - mm_size; // above toolbar area
-        let panel_bg = Color::new(0.06, 0.06, 0.08, 0.9);
+        let _panel_bg = Color::new(0.06, 0.06, 0.08, 0.9);
 
         draw_panel(mm_x - 4.0, mm_y - 24.0, mm_size + 8.0, mm_size + 32.0, Some("Map"), false);
 

@@ -221,6 +221,16 @@ pub struct SpriteAtlas {
     pub r_item_iron_stick: Rect,
     pub r_item_speed_module: Rect,
     pub r_item_science_yellow: Rect,
+    pub r_item_uranium_ore: Rect,
+    pub r_item_rail: Rect,
+    pub r_item_concrete: Rect,
+    pub r_item_solar_panel: Rect,
+    pub r_item_accumulator: Rect,
+    pub r_item_robot_frame: Rect,
+    pub r_item_uranium_235: Rect,
+    pub r_item_uranium_238: Rect,
+    pub r_item_nuclear_fuel: Rect,
+    pub r_item_low_density: Rect,
 
     // Enemies & special (variable sizes, 2-frame walk cycle)
     pub r_enemy_small_biter: [Rect; 2],
@@ -388,6 +398,16 @@ impl SpriteAtlas {
         let r_item_iron_stick   = pack(&mut atlas_img, &make_item_sprite(3, 5), si*7, y6b);          // thin bar
         let r_item_speed_module = pack(&mut atlas_img, &make_item_sprite(25, 28), si*8, y6b);        // blue module
         let r_item_science_yellow = pack(&mut atlas_img, &make_flask_item_sprite(16, 17), si*9, y6b);// yellow
+        let r_item_uranium_ore  = pack(&mut atlas_img, &make_item_sprite(9, 62), si*10, y6b);        // green glow
+        let r_item_rail         = pack(&mut atlas_img, &make_item_sprite(14, 4), si*11, y6b);         // brown+gray
+        let r_item_concrete     = pack(&mut atlas_img, &make_item_sprite(3, 2), si*12, y6b);          // dark gray
+        let r_item_solar_panel  = pack(&mut atlas_img, &make_item_sprite(25, 8), si*13, y6b);         // blue+white
+        let r_item_accumulator  = pack(&mut atlas_img, &make_item_sprite(25, 6), si*14, y6b);         // blue+pale
+        let r_item_robot_frame  = pack(&mut atlas_img, &make_item_sprite(4, 29), si*15, y6b);         // gray+purple
+        let r_item_uranium_235  = pack(&mut atlas_img, &make_item_sprite(62, 9), si*16, y6b);         // bright green
+        let r_item_uranium_238  = pack(&mut atlas_img, &make_item_sprite(9, 2), si*17, y6b);          // dull green
+        let r_item_nuclear_fuel = pack(&mut atlas_img, &make_item_sprite(62, 61), si*18, y6b);        // hot green
+        let r_item_low_density  = pack(&mut atlas_img, &make_item_sprite(5, 7), si*19, y6b);          // silver-white
 
         // Row 7: Enemy (2 walk frames) + crashed ship
         let y7 = 120u32; // pushed down to make room for extra item row
@@ -480,6 +500,10 @@ impl SpriteAtlas {
             r_item_rocket_part, r_item_rocket_fuel,
             r_item_inserter, r_item_iron_stick, r_item_speed_module,
             r_item_science_yellow,
+            r_item_uranium_ore, r_item_rail, r_item_concrete,
+            r_item_solar_panel, r_item_accumulator, r_item_robot_frame,
+            r_item_uranium_235, r_item_uranium_238, r_item_nuclear_fuel,
+            r_item_low_density,
 
             r_enemy_small_biter, r_crashed_ship,
             r_forge_avatar,
@@ -758,7 +782,7 @@ fn make_belt_sprite(base_color: u8, arrow_color: u8, frame: u8) -> Image {
 /// the same edge pattern (outline→highlight→inner hl→surface→inner sh→shadow→outline)
 /// plus a rounded cutout in the inner corner.
 /// `mirror=false`: left-turn (W→N). `mirror=true`: right-turn (E→N).
-fn make_belt_corner_sprite(base_color: u8, arrow_color: u8, _frame: u8, mirror: bool) -> Image {
+fn make_belt_corner_sprite(_base_color: u8, _arrow_color: u8, _frame: u8, mirror: bool) -> Image {
     let mut pixels = [[0u8; 16]; 16];
 
     for y in 0..16u8 {
