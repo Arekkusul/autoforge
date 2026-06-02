@@ -1532,6 +1532,17 @@ fn short_resource_name(r: types::Resource) -> &'static str {
     }
 }
 
+/// Format a number with comma separators (e.g., 12345 → "12,345").
+fn fmt_num(n: u64) -> String {
+    let s = n.to_string();
+    let mut result = String::with_capacity(s.len() + s.len() / 3);
+    for (i, c) in s.chars().enumerate() {
+        if i > 0 && (s.len() - i) % 3 == 0 { result.push(','); }
+        result.push(c);
+    }
+    result
+}
+
 fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
     // Modern UI colors — clean, high contrast, readable.
     let panel_bg = Color::new(0.08, 0.08, 0.12, 0.92);
@@ -1585,7 +1596,7 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
         state.stats.items_crafted as f32 / (state.stats.total_ticks as f32 / 1200.0)
     } else { 0.0 };
     draw_text(
-        &format!("Items: {} ({:.0}/min)", state.stats.items_crafted, items_per_min),
+        &format!("Items: {} ({:.0}/min)", fmt_num(state.stats.items_crafted), items_per_min),
         cx, cy + 4.0, 12.0, text_dim,
     );
     cy += 16.0;
@@ -1673,7 +1684,7 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
         let playtime_sec = (state.stats.total_ticks / 20) % 60;
         draw_text(&format!("Playtime:  {}:{:02}", playtime_min, playtime_sec), cx, cy, 14.0, bright);
         cy += 20.0;
-        draw_text(&format!("Items Crafted:  {}", state.stats.items_crafted), cx, cy, 14.0, bright);
+        draw_text(&format!("Items Crafted:  {}", fmt_num(state.stats.items_crafted)), cx, cy, 14.0, bright);
         cy += 20.0;
         draw_text(&format!("Buildings Placed:  {}", state.stats.buildings_placed), cx, cy, 14.0, bright);
         cy += 20.0;

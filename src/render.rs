@@ -810,6 +810,14 @@ pub fn draw_ghost_preview(
                 ..Default::default()
             },
         );
+
+        // Turret range indicator.
+        if kind == BuildingKind::GunTurret || kind == BuildingKind::LaserTurret {
+            let center_x = world.x + TILE_SIZE * 0.5;
+            let center_y = world.y + TILE_SIZE * 0.5;
+            let range = TILE_SIZE * 6.0;
+            draw_circle_lines(center_x, center_y, range, 1.0, Color::new(1.0, 0.3, 0.3, 0.25));
+        }
     } else {
         // No building selected — just show cursor highlight.
         draw_rectangle_lines(world.x, world.y, TILE_SIZE, TILE_SIZE, 1.0, YELLOW);
