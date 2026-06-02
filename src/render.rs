@@ -399,6 +399,16 @@ pub fn draw_world(
                 }
             }
 
+            // Underground belt pairing line.
+            if lod == 0 && building.kind.is_underground_belt() {
+                if let Some(pair_pos) = building.underground_pair {
+                    let pair_world = Grid::grid_to_world_center(pair_pos);
+                    let my_center = Vec2::new(world.x + TILE_SIZE * 0.5, world.y + TILE_SIZE * 0.5);
+                    draw_line(my_center.x, my_center.y, pair_world.x, pair_world.y, 1.5,
+                        Color::new(0.4, 0.6, 1.0, 0.3));
+                }
+            }
+
             // Health bar for damaged buildings.
             if lod == 0 && building.hp < building.max_hp && building.max_hp > 0.0 {
                 let bar_w = TILE_SIZE - 6.0;
