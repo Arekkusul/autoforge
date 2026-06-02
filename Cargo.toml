@@ -1,6 +1,6 @@
 [package]
 name = "autoforge"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 description = "A 2D top-down factory automation game — mine, smelt, assemble, research, and defend."
 license = "MIT"
