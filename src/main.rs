@@ -126,11 +126,23 @@ async fn main() {
     let tip_idx = (macroquad::miniquad::date::now() * 1000.0) as usize % tips.len();
     state.toast(tips[tip_idx].to_string(), 200);
 
+    // Start with a zoom-in animation from the cutscene.
+    state.camera.zoom = 0.3;
+    let mut startup_zoom_timer = 0.0f32;
+
     // --- Main game loop ---
     let mut autosave_timer = 0.0f32;
 
     loop {
         let dt = get_frame_time() as f64;
+
+        // Startup zoom-in animation (0.3 → 1.0 over ~1 second).
+        if startup_zoom_timer < 1.0 {
+            startup_zoom_timer += dt as f32;
+            let t = (startup_zoom_timer / 1.0).min(1.0);
+            let ease = t * t * (3.0 - 2.0 * t); // smoothstep
+            state.camera.zoom = 0.3 + ease * 0.7;
+        }
 
         // Auto-save every 5 minutes (pauses when game is paused).
         if !state.paused { autosave_timer += dt as f32; }
@@ -604,6 +616,14 @@ fn handle_input(state: &mut GameState, sfx: &mut sound::SoundEffects) {
         } else {
             state.toast("No save file found.".to_string(), 60);
         }
+    }
+
+    // Screenshot (F12)
+    if is_key_pressed(KeyCode::F12) {
+        let img = get_screen_data();
+        let filename = format!("autoforge_screenshot_{}.png", (macroquad::miniquad::date::now() * 1000.0) as u64);
+        img.export_png(&filename);
+        state.toast(format!("Screenshot saved: {}", filename), 80);
     }
 
     // Quick-select buildings (basic set available from start).
@@ -1110,7 +1130,10 @@ fn handle_input(state: &mut GameState, sfx: &mut sound::SoundEffects) {
                 if state.undo_history.len() > 20 { state.undo_history.remove(0); }
                 state.placement_flash = Some((grid_pos, 10));
                 state.stats.buildings_placed += 1;
-                sfx.play(&sfx.place);
+                // Throttle placement sound during belt drag (play max every 4 ticks).
+                if !kind.is_belt() || state.stats.total_ticks % 4 == 0 {
+                    sfx.play(&sfx.place);
+                }
 
                 // Spawn robot worker from ship to placement site.
                 let ship_center = macroquad::prelude::Vec2::new(
@@ -2330,7 +2353,7 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
             "R: Rotate | Q: Copy | Ctrl+Z: Undo",
             "E: Recipes | Tab: Research | H: Tutorial",
             "Space: Pause | +/-: Speed | F2: Mute",
-            "F5: Save | F9: Load | F1: Help",
+            "F5:Save F9:Load F12:Screenshot F1:Help",
         ];
         for (i, line) in hints.iter().enumerate() {
             draw_text(line, help_x, help_y + i as f32 * 18.0, 14.0, hint_color);
@@ -2669,6 +2692,7 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
             ("F1", "This help screen"),
             ("F2", "Mute/unmute sound"),
             ("F5 / F9", "Save / Load game"),
+            ("F12", "Screenshot"),
         ];
 
         for (i, (key, desc)) in help.iter().enumerate() {
