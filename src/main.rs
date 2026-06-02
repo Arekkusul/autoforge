@@ -1724,6 +1724,38 @@ fn short_resource_name(r: types::Resource) -> &'static str {
 }
 
 /// Format a number with comma separators (e.g., 12345 → "12,345").
+fn building_description(kind: types::BuildingKind) -> &'static str {
+    match kind {
+        types::BuildingKind::BeltYellow => "Moves items at 1x speed",
+        types::BuildingKind::BeltRed => "Moves items at 2x speed",
+        types::BuildingKind::BeltBlue => "Moves items at 3x speed",
+        types::BuildingKind::Miner => "Extracts ore from deposits",
+        types::BuildingKind::StoneFurnace => "Smelts ore into plates (needs coal)",
+        types::BuildingKind::SteelFurnace => "1.5x smelting speed (needs coal)",
+        types::BuildingKind::ElectricFurnace => "2x smelting speed (uses power)",
+        types::BuildingKind::InserterRegular => "Moves items between buildings",
+        types::BuildingKind::InserterLong => "Long-reach inserter",
+        types::BuildingKind::InserterFast => "2x inserter speed",
+        types::BuildingKind::InserterStack => "Moves 4 items at once",
+        types::BuildingKind::AssemblerT1 => "Crafts items from recipes",
+        types::BuildingKind::AssemblerT2 => "1.33x crafting speed",
+        types::BuildingKind::AssemblerT3 => "2x crafting speed",
+        types::BuildingKind::Lab => "Consumes science packs for research",
+        types::BuildingKind::Boiler => "Burns coal to heat water",
+        types::BuildingKind::SteamEngine => "Generates 900kW from steam",
+        types::BuildingKind::SolarPanel => "Generates 60kW during daytime",
+        types::BuildingKind::StorageChest => "Stores items, feeds your inventory",
+        types::BuildingKind::GunTurret => "Shoots enemies (needs ammo)",
+        types::BuildingKind::LaserTurret => "Shoots enemies (uses power)",
+        types::BuildingKind::Wall => "Blocks enemies, absorbs damage",
+        types::BuildingKind::ChemicalPlant => "Advanced chemical recipes",
+        types::BuildingKind::Roboport => "Auto-delivers items to nearby machines",
+        types::BuildingKind::NuclearReactor => "40,000kW nuclear power",
+        types::BuildingKind::Splitter => "Splits belt items left/right",
+        _ => "",
+    }
+}
+
 fn fmt_num(n: u64) -> String {
     let s = n.to_string();
     let mut result = String::with_capacity(s.len() + s.len() / 3);
@@ -1930,7 +1962,14 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
     if let Some(tile) = state.grid.get_tile(grid_pos) {
         let mut lines: Vec<(String, Color)> = Vec::new();
         lines.push((format!("({}, {})", grid_pos.x, grid_pos.y), text_dim));
-        lines.push((format!("{:?}", tile.terrain), text_bright));
+        let terrain_info = if tile.terrain == types::Terrain::Forest {
+            format!("{:?} (absorbs pollution)", tile.terrain)
+        } else if tile.terrain == types::Terrain::Water {
+            format!("{:?} (not buildable)", tile.terrain)
+        } else {
+            format!("{:?}", tile.terrain)
+        };
+        lines.push((terrain_info, text_bright));
 
         // Show pollution level if significant.
         if tile.pollution > 0.1 {
@@ -1954,6 +1993,11 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
         if let Some(bid) = tile.building {
             if let Some(b) = state.buildings.get(bid) {
                 lines.push((b.kind.display_name().to_string(), text_accent));
+                // One-liner description.
+                let desc = building_description(b.kind);
+                if !desc.is_empty() {
+                    lines.push((desc.to_string(), Color::new(0.6, 0.6, 0.7, 0.7)));
+                }
                 lines.push((format!("Facing: {:?}  (R to rotate)", b.direction), text_dim));
                 // Show HP if damaged.
                 if b.hp < b.max_hp {
@@ -2220,32 +2264,7 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
             .join(" + ");
 
         let info = format!("{} — {:?}", name, state.placement_direction);
-        let desc = match kind {
-            types::BuildingKind::BeltYellow => "Moves items at 1x speed",
-            types::BuildingKind::BeltRed => "Moves items at 2x speed",
-            types::BuildingKind::BeltBlue => "Moves items at 3x speed",
-            types::BuildingKind::Miner => "Extracts ore from deposits",
-            types::BuildingKind::StoneFurnace => "Smelts ore into plates (needs coal)",
-            types::BuildingKind::SteelFurnace => "1.5x smelting speed (needs coal)",
-            types::BuildingKind::ElectricFurnace => "2x smelting speed (uses power)",
-            types::BuildingKind::InserterRegular => "Moves items between buildings",
-            types::BuildingKind::InserterFast => "2x inserter speed",
-            types::BuildingKind::InserterStack => "Moves 4 items at once",
-            types::BuildingKind::AssemblerT1 => "Crafts items from recipes",
-            types::BuildingKind::AssemblerT2 => "1.33x crafting speed",
-            types::BuildingKind::AssemblerT3 => "2x crafting speed",
-            types::BuildingKind::Lab => "Consumes science packs for research",
-            types::BuildingKind::Boiler => "Burns coal to heat water",
-            types::BuildingKind::SteamEngine => "Generates 900kW from steam",
-            types::BuildingKind::SolarPanel => "Generates 60kW during daytime",
-            types::BuildingKind::StorageChest => "Stores items, feeds your inventory",
-            types::BuildingKind::GunTurret => "Shoots enemies (needs ammo)",
-            types::BuildingKind::LaserTurret => "Shoots enemies (uses power)",
-            types::BuildingKind::Wall => "Blocks enemies, absorbs damage",
-            types::BuildingKind::ChemicalPlant => "Advanced chemical recipes",
-            types::BuildingKind::Roboport => "Auto-delivers items to nearby machines",
-            _ => "",
-        };
+        let desc = building_description(kind);
         let can_afford = buildcost::can_afford(&state.inventory, kind);
         let cost_color = if can_afford {
             Color::new(0.5, 0.9, 0.5, 0.9)
