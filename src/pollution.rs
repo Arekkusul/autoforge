@@ -56,14 +56,13 @@ pub fn tick_pollution(grid: &mut Grid, buildings: &Buildings) {
         }
     }
 
-    // Apply deltas.
+    // Apply deltas (clamp to prevent negative pollution).
     for (idx, delta) in deltas {
         let tiles = grid.tiles_mut();
-        tiles[idx].pollution += delta;
+        tiles[idx].pollution = (tiles[idx].pollution + delta).max(0.0);
     }
 
-    // Tree absorption + clamp (only on polluted tiles).
-    // Re-scan since new tiles may have gotten pollution from diffusion.
+    // Tree absorption + cleanup.
     let tiles = grid.tiles_mut();
     for tile in tiles.iter_mut() {
         if tile.pollution > 0.0 {

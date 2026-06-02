@@ -153,10 +153,10 @@ impl Enemies {
                 if i % 2 == 0 { EnemyKind::BigSpitter } else { EnemyKind::BigBiter }
             } else if evolution >= 0.4 && i % 4 == 0 {
                 EnemyKind::MediumSpitter
-            } else if evolution >= 0.2 && i % 3 == 0 {
-                EnemyKind::MediumBiter
             } else if evolution >= 0.25 && i % 4 == 0 {
                 EnemyKind::SmallSpitter
+            } else if evolution >= 0.2 && i % 3 == 0 {
+                EnemyKind::MediumBiter
             } else {
                 EnemyKind::SmallBiter
             };

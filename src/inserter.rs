@@ -147,10 +147,6 @@ pub fn tick_inserters(grid: &mut Grid, buildings: &mut Buildings, items: &mut It
         }
     }
 
-    // (Cooldowns already decremented in Pass 0 above.)
-    // Pass 3 removed — was causing double-decrement.
-    for _bid in &ids {
-    }
 }
 
 /// Tries to pick one item from a source tile (belt, machine output buffer, or ground).
