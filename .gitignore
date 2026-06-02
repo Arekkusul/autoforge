@@ -1,5 +1,9 @@
 /target
 autoforge_save.json
+autoforge_save.bin
 *.swp
 *.swo
 .DS_Store
+.vscode/
+.idea/
+*.iml
