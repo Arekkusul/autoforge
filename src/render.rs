@@ -598,19 +598,29 @@ pub fn draw_world(
         };
 
         if lod <= 1 {
-            // Rotate sprite to face movement direction.
-            // Sprite is drawn pointing up (North) by default, so offset by PI/2.
+            // Select sprite based on enemy type.
+            let sprite = match enemy.kind {
+                crate::enemy::EnemyKind::BigBiter | crate::enemy::EnemyKind::BehemothBiter =>
+                    atlas.r_enemy_big_biter[_anim_frame],
+                crate::enemy::EnemyKind::SmallSpitter | crate::enemy::EnemyKind::MediumSpitter
+                | crate::enemy::EnemyKind::BigSpitter | crate::enemy::EnemyKind::BehemothSpitter =>
+                    atlas.r_enemy_spitter[_anim_frame],
+                _ => atlas.r_enemy_small_biter[_anim_frame],
+            };
+
+            // Rotate sprite to face movement direction + body bob for walk animation.
             let rotation = enemy.facing + std::f32::consts::FRAC_PI_2;
+            let bob = if _anim_frame == 0 { -0.5 } else { 0.5 }; // subtle vertical bob
             draw_texture_ex(
                 &atlas.tex,
                 ex,
-                ey,
+                ey + bob,
                 tint,
                 DrawTextureParams {
-                    source: Some(atlas.r_enemy_small_biter[_anim_frame]),
+                    source: Some(sprite),
                     dest_size: Some(Vec2::splat(size)),
                     rotation,
-                    pivot: Some(Vec2::new(enemy.x, enemy.y)),
+                    pivot: Some(Vec2::new(enemy.x, enemy.y + bob)),
                     ..Default::default()
                 },
             );
