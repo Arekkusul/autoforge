@@ -365,13 +365,13 @@ pub fn draw_world(
                     }
 
                     // Status indicators.
-                    if ms.output_buffer.len() >= 8 && ms.progress_ticks == 0 {
+                    if ms.output_buffer.len() >= MACHINE_BUFFER_CAP && ms.progress_ticks == 0 {
                         // BLOCKED: output full, machine idle — needs belt/inserter to drain output.
                         let warn_x = world.x + 1.0;
                         let warn_y = world.y + TILE_SIZE - 16.0;
                         draw_rectangle(warn_x, warn_y, 52.0, 14.0, Color::new(0.8, 0.2, 0.1, 0.9));
                         draw_text("BLOCKED", warn_x + 2.0, warn_y + 11.0, 10.0, WHITE);
-                    } else if ms.output_buffer.len() >= 8 {
+                    } else if ms.output_buffer.len() >= MACHINE_BUFFER_CAP {
                         let warn_x = world.x + 2.0;
                         let warn_y = world.y + TILE_SIZE - 16.0;
                         draw_rectangle(warn_x, warn_y, 38.0, 14.0, Color::new(0.7, 0.5, 0.0, 0.9));

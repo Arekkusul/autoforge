@@ -78,7 +78,7 @@ pub const LAB_TICKS: u32 = 60;
 // ---------------------------------------------------------------------------
 
 /// Maximum items in a machine input or output buffer.
-pub const MACHINE_BUFFER_CAP: usize = 8;
+pub const MACHINE_BUFFER_CAP: usize = 16;
 /// Storage chest capacity (number of item stacks).
 pub const STORAGE_CHEST_STACKS: usize = 48;
 /// Items per stack in a storage chest.

@@ -1812,11 +1812,11 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
                             let more = if ms.input_buffer.len() > 4 { format!(" +{}", ms.input_buffer.len() - 4) } else { String::new() };
                             lines.push((format!("Stored: {}{}", items, more), text_dim));
                         } else {
-                            lines.push((format!("Input: {}/8", ms.input_buffer.len()), text_dim));
+                            lines.push((format!("Input: {}/{}", ms.input_buffer.len(), MACHINE_BUFFER_CAP), text_dim));
                         }
                     }
                     if !ms.output_buffer.is_empty() {
-                        lines.push((format!("Output buffer: {}/8", ms.output_buffer.len()), text_dim));
+                        lines.push((format!("Output: {}/{}", ms.output_buffer.len(), MACHINE_BUFFER_CAP), text_dim));
                     }
                     if ms.fuel_ticks > 0 {
                         lines.push((format!("Fuel: {:.1}s", ms.fuel_ticks as f32 / 20.0), text_dim));
