@@ -1451,6 +1451,7 @@ fn simulation_tick(state: &mut GameState, sfx: &sound::SoundEffects) {
             &state.research.completed,
             &state.inventory,
             tick,
+            state.stats.buildings_placed,
         );
         for idx in new_milestones {
             state.milestones_completed[idx] = true;
@@ -2184,70 +2185,62 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
         }
     }
 
-    // --- Goal Panel (below inventory, dynamically positioned) ---
+    // --- Roadmap Goal Panel (below inventory, dynamically positioned) ---
     {
         let goal_x = 8.0;
         let goal_y = inv_panel_bottom + 8.0;
-        let (gx, _gy) = draw_panel(goal_x, goal_y, 200.0, 105.0, Some("Goal"), false);
-        let goal_x = gx - 4.0; // re-alias for text positioning
-        draw_text("Next Goal:", goal_x + 8.0, goal_y + 16.0, 14.0, Color::new(0.9, 0.7, 0.3, 1.0));
 
-        let goal_text = if state.tutorial_step < 5 {
-            "Follow the tutorial above ^"
-        } else if state.research.current_tech.is_some() {
-            "Feed science packs to Labs!"
-        } else if state.stats.items_crafted < 5 {
-            "Feed ore+coal into Furnace via Inserters"
-        } else if !state.research.completed[0] {
-            "Craft Red Science (Assembler) > feed Lab"
-        } else if !state.research.completed[6] {
-            "Craft Green Circuits (needs Wire!)"
-        } else if !state.research.completed[7] {
-            "Research Advanced Electronics"
-        } else {
-            "Expand and optimize!"
-        };
-        draw_text(goal_text, goal_x + 8.0, goal_y + 36.0, 13.0, Color::new(0.85, 0.85, 0.95, 1.0));
+        // Find the next uncompleted milestone.
+        let next = milestones::next_milestone(&state.milestones_completed);
+        let panel_h = if next.is_some() { 115.0 } else { 70.0 };
+        let (gx, _gy) = draw_panel(goal_x, goal_y, 210.0, panel_h, Some("Roadmap"), false);
+        let gx = gx - 4.0;
 
-        // Production rate (items/min).
-        let items_per_min = if state.stats.total_ticks > 0 {
-            state.stats.items_crafted as f32 / (state.stats.total_ticks as f32 / 1200.0)
+        if let Some(idx) = next {
+            let m = &milestones::MILESTONES[idx];
+            let (pr, pg, pb) = m.phase.color();
+            let phase_color = Color::new(pr, pg, pb, 0.9);
+
+            // Phase label.
+            draw_text(m.phase.label(), gx + 8.0, goal_y + 16.0, 11.0, phase_color);
+
+            // Milestone name (gold).
+            draw_text(m.name, gx + 8.0, goal_y + 34.0, 16.0, Color::new(0.95, 0.82, 0.35, 1.0));
+
+            // Description.
+            draw_text(m.description, gx + 8.0, goal_y + 52.0, 12.0, Color::new(0.85, 0.85, 0.95, 1.0));
+
+            // Hint (how to do it).
+            draw_text(m.hint, gx + 8.0, goal_y + 68.0, 10.0, Color::new(0.6, 0.7, 0.8, 0.8));
+
+            // Reward preview.
+            let reward_str: String = m.reward.iter()
+                .map(|(r, c)| format!("{}x{}", c, short_resource_name(*r)))
+                .collect::<Vec<_>>().join(" ");
+            draw_text(&format!("Reward: {}", reward_str), gx + 8.0, goal_y + 84.0, 10.0,
+                Color::new(0.5, 0.9, 0.5, 0.7));
+
+            // Progress bar toward 50k items.
+            let progress = (state.stats.items_crafted as f32 / 50000.0).min(1.0);
+            let bar_x = gx + 8.0;
+            let bar_y = goal_y + 92.0;
+            let bar_w = 194.0;
+            let bar_h = 6.0;
+            draw_rectangle(bar_x, bar_y, bar_w, bar_h, Color::new(0.15, 0.15, 0.2, 0.8));
+            let bar_color = if progress >= 0.9 { Color::new(0.3, 0.9, 0.3, 0.9) }
+                else if progress >= 0.5 { Color::new(0.9, 0.8, 0.2, 0.9) }
+                else { Color::new(0.4, 0.5, 0.7, 0.9) };
+            draw_rectangle(bar_x, bar_y, bar_w * progress, bar_h, bar_color);
+            let completed_count = state.milestones_completed.iter().filter(|&&c| c).count();
+            draw_text(
+                &format!("{}/{} milestones | {:.0}% to FORGE", completed_count, milestones::MILESTONES.len(), progress * 100.0),
+                bar_x, bar_y + 16.0, 9.0, Color::new(0.5, 0.6, 0.7, 0.7));
         } else {
-            0.0
-        };
-        draw_text(
-            &format!("Production: {:.1}/min", items_per_min),
-            goal_x + 8.0,
-            goal_y + 56.0,
-            12.0,
-            Color::new(0.6, 0.8, 0.6, 0.9),
-        );
-        // Additional stats.
-        let enemy_count = state.enemies.list.iter().filter(|e| e.alive).count();
-        let building_count = state.buildings.alive_ids().len();
-        draw_text(
-            &format!("Buildings: {}  |  Enemies: {}", building_count, enemy_count),
-            goal_x + 8.0,
-            goal_y + 74.0,
-            11.0,
-            Color::new(0.5, 0.6, 0.7, 0.8),
-        );
-        // Progress bar toward 50k items (the win condition).
-        let progress = (state.stats.items_crafted as f32 / 50000.0).min(1.0);
-        let bar_x = goal_x + 8.0;
-        let bar_y = goal_y + 82.0;
-        let bar_w = 184.0;
-        let bar_h = 8.0;
-        draw_rectangle(bar_x, bar_y, bar_w, bar_h, Color::new(0.15, 0.15, 0.2, 0.8));
-        let bar_color = if progress >= 0.9 { Color::new(0.3, 0.9, 0.3, 0.9) }
-            else if progress >= 0.5 { Color::new(0.9, 0.8, 0.2, 0.9) }
-            else { Color::new(0.4, 0.5, 0.7, 0.9) };
-        draw_rectangle(bar_x, bar_y, bar_w * progress, bar_h, bar_color);
-        draw_text(
-            &format!("{:.1}% to FORGE restoration", progress * 100.0),
-            bar_x, bar_y + 18.0, 10.0,
-            Color::new(0.5, 0.6, 0.7, 0.8),
-        );
+            // All milestones done!
+            draw_text("All milestones complete!", gx + 8.0, goal_y + 20.0, 14.0, Color::new(0.5, 0.9, 0.5, 1.0));
+            draw_text("FORGE consciousness restored <3", gx + 8.0, goal_y + 40.0, 12.0, Color::new(0.9, 0.7, 0.85, 0.9));
+        }
+
     }
 
     // --- Recipe picker popup (click assembler to open) ---
@@ -2369,40 +2362,61 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
     if state.show_achievements {
         let sw = screen_width();
         let sh = screen_height();
-        let pw = (sw * 0.5).min(500.0);
-        let ph = (sh * 0.7).min(450.0);
+        let pw = (sw * 0.6).min(560.0);
+        let ph = (sh * 0.8).min(600.0);
         let px = (sw - pw) * 0.5;
         let py = (sh - ph) * 0.5;
 
-        let (ax, mut ay) = draw_panel(px, py, pw, ph, Some("Achievements"), true);
+        draw_rectangle(0.0, 0.0, sw, sh, Color::new(0.0, 0.0, 0.0, 0.4));
+        let (ax, mut ay) = draw_panel(px, py, pw, ph, Some("Achievement Roadmap — N to close"), true);
 
         let completed = state.milestones_completed.iter().filter(|&&c| c).count();
         let total = milestones::MILESTONES.len();
         draw_text(
             &format!("{}/{} completed", completed, total),
-            ax + 120.0, ay - 6.0, 13.0, text_dim,
+            ax + 200.0, ay - 6.0, 13.0, text_dim,
         );
         ay += 4.0;
 
+        let mut last_phase = None;
         for (i, milestone) in milestones::MILESTONES.iter().enumerate() {
             if ay > py + ph - 16.0 { break; }
-            let done = state.milestones_completed.get(i).copied().unwrap_or(false);
-            let icon = if done { "[X]" } else { "[ ]" };
-            let color = if done { text_accent } else { text_dim };
-            draw_text(&format!("{} {}", icon, milestone.name), ax, ay, 14.0, color);
-            draw_text(milestone.description, ax + 160.0, ay, 12.0, text_dim);
-            ay += 22.0;
-        }
 
-        // Notification log at bottom.
-        ay += 8.0;
-        draw_text("Recent Notifications:", ax, ay, 13.0, Color::new(0.95, 0.82, 0.35, 0.8));
-        ay += 16.0;
-        let log_start = state.notification_log.len().saturating_sub(6);
-        for msg in &state.notification_log[log_start..] {
-            if ay > py + ph - 8.0 { break; }
-            draw_text(msg, ax, ay, 11.0, text_dim);
-            ay += 14.0;
+            // Phase header.
+            if last_phase != Some(milestone.phase) {
+                last_phase = Some(milestone.phase);
+                let (pr, pg, pb) = milestone.phase.color();
+                ay += 4.0;
+                draw_text(milestone.phase.label(), ax, ay, 14.0, Color::new(pr, pg, pb, 0.9));
+                ay += 18.0;
+            }
+
+            let done = state.milestones_completed.get(i).copied().unwrap_or(false);
+            let is_next = milestones::next_milestone(&state.milestones_completed) == Some(i);
+
+            // Highlight the next goal.
+            if is_next {
+                draw_rectangle(ax - 4.0, ay - 12.0, pw - 16.0, 36.0, Color::new(0.15, 0.2, 0.3, 0.5));
+                draw_text(">>>", ax - 2.0, ay + 4.0, 12.0, Color::new(0.9, 0.8, 0.3, 0.9));
+            }
+
+            let icon = if done { "[X]" } else { "[ ]" };
+            let name_color = if done { text_accent }
+                else if is_next { Color::new(0.95, 0.85, 0.35, 1.0) }
+                else { text_dim };
+            draw_text(&format!("{} {}", icon, milestone.name), ax + 18.0, ay, 14.0, name_color);
+            draw_text(milestone.description, ax + 180.0, ay, 11.0, text_dim);
+
+            // Show reward for uncompleted milestones.
+            if !done {
+                let reward_str: String = milestone.reward.iter()
+                    .map(|(r, c)| format!("{}x{}", c, short_resource_name(*r)))
+                    .collect::<Vec<_>>().join(" ");
+                draw_text(&format!("Reward: {}", reward_str), ax + 180.0, ay + 14.0, 10.0,
+                    Color::new(0.4, 0.8, 0.4, 0.6));
+            }
+
+            ay += if is_next { 38.0 } else { 24.0 };
         }
     }
 
