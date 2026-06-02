@@ -156,14 +156,17 @@ async fn main() {
         state.camera.update(get_frame_time());
 
         // 2. Fixed-timestep simulation (with game speed multiplier).
+        // Capped at 5 ticks/frame to prevent stutters during lag spikes.
         if !state.paused {
             state.tick_accumulator += dt * state.game_speed as f64;
             if state.tick_accumulator > MAX_ACCUMULATOR {
                 state.tick_accumulator = MAX_ACCUMULATOR;
             }
-            while state.tick_accumulator >= TICK_DURATION {
+            let mut ticks_this_frame = 0u32;
+            while state.tick_accumulator >= TICK_DURATION && ticks_this_frame < 5 {
                 simulation_tick(&mut state, &sfx);
                 state.tick_accumulator -= TICK_DURATION;
+                ticks_this_frame += 1;
             }
         }
 
@@ -2206,34 +2209,24 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
     }
 
     // --- Inventory (left side, below status, compact two-column) ---
-    let mut inv_panel_bottom = 136.0; // default if inventory empty (below 120px status panel)
+    // Dynamically shows ALL resources the player has (not a hardcoded subset).
+    let mut inv_panel_bottom = 136.0;
     {
-        let all_resources: &[(types::Resource, &str)] = &[
-            (types::Resource::IronPlate, "Fe"), (types::Resource::CopperPlate, "Cu"),
-            (types::Resource::Stone, "Stone"), (types::Resource::Coal, "Coal"),
-            (types::Resource::StoneBrick, "Brick"), (types::Resource::SteelPlate, "Steel"),
-            (types::Resource::Gear, "Gear"), (types::Resource::Wire, "Wire"),
-            (types::Resource::GreenCircuit, "GrnC"), (types::Resource::RedCircuit, "RedC"),
-            (types::Resource::BlueCircuit, "BluC"), (types::Resource::Pipe, "Pipe"),
-            (types::Resource::Sulfur, "Sulf"), (types::Resource::Plastic, "Plst"),
-            (types::Resource::Battery, "Batt"), (types::Resource::BasicAmmo, "Ammo"),
-            (types::Resource::ScienceRed, "RSci"), (types::Resource::ScienceGreen, "GSci"),
-        ];
-        let show: Vec<(&types::Resource, &&str, u32)> = all_resources.iter()
-            .filter_map(|(r, n)| {
-                let c = state.inventory.get(r).copied().unwrap_or(0);
-                if c > 0 { Some((r, n, c)) } else { None }
-            }).collect();
+        let mut show: Vec<(&str, u32)> = state.inventory.iter()
+            .filter(|(_, &c)| c > 0)
+            .map(|(r, &c)| (short_resource_name(*r), c))
+            .collect();
+        show.sort_by(|a, b| b.1.cmp(&a.1)); // most items first
 
         if !show.is_empty() {
             let rows = (show.len() + 1) / 2; // two columns
-            let inv_h = 30.0 + rows.min(8) as f32 * 16.0;
-            let (ix, mut iy) = draw_panel(8.0, 136.0, 210.0, inv_h, Some("Inventory"), false);
+            let inv_h = 34.0 + rows.min(10) as f32 * 16.0;
+            let (ix, mut iy) = draw_panel(8.0, 136.0, 220.0, inv_h, Some("Inventory"), false);
             inv_panel_bottom = 136.0 + inv_h;
 
             for chunk in show.chunks(2) {
-                for (col, (_, name, count)) in chunk.iter().enumerate() {
-                    let x = ix + col as f32 * 96.0;
+                for (col, (name, count)) in chunk.iter().enumerate() {
+                    let x = ix + col as f32 * 102.0;
                     draw_text(&format!("{}: {}", name, count), x, iy + 4.0, 12.0, text_bright);
                 }
                 iy += 16.0;
@@ -2396,6 +2389,8 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
         draw_text(&format!("Enemies killed: {}", state.stats.enemies_killed), sx, sy, 14.0, text_bright);
         sy += 20.0;
         draw_text(&format!("Rockets launched: {}", state.stats.rockets_launched), sx, sy, 14.0, text_bright);
+        sy += 20.0;
+        draw_text(&format!("World seed: {}", state.seed), sx, sy, 13.0, text_dim);
         sy += 24.0;
 
         // Building count by type.
