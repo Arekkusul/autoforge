@@ -2030,7 +2030,7 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
             let amount_str = if tile.ore_amount == u32::MAX {
                 "Infinite".to_string()
             } else {
-                format!("{}", tile.ore_amount)
+                fmt_num(tile.ore_amount as u64)
             };
             lines.push((
                 format!("{} ({})", deposit.display_name(), amount_str),
@@ -2055,12 +2055,12 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
                         lines.push(("No ore remaining!".to_string(), Color::new(0.9, 0.3, 0.3, 0.9)));
                     }
                 }
-                // Show HP if damaged.
+                // Show HP if damaged (with auto-repair hint).
                 if b.hp < b.max_hp {
                     let hp_pct = (b.hp / b.max_hp * 100.0) as u32;
                     let hp_color = if hp_pct > 50 { Color::new(0.9, 0.8, 0.2, 1.0) }
                         else { Color::new(0.9, 0.3, 0.3, 1.0) };
-                    lines.push((format!("HP: {}%  ({:.0}/{:.0})", hp_pct, b.hp, b.max_hp), hp_color));
+                    lines.push((format!("HP: {}% ({:.0}/{:.0}) — auto-repairing", hp_pct, b.hp, b.max_hp), hp_color));
                 }
                 // Belt speed info.
                 if b.kind.is_belt() {
@@ -2164,6 +2164,15 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
                 lines.push((format!("Dmg: {:.0}  Spd: {:.1}", enemy.kind.damage(), enemy.kind.speed()),
                     Color::new(0.8, 0.5, 0.4, 0.8)));
                 break; // only show one enemy
+            }
+        }
+
+        // Check for nearby enemy nests.
+        for nest_pos in &state.nests {
+            let dist = grid_pos.distance(*nest_pos);
+            if dist < 3.0 {
+                lines.push(("Enemy Nest nearby!".to_string(), Color::new(0.8, 0.2, 0.2, 0.9)));
+                break;
             }
         }
 
