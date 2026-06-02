@@ -585,8 +585,8 @@ pub fn draw_world(
         let ex = enemy.x - size * 0.5;
         let ey = enemy.y - size * 0.5;
 
-        // Color tint by type.
-        let tint = match enemy.kind {
+        // Color tint by type + attack flash.
+        let mut tint = match enemy.kind {
             crate::enemy::EnemyKind::SmallBiter => WHITE,
             crate::enemy::EnemyKind::MediumBiter => Color::new(1.0, 0.8, 0.6, 1.0),
             crate::enemy::EnemyKind::BigBiter => Color::new(1.0, 0.5, 0.3, 1.0),
@@ -596,6 +596,12 @@ pub fn draw_world(
             crate::enemy::EnemyKind::BigSpitter => Color::new(0.3, 0.9, 0.3, 1.0),
             crate::enemy::EnemyKind::BehemothSpitter => Color::new(0.2, 0.7, 1.0, 1.0),
         };
+        // Flash red when attacking.
+        if enemy.attack_cooldown > 15 {
+            tint.r = (tint.r + 0.4).min(1.0);
+            tint.g *= 0.5;
+            tint.b *= 0.5;
+        }
 
         if lod <= 1 {
             // Select sprite based on enemy type.

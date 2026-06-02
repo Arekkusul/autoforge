@@ -260,6 +260,14 @@ async fn main() {
             );
         }
 
+        // Render combat FX (turret laser/bullet lines).
+        for &(fx, fy, tx, ty, ticks, r, g, b) in &state.combat_fx {
+            let alpha = ticks as f32 / 4.0;
+            draw_line(fx, fy, tx, ty, 2.0, Color::new(r, g, b, alpha * 0.8));
+            // Impact flash at target.
+            draw_circle(tx, ty, 3.0, Color::new(1.0, 1.0, 1.0, alpha * 0.5));
+        }
+
         // Render robot workers (small dots moving from ship to target).
         for (start, target, progress) in &state.robots {
             let pos = *start + (*target - *start) * *progress;
@@ -1237,6 +1245,12 @@ fn simulation_tick(state: &mut GameState, sfx: &sound::SoundEffects) {
         }
     }
 
+    // Tick combat FX (fade out and remove expired).
+    for fx in state.combat_fx.iter_mut() {
+        if fx.4 > 0 { fx.4 -= 1; }
+    }
+    state.combat_fx.retain(|fx| fx.4 > 0);
+
     // --- EVERY TICK (20 Hz) --- Critical path for smooth gameplay ---
 
     // 1. Machines process: count down timers, complete recipes, start new ones.
@@ -1372,6 +1386,41 @@ fn simulation_tick(state: &mut GameState, sfx: &sound::SoundEffects) {
             &mut state.enemies,
             &mut state.stats.enemies_killed,
         );
+        // Generate combat visual FX: laser/bullet lines from turrets to nearest enemies.
+        for (_bid, building) in state.buildings.iter() {
+            if building.kind != types::BuildingKind::GunTurret && building.kind != types::BuildingKind::LaserTurret {
+                continue;
+            }
+            if let Some(ref ms) = building.machine_state {
+                // progress_ticks == COOLDOWN means turret JUST fired this tick.
+                if ms.progress_ticks == 10 { // just fired (cooldown = 10 ticks)
+                    let bx = building.pos.x as f32 * TILE_SIZE + TILE_SIZE * 0.5;
+                    let by = building.pos.y as f32 * TILE_SIZE + TILE_SIZE * 0.5;
+                    // Find closest alive enemy for the line target.
+                    let mut closest = None;
+                    let mut closest_dist = f32::MAX;
+                    for enemy in &state.enemies.list {
+                        if !enemy.alive { continue; }
+                        let dx = enemy.x - bx;
+                        let dy = enemy.y - by;
+                        let d = dx * dx + dy * dy;
+                        if d < closest_dist {
+                            closest_dist = d;
+                            closest = Some((enemy.x, enemy.y));
+                        }
+                    }
+                    if let Some((tx, ty)) = closest {
+                        let (r, g, b) = if building.kind == types::BuildingKind::LaserTurret {
+                            (0.3, 0.5, 1.0) // blue laser
+                        } else {
+                            (1.0, 0.8, 0.2) // yellow bullet
+                        };
+                        state.combat_fx.push((bx, by, tx, ty, 4, r, g, b));
+                    }
+                }
+            }
+        }
+
         // Loot drops + sounds.
         let new_kills = state.stats.enemies_killed - kills_before;
         if new_kills > 0 {
