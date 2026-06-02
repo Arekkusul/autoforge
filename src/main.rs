@@ -1471,7 +1471,7 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
     let selected_border = Color::new(0.45, 0.75, 1.0, 1.0);
 
     // --- Top-left: Status Panel (compact, 4 lines) ---
-    let (cx, mut cy) = draw_panel(8.0, 8.0, 240.0, 96.0, Some("FORGE"), false);
+    let (cx, mut cy) = draw_panel(8.0, 8.0, 240.0, 112.0, Some("FORGE"), false);
 
     // Line 1: Time + FPS
     draw_text(
@@ -1500,7 +1500,17 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
     draw_text("Power", cx + bar_w + 30.0, cy + 9.0, 11.0, text_dim);
     cy += 16.0;
 
-    // Line 3: Day/Night + Direction
+    // Line 3: Items crafted + production rate
+    let items_per_min = if state.stats.total_ticks > 1200 {
+        state.stats.items_crafted as f32 / (state.stats.total_ticks as f32 / 1200.0)
+    } else { 0.0 };
+    draw_text(
+        &format!("Items: {} ({:.0}/min)", state.stats.items_crafted, items_per_min),
+        cx, cy + 4.0, 12.0, text_dim,
+    );
+    cy += 16.0;
+
+    // Line 4: Day/Night + Direction
     let dn_color = if state.daynight.is_day() { Color::new(0.9, 0.82, 0.3, 1.0) } else { Color::new(0.4, 0.4, 0.7, 1.0) };
     let dir_text = match state.placement_direction {
         types::Direction::North => "N", types::Direction::East => "E",
@@ -1969,7 +1979,7 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
     }
 
     // --- Inventory (left side, below status, compact two-column) ---
-    let mut inv_panel_bottom = 112.0; // default if inventory empty
+    let mut inv_panel_bottom = 128.0; // default if inventory empty
     {
         let all_resources: &[(types::Resource, &str)] = &[
             (types::Resource::IronPlate, "Fe"), (types::Resource::CopperPlate, "Cu"),
@@ -1991,8 +2001,8 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
         if !show.is_empty() {
             let rows = (show.len() + 1) / 2; // two columns
             let inv_h = 30.0 + rows.min(8) as f32 * 16.0;
-            let (ix, mut iy) = draw_panel(8.0, 112.0, 200.0, inv_h, Some("Inventory"), false);
-            inv_panel_bottom = 112.0 + inv_h;
+            let (ix, mut iy) = draw_panel(8.0, 128.0, 200.0, inv_h, Some("Inventory"), false);
+            inv_panel_bottom = 128.0 + inv_h;
 
             for chunk in show.chunks(2) {
                 for (col, (_, name, count)) in chunk.iter().enumerate() {
@@ -2008,7 +2018,7 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
     {
         let goal_x = 8.0;
         let goal_y = inv_panel_bottom + 8.0;
-        let (gx, _gy) = draw_panel(goal_x, goal_y, 200.0, 80.0, Some("Goal"), false);
+        let (gx, _gy) = draw_panel(goal_x, goal_y, 200.0, 105.0, Some("Goal"), false);
         let goal_x = gx - 4.0; // re-alias for text positioning
         draw_text("Next Goal:", goal_x + 8.0, goal_y + 16.0, 14.0, Color::new(0.9, 0.7, 0.3, 1.0));
 
@@ -2052,13 +2062,21 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
             11.0,
             Color::new(0.5, 0.6, 0.7, 0.8),
         );
-        // Tip about controls.
+        // Progress bar toward 50k items (the win condition).
+        let progress = (state.stats.items_crafted as f32 / 50000.0).min(1.0);
+        let bar_x = goal_x + 8.0;
+        let bar_y = goal_y + 82.0;
+        let bar_w = 184.0;
+        let bar_h = 8.0;
+        draw_rectangle(bar_x, bar_y, bar_w, bar_h, Color::new(0.15, 0.15, 0.2, 0.8));
+        let bar_color = if progress >= 0.9 { Color::new(0.3, 0.9, 0.3, 0.9) }
+            else if progress >= 0.5 { Color::new(0.9, 0.8, 0.2, 0.9) }
+            else { Color::new(0.4, 0.5, 0.7, 0.9) };
+        draw_rectangle(bar_x, bar_y, bar_w * progress, bar_h, bar_color);
         draw_text(
-            "E:Recipes Tab:Research Mid:Insert",
-            goal_x + 8.0,
-            goal_y + 88.0,
-            10.0,
-            Color::new(0.4, 0.4, 0.6, 0.6),
+            &format!("{:.1}% to FORGE restoration", progress * 100.0),
+            bar_x, bar_y + 18.0, 10.0,
+            Color::new(0.5, 0.6, 0.7, 0.8),
         );
     }
 
