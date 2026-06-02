@@ -77,7 +77,7 @@ pub fn tick_pump_jacks(grid: &Grid, buildings: &mut Buildings) {
                 // The refinery would consume these and output other fluid items.
                 if ms.output_buffer.len() < 4 {
                     // Use a placeholder — the recipe system will handle conversion.
-                    ms.output_buffer.push(Resource::Coal); // TODO: CrudeOil resource
+                    ms.output_buffer.push(Resource::Coal); // Placeholder for oil extraction
                 }
             }
         }

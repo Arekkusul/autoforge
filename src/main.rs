@@ -2683,6 +2683,7 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
     if state.show_stats {
         let sw = screen_width();
         let sh = screen_height();
+        draw_rectangle(0.0, 0.0, sw, sh, Color::new(0.0, 0.0, 0.0, 0.4));
         let pw = (sw * 0.5).min(500.0);
         let ph = (sh * 0.65).min(450.0);
         let px = (sw - pw) * 0.5;
