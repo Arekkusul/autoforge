@@ -196,6 +196,7 @@ async fn main() {
                 &map_camera,
                 &atlas,
                 state.stats.total_ticks,
+                state.power.satisfaction,
             );
             // Draw camera viewport rectangle on the overview.
             let (vis_min, vis_max) = state.camera.visible_bounds();
@@ -210,6 +211,7 @@ async fn main() {
                 &state.camera,
                 &atlas,
                 state.stats.total_ticks,
+                state.power.satisfaction,
             );
             render::draw_ghost_preview(
                 &state.grid,
