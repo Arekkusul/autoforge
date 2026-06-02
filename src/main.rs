@@ -1782,14 +1782,11 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
 
         draw_text("Press any key to continue playing~", cx, cy, 13.0, dim);
 
-        // Dismiss on key press (after initial display).
-        if state.stats.items_crafted > 50100 {
-            // Only dismiss after a brief delay so the screen is actually seen.
-            if is_key_pressed(KeyCode::Space) || is_key_pressed(KeyCode::Escape)
-                || is_key_pressed(KeyCode::Enter) || is_mouse_button_pressed(MouseButton::Left)
-            {
-                state.game_won = false; // Dismiss victory screen, keep playing.
-            }
+        // Dismiss on any key/click.
+        if is_key_pressed(KeyCode::Space) || is_key_pressed(KeyCode::Escape)
+            || is_key_pressed(KeyCode::Enter) || is_mouse_button_pressed(MouseButton::Left)
+        {
+            state.game_won = false; // Dismiss victory screen, keep playing.
         }
     }
 
@@ -2017,13 +2014,14 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
         draw_rectangle(x + 3.0, y + 1.0, 16.0, 16.0, Color::new(0.0, 0.0, 0.0, 0.6));
         draw_text(hotkey, x + 6.0, y + 14.0, 16.0, Color::new(1.0, 1.0, 0.5, 0.9));
 
-        // Label below icon
-        let label_w = measure_text(name, None, 14, 1.0).width;
+        // Label below icon (auto-shrink font if slot is narrow).
+        let label_font = if slot_w < 68.0 { 11.0 } else { 13.0 };
+        let label_w = measure_text(name, None, label_font as u16, 1.0).width;
         draw_text(
             name,
-            x + (slot_w - label_w) * 0.5,
+            x + (slot_w - label_w).max(0.0) * 0.5,
             y + slot_h - 5.0,
-            14.0,
+            label_font,
             if is_selected { text_bright } else { text_dim },
         );
 
