@@ -1523,18 +1523,20 @@ fn draw_panel(x: f32, y: f32, w: f32, h: f32, title: Option<&str>, closeable: bo
     let border = Color::new(0.25, 0.30, 0.40, 0.50);
     let title_color = Color::new(0.95, 0.82, 0.35, 1.0);
 
+    // Subtle rounded feel: slightly brighter inner border.
     draw_rectangle(x, y, w, h, bg);
     draw_rectangle_lines(x, y, w, h, 1.0, border);
+    draw_rectangle_lines(x + 1.0, y + 1.0, w - 2.0, h - 2.0, 1.0, Color::new(0.15, 0.15, 0.22, 0.3));
 
-    let mut content_y = y + 8.0;
+    let mut content_y = y + 10.0;
     if let Some(t) = title {
-        draw_text(t, x + 12.0, y + 22.0, 16.0, title_color);
-        content_y = y + 30.0;
+        draw_text(t, x + 12.0, y + 24.0, 18.0, title_color);
+        content_y = y + 34.0;
     }
     if closeable {
         draw_close_button(x, y, w);
     }
-    (x + 8.0, content_y)
+    (x + 10.0, content_y)
 }
 
 /// Draws a clickable X close button at the top-right of a panel.
@@ -1612,49 +1614,49 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
     // Map view indicator.
     if state.camera.map_view {
         let label = "MAP VIEW — Press M or Esc to return";
-        let w = measure_text(label, None, 22, 1.0).width;
+        let w = measure_text(label, None, 20, 1.0).width;
         draw_rectangle((screen_width() - w) * 0.5 - 12.0, 6.0, w + 24.0, 28.0, Color::new(0.1, 0.1, 0.15, 0.85));
-        draw_text(label, (screen_width() - w) * 0.5, 26.0, 22.0, Color::new(0.9, 0.8, 0.3, 1.0));
+        draw_text(label, (screen_width() - w) * 0.5, 26.0, 20.0, Color::new(0.9, 0.8, 0.3, 1.0));
     }
 
-    let (cx, mut cy) = draw_panel(8.0, 8.0, 240.0, 112.0, Some("FORGE"), false);
+    let (cx, mut cy) = draw_panel(8.0, 8.0, 250.0, 120.0, Some("FORGE"), false);
 
-    // Line 1: Time + FPS
+    // Line 1: Time + FPS (standardized 14px body)
     draw_text(
-        &format!("{}:{:02} | FPS:{}", state.stats.total_ticks / 1200, (state.stats.total_ticks / 20) % 60, get_fps()),
-        cx, cy + 4.0, 13.0, text_dim,
+        &format!("{}:{:02}  |  FPS: {}", state.stats.total_ticks / 1200, (state.stats.total_ticks / 20) % 60, get_fps()),
+        cx, cy + 4.0, 14.0, text_dim,
     );
     // Speed badge (highlighted when not 1x).
     if state.game_speed > 1 {
         let speed_text = format!("{}x", state.game_speed);
-        let sw = measure_text(&speed_text, None, 14, 1.0).width;
-        draw_rectangle(cx + 165.0, cy - 4.0, sw + 10.0, 16.0, Color::new(0.8, 0.6, 0.1, 0.8));
-        draw_text(&speed_text, cx + 170.0, cy + 7.0, 14.0, Color::new(1.0, 1.0, 1.0, 1.0));
+        let stw = measure_text(&speed_text, None, 14, 1.0).width;
+        draw_rectangle(cx + 172.0, cy - 4.0, stw + 10.0, 18.0, Color::new(0.8, 0.6, 0.1, 0.8));
+        draw_text(&speed_text, cx + 177.0, cy + 8.0, 14.0, Color::new(1.0, 1.0, 1.0, 1.0));
     }
-    cy += 18.0;
+    cy += 20.0;
 
-    // Line 2: Power bar (visual, not just text)
-    let bar_w = 140.0;
-    let bar_h = 10.0;
+    // Line 2: Power bar (wider, taller for readability)
+    let bar_w = 150.0;
+    let bar_h = 12.0;
     let power_fill = state.power.satisfaction;
     let power_color = if power_fill >= 0.9 { Color::new(0.3, 0.85, 0.3, 1.0) }
         else if power_fill >= 0.5 { Color::new(0.9, 0.8, 0.2, 1.0) }
         else { Color::new(0.9, 0.2, 0.2, 1.0) };
     draw_rectangle(cx, cy, bar_w, bar_h, Color::new(0.15, 0.15, 0.2, 0.8));
     draw_rectangle(cx, cy, bar_w * power_fill, bar_h, power_color);
-    draw_text(&format!("{:.0}%", power_fill * 100.0), cx + bar_w + 4.0, cy + 9.0, 12.0, power_color);
-    draw_text("Power", cx + bar_w + 30.0, cy + 9.0, 11.0, text_dim);
-    cy += 16.0;
+    draw_text(&format!("{:.0}%", power_fill * 100.0), cx + bar_w + 6.0, cy + 10.0, 13.0, power_color);
+    draw_text("Power", cx + bar_w + 35.0, cy + 10.0, 12.0, text_dim);
+    cy += 18.0;
 
     // Line 3: Items crafted + production rate
     let items_per_min = if state.stats.total_ticks > 1200 {
         state.stats.items_crafted as f32 / (state.stats.total_ticks as f32 / 1200.0)
     } else { 0.0 };
     draw_text(
-        &format!("Items: {} ({:.0}/min)", fmt_num(state.stats.items_crafted), items_per_min),
-        cx, cy + 4.0, 12.0, text_dim,
+        &format!("Items: {}  ({:.0}/min)", fmt_num(state.stats.items_crafted), items_per_min),
+        cx, cy + 4.0, 14.0, text_dim,
     );
-    cy += 16.0;
+    cy += 18.0;
 
     // Line 4: Day/Night + Direction
     let dn_color = if state.daynight.is_day() { Color::new(0.9, 0.82, 0.3, 1.0) } else { Color::new(0.4, 0.4, 0.7, 1.0) };
@@ -1662,8 +1664,8 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
         types::Direction::North => "N", types::Direction::East => "E",
         types::Direction::South => "S", types::Direction::West => "W",
     };
-    draw_text(&state.daynight.display(), cx, cy + 4.0, 12.0, dn_color);
-    draw_text(&format!("Dir:{} | Kills:{}", dir_text, state.stats.enemies_killed), cx + 80.0, cy + 4.0, 12.0, text_dim);
+    draw_text(&state.daynight.display(), cx, cy + 4.0, 13.0, dn_color);
+    draw_text(&format!("Dir:{} | Kills:{}", dir_text, state.stats.enemies_killed), cx + 85.0, cy + 4.0, 13.0, text_dim);
 
     // Pause menu overlay (uses unified panel)
     if state.paused {
@@ -1764,7 +1766,7 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
     let mouse_world = state.camera.screen_to_world(mouse_screen);
     let grid_pos = grid::Grid::world_to_grid(mouse_world);
 
-    let panel_w = 280.0;
+    let panel_w = 300.0;
     let panel_x = screen_width() - panel_w - 10.0;
 
     if let Some(tile) = state.grid.get_tile(grid_pos) {
@@ -2176,7 +2178,7 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
             "F5: Save | F9: Load | F1: Help",
         ];
         for (i, line) in hints.iter().enumerate() {
-            draw_text(line, help_x, help_y + i as f32 * 18.0, 15.0, hint_color);
+            draw_text(line, help_x, help_y + i as f32 * 18.0, 14.0, hint_color);
         }
     }
 
@@ -2204,7 +2206,7 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
     }
 
     // --- Inventory (left side, below status, compact two-column) ---
-    let mut inv_panel_bottom = 128.0; // default if inventory empty
+    let mut inv_panel_bottom = 136.0; // default if inventory empty (below 120px status panel)
     {
         let all_resources: &[(types::Resource, &str)] = &[
             (types::Resource::IronPlate, "Fe"), (types::Resource::CopperPlate, "Cu"),
@@ -2226,8 +2228,8 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
         if !show.is_empty() {
             let rows = (show.len() + 1) / 2; // two columns
             let inv_h = 30.0 + rows.min(8) as f32 * 16.0;
-            let (ix, mut iy) = draw_panel(8.0, 128.0, 200.0, inv_h, Some("Inventory"), false);
-            inv_panel_bottom = 128.0 + inv_h;
+            let (ix, mut iy) = draw_panel(8.0, 136.0, 210.0, inv_h, Some("Inventory"), false);
+            inv_panel_bottom = 136.0 + inv_h;
 
             for chunk in show.chunks(2) {
                 for (col, (_, name, count)) in chunk.iter().enumerate() {
@@ -2246,9 +2248,8 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
 
         // Find the next uncompleted milestone.
         let next = milestones::next_milestone(&state.milestones_completed);
-        let panel_h = if next.is_some() { 115.0 } else { 70.0 };
-        let (gx, _gy) = draw_panel(goal_x, goal_y, 210.0, panel_h, Some("Roadmap"), false);
-        let gx = gx - 4.0;
+        let panel_h = if next.is_some() { 130.0 } else { 70.0 };
+        let (gx, _gy) = draw_panel(goal_x, goal_y, 220.0, panel_h, Some("Roadmap"), false);
 
         if let Some(idx) = next {
             let m = &milestones::MILESTONES[idx];
@@ -2256,30 +2257,30 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
             let phase_color = Color::new(pr, pg, pb, 0.9);
 
             // Phase label.
-            draw_text(m.phase.label(), gx + 8.0, goal_y + 16.0, 11.0, phase_color);
+            draw_text(m.phase.label(), gx, goal_y + 18.0, 12.0, phase_color);
 
-            // Milestone name (gold).
-            draw_text(m.name, gx + 8.0, goal_y + 34.0, 16.0, Color::new(0.95, 0.82, 0.35, 1.0));
+            // Milestone name (gold, prominent).
+            draw_text(m.name, gx, goal_y + 38.0, 17.0, Color::new(0.95, 0.82, 0.35, 1.0));
 
             // Description.
-            draw_text(m.description, gx + 8.0, goal_y + 52.0, 12.0, Color::new(0.85, 0.85, 0.95, 1.0));
+            draw_text(m.description, gx, goal_y + 56.0, 13.0, Color::new(0.85, 0.85, 0.95, 1.0));
 
-            // Hint (how to do it).
-            draw_text(m.hint, gx + 8.0, goal_y + 68.0, 10.0, Color::new(0.6, 0.7, 0.8, 0.8));
+            // Hint (how to do it — enlarged for readability).
+            draw_text(m.hint, gx, goal_y + 74.0, 11.0, Color::new(0.6, 0.7, 0.8, 0.85));
 
             // Reward preview.
             let reward_str: String = m.reward.iter()
                 .map(|(r, c)| format!("{}x{}", c, short_resource_name(*r)))
                 .collect::<Vec<_>>().join(" ");
-            draw_text(&format!("Reward: {}", reward_str), gx + 8.0, goal_y + 84.0, 10.0,
-                Color::new(0.5, 0.9, 0.5, 0.7));
+            draw_text(&format!("Reward: {}", reward_str), gx, goal_y + 90.0, 12.0,
+                Color::new(0.5, 0.9, 0.5, 0.8));
 
             // Progress bar toward 50k items.
             let progress = (state.stats.items_crafted as f32 / 50000.0).min(1.0);
-            let bar_x = gx + 8.0;
-            let bar_y = goal_y + 92.0;
-            let bar_w = 194.0;
-            let bar_h = 6.0;
+            let bar_x = gx;
+            let bar_y = goal_y + 100.0;
+            let bar_w = 200.0;
+            let bar_h = 8.0;
             draw_rectangle(bar_x, bar_y, bar_w, bar_h, Color::new(0.15, 0.15, 0.2, 0.8));
             let bar_color = if progress >= 0.9 { Color::new(0.3, 0.9, 0.3, 0.9) }
                 else if progress >= 0.5 { Color::new(0.9, 0.8, 0.2, 0.9) }
@@ -2287,8 +2288,8 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
             draw_rectangle(bar_x, bar_y, bar_w * progress, bar_h, bar_color);
             let completed_count = state.milestones_completed.iter().filter(|&&c| c).count();
             draw_text(
-                &format!("{}/{} milestones | {:.0}% to FORGE", completed_count, milestones::MILESTONES.len(), progress * 100.0),
-                bar_x, bar_y + 16.0, 9.0, Color::new(0.5, 0.6, 0.7, 0.7));
+                &format!("{}/{} milestones  |  {:.0}% to FORGE", completed_count, milestones::MILESTONES.len(), progress * 100.0),
+                bar_x, bar_y + 18.0, 11.0, Color::new(0.5, 0.6, 0.7, 0.75));
         } else {
             // All milestones done!
             draw_text("All milestones complete!", gx + 8.0, goal_y + 20.0, 14.0, Color::new(0.5, 0.9, 0.5, 1.0));
