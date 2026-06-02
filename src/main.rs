@@ -1784,7 +1784,8 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
             draw_text(desc, cx + 50.0, cy, 14.0, Color::new(0.8, 0.8, 0.85, 0.9));
             cy += 24.0;
         }
-        draw_text("Click outside or press Space to resume", px + 40.0, py + ph - 12.0, 12.0, text_dim);
+        draw_text("Click outside or press Space to resume", px + 40.0, py + ph - 24.0, 12.0, text_dim);
+        draw_text("AutoForge v0.2.0", px + pw - 110.0, py + ph - 8.0, 11.0, Color::new(0.4, 0.4, 0.5, 0.5));
 
         // Click outside the pause panel to unpause.
         if is_mouse_button_pressed(MouseButton::Left) {

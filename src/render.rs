@@ -164,11 +164,23 @@ pub fn draw_world(
                             OreDeposit::Oil => atlas.r_ore_oil,
                         };
                         let world = Grid::grid_to_world(pos);
+                        // Fade ore sprite as deposit depletes (dims below 2000, fades below 500).
+                        let ore_tint = if tile.ore_amount == u32::MAX {
+                            WHITE
+                        } else if tile.ore_amount < 500 {
+                            let fade = tile.ore_amount as f32 / 500.0;
+                            Color::new(1.0, 0.6 + fade * 0.4, 0.6 + fade * 0.4, 0.5 + fade * 0.5)
+                        } else if tile.ore_amount < 2000 {
+                            let dim = tile.ore_amount as f32 / 2000.0;
+                            Color::new(1.0, 0.8 + dim * 0.2, 0.8 + dim * 0.2, 1.0)
+                        } else {
+                            WHITE
+                        };
                         draw_texture_ex(
                             &atlas.tex,
                             world.x,
                             world.y,
-                            WHITE,
+                            ore_tint,
                             DrawTextureParams {
                                 source: Some(ore_src),
                                 dest_size: Some(Vec2::splat(TILE_SIZE * 2.0)),
@@ -348,6 +360,22 @@ pub fn draw_world(
                             Color::new(0.2, 0.2, 0.2, 0.5),
                         );
                     }
+                    // Smoke puffs for active furnaces/boilers.
+                    if ms.progress_ticks > 0 && (building.kind == BuildingKind::StoneFurnace
+                        || building.kind == BuildingKind::SteelFurnace
+                        || building.kind == BuildingKind::Boiler)
+                    {
+                        let smoke_phase = (tick as f32 * 0.1 + world.x * 0.3) % 3.0;
+                        for i in 0..3u32 {
+                            let phase = (smoke_phase + i as f32) % 3.0;
+                            let sx = world.x + TILE_SIZE * 0.5 + (phase * 2.0).sin() * 3.0;
+                            let sy = world.y - phase * 6.0;
+                            let alpha = (1.0 - phase / 3.0) * 0.3;
+                            let size = 2.0 + phase * 1.5;
+                            draw_circle(sx, sy, size, Color::new(0.4, 0.4, 0.45, alpha));
+                        }
+                    }
+
                     // Item count badge (top-right corner) showing buffer contents.
                     let total_items = ms.input_buffer.len() + ms.output_buffer.len();
                     if total_items > 0 {
@@ -702,14 +730,21 @@ pub fn draw_world(
                 },
             );
 
-            // Label.
+            // Nameplate with semi-transparent background panel.
             if lod == 0 {
-                draw_text("FORGE BASE", ship_cx - 40.0, ship_y - 8.0, 16.0,
-                    Color::new(0.7, 0.6, 0.9, 0.8));
-                draw_text("Horizon's Promise", ship_cx - 50.0, ship_y + 6.0, 12.0,
-                    Color::new(0.4, 0.4, 0.5, 0.5));
-                draw_text("[ click for lore ]", ship_cx - 48.0, ship_y + ship_h + 18.0, 11.0,
-                    Color::new(0.5, 0.5, 0.6, 0.4));
+                let np_w = 120.0;
+                let np_h = 28.0;
+                let np_x = ship_cx - np_w * 0.5;
+                let np_y = ship_y - np_h - 4.0;
+                draw_rectangle(np_x, np_y, np_w, np_h, Color::new(0.06, 0.06, 0.1, 0.8));
+                draw_rectangle_lines(np_x, np_y, np_w, np_h, 1.0, Color::new(0.3, 0.25, 0.5, 0.6));
+                draw_text("FORGE BASE", np_x + 14.0, np_y + 14.0, 16.0,
+                    Color::new(0.95, 0.82, 0.35, 0.9));
+                draw_text("Horizon's Promise", np_x + 8.0, np_y + 26.0, 11.0,
+                    Color::new(0.5, 0.5, 0.6, 0.6));
+                // Interaction hint below the ship.
+                draw_text("[ click for lore ]", ship_cx - 48.0, ship_y + ship_h + 18.0, 12.0,
+                    Color::new(0.6, 0.5, 0.8, 0.5));
             }
 
             // Robot docking area — idle robots parked near the ship.
