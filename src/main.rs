@@ -2193,7 +2193,7 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
         let mm_y = screen_height() - 210.0 - mm_size; // above toolbar area
         let _panel_bg = Color::new(0.06, 0.06, 0.08, 0.9);
 
-        draw_panel(mm_x - 4.0, mm_y - 24.0, mm_size + 8.0, mm_size + 32.0, Some("Map"), false);
+        draw_panel(mm_x - 4.0, mm_y - 24.0, mm_size + 8.0, mm_size + 56.0, Some("Map"), false);
 
         // Draw a simplified view of the map (each pixel = 4 tiles).
         let tiles_per_pixel = 4;
@@ -2274,6 +2274,21 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
                 let target_gy = cam_grid.y - half_range + (frac_y * (map_pixels * tiles_per_pixel) as f32) as i32;
                 state.camera.target = grid::Grid::grid_to_world_center(types::GridPos::new(target_gx, target_gy));
             }
+        }
+
+        // Minimap legend (color key).
+        let lg_y = mm_y + mm_size + 4.0;
+        let lg_items: &[(&str, Color)] = &[
+            ("Bld", Color::new(0.5, 0.5, 0.8, 1.0)),
+            ("Ore", Color::new(0.7, 0.5, 0.2, 1.0)),
+            ("H2O", Color::new(0.2, 0.3, 0.6, 1.0)),
+            ("Pol", Color::new(0.4, 0.4, 0.1, 1.0)),
+            ("Nest", Color::new(0.6, 0.1, 0.1, 1.0)),
+        ];
+        for (i, (label, color)) in lg_items.iter().enumerate() {
+            let lx = mm_x + i as f32 * 28.0;
+            draw_rectangle(lx, lg_y, 6.0, 6.0, *color);
+            draw_text(label, lx + 8.0, lg_y + 7.0, 9.0, text_dim);
         }
     }
 

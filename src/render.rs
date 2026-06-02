@@ -663,17 +663,19 @@ pub fn draw_world(
             draw_circle(enemy.x, enemy.y, TILE_SIZE * 0.3, Color::new(0.9, 0.1, 0.1, 0.9));
         }
 
-        // Health bar (only at LOD 0).
-        if lod == 0 {
+        // Health bar (LOD 0-1, wider bar for visibility).
+        if lod <= 1 {
             let max_hp = enemy.kind.max_hp();
             if enemy.hp < max_hp {
-                let bar_w = size;
-                let bar_h = 3.0;
-                let bar_x = ex;
-                let bar_y = ey - 5.0;
-                let fill = enemy.hp / max_hp;
-                draw_rectangle(bar_x, bar_y, bar_w, bar_h, Color::new(0.3, 0.0, 0.0, 0.8));
-                draw_rectangle(bar_x, bar_y, bar_w * fill, bar_h, Color::new(0.9, 0.1, 0.1, 0.9));
+                let bar_w = size * 1.2;
+                let bar_h = 4.0;
+                let bar_x = ex - size * 0.1;
+                let bar_y = ey - 6.0;
+                let fill = (enemy.hp / max_hp).max(0.0);
+                let fill_color = if fill > 0.5 { Color::new(0.9, 0.5, 0.1, 0.9) }
+                    else { Color::new(0.9, 0.1, 0.1, 0.9) };
+                draw_rectangle(bar_x, bar_y, bar_w, bar_h, Color::new(0.15, 0.0, 0.0, 0.8));
+                draw_rectangle(bar_x, bar_y, bar_w * fill, bar_h, fill_color);
             }
         }
     }
