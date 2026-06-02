@@ -28,6 +28,7 @@ pub fn draw_world(
     camera: &GameCamera,
     atlas: &SpriteAtlas,
     tick: u64,
+    power_satisfaction: f32,
 ) {
     let (min_world, max_world) = camera.visible_bounds();
 
@@ -272,14 +273,24 @@ pub fn draw_world(
             };
 
             // Tier tinting: higher-tier buildings get subtle color to distinguish.
-            let tint = match building.kind {
-                BuildingKind::InserterLong => Color::new(tint.r, tint.g * 0.9, tint.b * 0.7, 1.0), // warm
-                BuildingKind::InserterFast => Color::new(tint.r * 0.7, tint.g * 0.8, tint.b, 1.0),  // blue
-                BuildingKind::InserterStack => Color::new(tint.r * 0.8, tint.g, tint.b * 0.7, 1.0),  // green
-                BuildingKind::AssemblerT2 => Color::new(tint.r * 0.8, tint.g * 0.85, tint.b, 1.0),  // slight blue
-                BuildingKind::AssemblerT3 => Color::new(tint.r * 0.7, tint.g * 0.75, tint.b, 1.0),  // deeper blue
+            let mut tint = match building.kind {
+                BuildingKind::InserterLong => Color::new(tint.r, tint.g * 0.9, tint.b * 0.7, 1.0),
+                BuildingKind::InserterFast => Color::new(tint.r * 0.7, tint.g * 0.8, tint.b, 1.0),
+                BuildingKind::InserterStack => Color::new(tint.r * 0.8, tint.g, tint.b * 0.7, 1.0),
+                BuildingKind::AssemblerT2 => Color::new(tint.r * 0.8, tint.g * 0.85, tint.b, 1.0),
+                BuildingKind::AssemblerT3 => Color::new(tint.r * 0.7, tint.g * 0.75, tint.b, 1.0),
                 _ => tint,
             };
+
+            // Brownout tint: dim electric machines when power is low.
+            if power_satisfaction < 0.5 && !building.kind.needs_fuel() && !building.kind.is_belt()
+                && !building.kind.is_inserter() && building.kind != BuildingKind::Miner
+            {
+                let dim = 0.5 + power_satisfaction;
+                tint.r *= dim;
+                tint.g *= dim;
+                tint.b *= dim * 1.1; // slight blue tinge
+            }
 
             // Inserter arm swing: add rotation offset based on progress.
             let final_rotation = if building.kind.is_inserter() {
@@ -382,6 +393,18 @@ pub fn draw_world(
                         let warn_y = world.y + TILE_SIZE - 16.0;
                         draw_rectangle(warn_x, warn_y, 44.0, 14.0, Color::new(0.3, 0.3, 0.6, 0.8));
                         draw_text("EMPTY", warn_x + 3.0, warn_y + 11.0, 11.0, WHITE);
+                    }
+
+                    // Low power badge for electric machines experiencing brownout.
+                    if power_satisfaction < 0.5 && !building.kind.needs_fuel()
+                        && !building.kind.is_belt() && !building.kind.is_inserter()
+                        && building.kind != BuildingKind::Miner
+                    {
+                        let warn_x = world.x + TILE_SIZE - 38.0;
+                        let warn_y = world.y + 2.0;
+                        let flash = ((tick as f32 * 0.2).sin() * 0.3 + 0.7).max(0.0);
+                        draw_rectangle(warn_x, warn_y, 36.0, 12.0, Color::new(0.6, 0.2, 0.6, 0.8 * flash));
+                        draw_text("PWR!", warn_x + 2.0, warn_y + 10.0, 10.0, Color::new(1.0, 0.8, 1.0, flash));
                     }
                 }
 
