@@ -362,6 +362,13 @@ async fn main() {
         set_default_camera();
         draw_ui(&mut state, &atlas);
 
+        // Performance warning when FPS drops (one-time toast).
+        if get_fps() < 30 && state.stats.total_ticks > 200 {
+            if !state.notification_log.iter().any(|m| m.contains("Performance mode")) {
+                state.toast("Performance mode enabled — zoom in for full detail".to_string(), 120);
+            }
+        }
+
         next_frame().await;
     }
 }
@@ -1880,7 +1887,7 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
         let sw = screen_width();
         let sh = screen_height();
         let pw = 320.0;
-        let ph = 310.0;
+        let ph = 360.0;
         let px = (sw - pw) * 0.5;
         let py = (sh - ph) * 0.5;
 
@@ -1906,6 +1913,21 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
             draw_text(desc, cx + 50.0, cy, 14.0, Color::new(0.8, 0.8, 0.85, 0.9));
             cy += 24.0;
         }
+        // Quit button.
+        let quit_y = cy + 8.0;
+        let quit_w = 120.0;
+        let quit_x = px + (pw - quit_w) * 0.5;
+        let (qmx, qmy) = mouse_position();
+        let quit_hover = qmx >= quit_x && qmx <= quit_x + quit_w && qmy >= quit_y && qmy <= quit_y + 24.0;
+        let quit_bg = if quit_hover { Color::new(0.5, 0.15, 0.15, 0.8) } else { Color::new(0.3, 0.1, 0.1, 0.6) };
+        draw_rectangle(quit_x, quit_y, quit_w, 24.0, quit_bg);
+        draw_rectangle_lines(quit_x, quit_y, quit_w, 24.0, 1.0, Color::new(0.5, 0.2, 0.2, 0.5));
+        draw_text("Save & Quit", quit_x + 16.0, quit_y + 17.0, 14.0, Color::new(0.9, 0.7, 0.7, 0.9));
+        if quit_hover && is_mouse_button_pressed(MouseButton::Left) {
+            save::save_game(state);
+            std::process::exit(0);
+        }
+
         draw_text("You can still place buildings while paused!", px + 30.0, py + ph - 36.0, 11.0, Color::new(0.5, 0.7, 0.5, 0.6));
         draw_text("Click outside or press Space to resume", px + 40.0, py + ph - 20.0, 12.0, text_dim);
         draw_text("AutoForge v0.2.0", px + pw - 110.0, py + ph - 8.0, 11.0, Color::new(0.4, 0.4, 0.5, 0.5));
