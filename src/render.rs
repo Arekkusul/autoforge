@@ -271,6 +271,16 @@ pub fn draw_world(
                 WHITE
             };
 
+            // Tier tinting: higher-tier buildings get subtle color to distinguish.
+            let tint = match building.kind {
+                BuildingKind::InserterLong => Color::new(tint.r, tint.g * 0.9, tint.b * 0.7, 1.0), // warm
+                BuildingKind::InserterFast => Color::new(tint.r * 0.7, tint.g * 0.8, tint.b, 1.0),  // blue
+                BuildingKind::InserterStack => Color::new(tint.r * 0.8, tint.g, tint.b * 0.7, 1.0),  // green
+                BuildingKind::AssemblerT2 => Color::new(tint.r * 0.8, tint.g * 0.85, tint.b, 1.0),  // slight blue
+                BuildingKind::AssemblerT3 => Color::new(tint.r * 0.7, tint.g * 0.75, tint.b, 1.0),  // deeper blue
+                _ => tint,
+            };
+
             // Inserter arm swing: add rotation offset based on progress.
             let final_rotation = if building.kind.is_inserter() {
                 if let Some(ref ms) = building.machine_state {

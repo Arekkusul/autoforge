@@ -110,8 +110,8 @@ async fn main() {
 
     // --- Game initialization (after cutscene) ---
     let mut state = GameState::new(0);
-    state.toast("Welcome to AutoForge! Press F1 for help~".to_string(), 120);
-    state.toast("Click toolbar to select buildings. Press E for recipes!".to_string(), 150);
+    state.toast("Welcome to AutoForge! Press H for tutorial, F1 for help~".to_string(), 120);
+    state.toast("Starting supplies: 50 Iron, 30 Copper, 20 Stone, 30 Coal, 25 Gears".to_string(), 150);
 
     // --- Main game loop ---
     let mut autosave_timer = 0.0f32;
@@ -1555,7 +1555,7 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
         let sw = screen_width();
         let sh = screen_height();
         let pw = 320.0;
-        let ph = 240.0;
+        let ph = 310.0;
         let px = (sw - pw) * 0.5;
         let py = (sh - ph) * 0.5;
 
@@ -1567,9 +1567,13 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
             ("F5", "Save Game"),
             ("F9", "Load Game"),
             ("E", "Recipe Book"),
-            ("Tab", "Research"),
+            ("Tab", "Research Tree"),
+            ("N", "Achievements"),
+            ("V", "Production Stats"),
+            ("B", "Blueprint"),
             ("+/-", "Game Speed"),
             ("F1", "Help / Controls"),
+            ("F2", "Mute Sound"),
         ];
         cy += 4.0;
         for (key, desc) in &items {
@@ -2271,8 +2275,8 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
     if state.show_help {
         let sw = screen_width();
         let sh = screen_height();
-        let pw = (sw * 0.6).min(600.0);
-        let ph = (sh * 0.75).min(500.0);
+        let pw = (sw * 0.65).min(620.0);
+        let ph = (sh * 0.85).min(650.0);
         let px = (sw - pw) * 0.5;
         let py = (sh - ph) * 0.5;
 
@@ -2280,29 +2284,37 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
         let help = [
             ("BUILDING", ""),
             ("1-9, 0", "Select building from toolbar"),
-            ("Click toolbar", "Select building"),
-            ("Left Click", "Place building (costs resources)"),
-            ("Right Click", "Remove building (hold to mass-delete)"),
-            ("R", "Rotate direction before placing"),
-            ("Q", "Copy building type from world (eyedropper)"),
-            ("Ctrl+Z", "Undo last placement"),
+            ("T/G/U/C/L/P", "Turret/Wall/UGBelt/Chem/Laser/Solar"),
+            ("Left Click", "Place (hold to drag belts)"),
+            ("Right Click", "Remove (hold to mass-delete)"),
+            ("R", "Rotate direction"),
+            ("Q", "Copy building from world (eyedropper)"),
+            ("Ctrl+Z", "Undo last placement (20 levels)"),
+            ("B", "Blueprint copy/paste"),
+            ("Esc", "Deselect building"),
             ("", ""),
             ("INTERACTION", ""),
-            ("Left Click (no selection)", "Click assembler to cycle recipe"),
-            ("Middle Click", "Hand-insert item from inventory into machine"),
+            ("Click assembler", "Open recipe picker"),
+            ("Middle Click", "Hand-insert item into machine"),
+            ("Click ship", "Read ship lore messages"),
+            ("Click minimap", "Teleport camera"),
             ("", ""),
             ("NAVIGATION", ""),
             ("WASD / Arrows", "Pan camera"),
             ("Scroll wheel", "Zoom (toward cursor)"),
-            ("Edge of screen", "Auto-scroll camera"),
+            ("Home", "Center camera on base"),
+            ("M", "Map overview (zoom out)"),
             ("", ""),
-            ("MENUS", ""),
-            ("E", "Recipe book (all crafting recipes)"),
-            ("Tab", "Research tree (unlock technologies)"),
-            ("H", "Toggle tutorial"),
-            ("Space", "Pause (shows pause menu)"),
-            ("+/-", "Game speed (1x to 5x)"),
+            ("MENUS & SYSTEM", ""),
+            ("E", "Recipe book"),
+            ("Tab", "Research tree"),
+            ("N", "Achievements"),
+            ("V", "Production stats"),
+            ("H", "Tutorial"),
+            ("Space", "Pause"),
+            ("+/-", "Game speed (1x–5x)"),
             ("F1", "This help screen"),
+            ("F2", "Mute/unmute sound"),
             ("F5 / F9", "Save / Load game"),
         ];
 
@@ -2353,61 +2365,38 @@ fn draw_recipe_browser() {
         Color::new(0.6, 0.6, 0.7, 0.7),
     );
 
-    // Recipe entries.
-    let recipes: &[(&str, &str, &str)] = &[
-        // (Name, Inputs, Output)
-        ("== SMELTING (Furnace) ==", "", ""),
-        ("Iron Plate", "1x Iron Ore", "1x Iron Plate"),
-        ("Copper Plate", "1x Copper Ore", "1x Copper Plate"),
-        ("Stone Brick", "2x Stone", "1x Stone Brick"),
-        ("Steel Plate", "5x Iron Plate", "1x Steel Plate"),
-        ("", "", ""),
-        ("== BASIC ASSEMBLY ==", "", ""),
-        ("Gear", "2x Iron Plate", "1x Gear"),
-        ("Wire", "1x Copper Plate", "2x Wire"),
-        ("Green Circuit", "1x Iron Plate + 3x Wire", "1x Green Circuit"),
-        ("Pipe", "1x Iron Plate", "1x Pipe"),
-        ("Iron Stick", "1x Iron Plate", "2x Iron Stick"),
-        ("Basic Ammo", "1x Iron Plate", "1x Ammo"),
-        ("", "", ""),
-        ("== SCIENCE PACKS ==", "", ""),
-        ("Red Science", "1x Gear + 1x Copper Plate", "1x Red Science"),
-        ("Inserter (item)", "1x Circuit + 1x Gear + 1x Iron", "1x Inserter"),
-        ("Green Science", "1x Inserter + 1x Iron Plate", "1x Green Science"),
-        ("Blue Science", "1x Piercing Ammo + 1x Grenade + 2x Brick", "1x Blue Science"),
-        ("", "", ""),
-        ("== CHEMICAL PLANT ==", "", ""),
-        ("Sulfur", "2x Coal + 1x Iron Plate", "2x Sulfur"),
-        ("Plastic", "1x Coal + 1x Copper Plate", "2x Plastic"),
-        ("Battery", "1x Copper + 1x Iron + 1x Sulfur", "1x Battery"),
-        ("Rocket Fuel", "5x Coal + 1x Steel Plate", "1x Rocket Fuel"),
-    ];
-
+    // Dynamically generated from the actual RECIPES array — always complete.
     let col_name = px + 20.0;
     let col_input = px + 180.0;
     let col_output = px + pw - 180.0;
     let start_y = py + 75.0;
-    let row_h = 22.0;
+    let row_h = 18.0;
 
     // Column headers.
     draw_text("Recipe", col_name, start_y - 5.0, 14.0, Color::new(0.7, 0.7, 0.8, 0.7));
     draw_text("Inputs", col_input, start_y - 5.0, 14.0, Color::new(0.7, 0.7, 0.8, 0.7));
     draw_text("Output", col_output, start_y - 5.0, 14.0, Color::new(0.7, 0.7, 0.8, 0.7));
 
-    for (i, (name, inputs, output)) in recipes.iter().enumerate() {
+    for (i, r) in recipe::RECIPES.iter().enumerate() {
         let y = start_y + 10.0 + i as f32 * row_h;
         if y > py + ph - 20.0 {
             break;
         }
 
-        if name.starts_with("==") {
-            // Section header.
-            draw_text(name, col_name, y, 16.0, Color::new(0.9, 0.75, 0.4, 1.0));
-        } else if !name.is_empty() {
-            draw_text(name, col_name, y, 14.0, Color::new(0.9, 0.9, 0.95, 1.0));
-            draw_text(inputs, col_input, y, 13.0, Color::new(0.7, 0.8, 0.7, 0.9));
-            draw_text(output, col_output, y, 13.0, Color::new(0.5, 0.9, 0.5, 0.9));
-        }
+        // Recipe name.
+        draw_text(r.name, col_name, y, 13.0, Color::new(0.9, 0.9, 0.95, 1.0));
+
+        // Inputs.
+        let inputs: String = r.inputs.iter()
+            .map(|(res, c)| format!("{}x{}", c, short_resource_name(*res)))
+            .collect::<Vec<_>>().join("+");
+        draw_text(&inputs, col_input, y, 12.0, Color::new(0.7, 0.8, 0.7, 0.9));
+
+        // Outputs.
+        let outputs: String = r.outputs.iter()
+            .map(|(res, c)| format!("{}x{}", c, short_resource_name(*res)))
+            .collect::<Vec<_>>().join("+");
+        draw_text(&outputs, col_output, y, 12.0, Color::new(0.5, 0.9, 0.5, 0.9));
     }
 }
 
