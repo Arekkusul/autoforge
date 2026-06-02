@@ -811,12 +811,13 @@ pub fn draw_ghost_preview(
             },
         );
 
-        // Turret range indicator.
+        // Range indicators for turrets and roboports.
+        let center_x = world.x + TILE_SIZE * 0.5;
+        let center_y = world.y + TILE_SIZE * 0.5;
         if kind == BuildingKind::GunTurret || kind == BuildingKind::LaserTurret {
-            let center_x = world.x + TILE_SIZE * 0.5;
-            let center_y = world.y + TILE_SIZE * 0.5;
-            let range = TILE_SIZE * 6.0;
-            draw_circle_lines(center_x, center_y, range, 1.0, Color::new(1.0, 0.3, 0.3, 0.25));
+            draw_circle_lines(center_x, center_y, TILE_SIZE * 6.0, 1.0, Color::new(1.0, 0.3, 0.3, 0.25));
+        } else if kind == BuildingKind::Roboport {
+            draw_circle_lines(center_x, center_y, TILE_SIZE * 10.0, 1.0, Color::new(0.3, 0.5, 1.0, 0.2));
         }
     } else {
         // No building selected — just show cursor highlight.
