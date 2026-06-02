@@ -268,15 +268,29 @@ async fn main() {
             draw_circle(tx, ty, 3.0, Color::new(1.0, 1.0, 1.0, alpha * 0.5));
         }
 
-        // Render robot workers (small dots moving from ship to target).
+        // Render robot workers (pixel art sprites with trail).
+        let robot_anim = ((state.stats.total_ticks / 3) % 2) as usize; // propeller animation
         for (start, target, progress) in &state.robots {
             let pos = *start + (*target - *start) * *progress;
-            // Robot body (small cute circle).
-            draw_circle(pos.x, pos.y, 4.0, Color::new(0.4, 0.6, 0.9, 0.9));
-            draw_circle(pos.x, pos.y, 2.0, Color::new(0.7, 0.8, 1.0, 0.9));
-            // Trail.
-            let trail_pos = *start + (*target - *start) * (*progress - 0.05).max(0.0);
-            draw_circle(trail_pos.x, trail_pos.y, 2.0, Color::new(0.4, 0.6, 0.9, 0.4));
+            let robot_size = TILE_SIZE * 0.5;
+            // Thruster trail (fading dots behind the robot).
+            for t in 1..4 {
+                let trail = *start + (*target - *start) * (*progress - t as f32 * 0.03).max(0.0);
+                let alpha = 0.4 - t as f32 * 0.1;
+                draw_circle(trail.x, trail.y, 2.0 - t as f32 * 0.4, Color::new(0.5, 0.3, 0.8, alpha));
+            }
+            // Robot sprite.
+            draw_texture_ex(
+                &atlas.tex,
+                pos.x - robot_size * 0.5,
+                pos.y - robot_size * 0.5,
+                WHITE,
+                DrawTextureParams {
+                    source: Some(atlas.r_robot[robot_anim]),
+                    dest_size: Some(Vec2::splat(robot_size)),
+                    ..Default::default()
+                },
+            );
         }
 
         // Render trains (rectangles moving along their routes).

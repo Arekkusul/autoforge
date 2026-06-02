@@ -712,14 +712,22 @@ pub fn draw_world(
                     Color::new(0.5, 0.5, 0.6, 0.4));
             }
 
-            // Robot docking area — small idle robots parked near the ship.
+            // Robot docking area — idle robots parked near the ship.
             let dock_x = ship_x + ship_w + 8.0;
             let dock_y = ship_cy - 10.0;
+            let robot_size = TILE_SIZE * 0.4;
+            let robot_frame = ((tick / 4) % 2) as usize;
             for i in 0..4u32 {
-                let rx = dock_x + (i % 2) as f32 * 12.0;
-                let ry = dock_y + (i / 2) as f32 * 12.0;
-                draw_circle(rx, ry, 3.0, Color::new(0.3, 0.45, 0.7, 0.6));
-                draw_circle(rx, ry, 1.5, Color::new(0.5, 0.65, 0.9, 0.5));
+                let rx = dock_x + (i % 2) as f32 * (robot_size + 4.0);
+                let ry = dock_y + (i / 2) as f32 * (robot_size + 4.0);
+                draw_texture_ex(
+                    &atlas.tex, rx, ry, Color::new(1.0, 1.0, 1.0, 0.7),
+                    DrawTextureParams {
+                        source: Some(atlas.r_robot[robot_frame]),
+                        dest_size: Some(Vec2::splat(robot_size)),
+                        ..Default::default()
+                    },
+                );
             }
         }
     }
