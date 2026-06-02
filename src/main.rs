@@ -376,6 +376,14 @@ fn handle_input(state: &mut GameState, sfx: &mut sound::SoundEffects) {
     // Rotate placement direction
     if is_key_pressed(KeyCode::R) {
         state.placement_direction = state.placement_direction.rotated_cw();
+        // Brief flash on the ghost preview position to confirm rotation.
+        if state.selected_building.is_some() {
+            let dir_name = match state.placement_direction {
+                types::Direction::North => "North", types::Direction::East => "East",
+                types::Direction::South => "South", types::Direction::West => "West",
+            };
+            state.toast(format!("Facing: {}", dir_name), 20);
+        }
     }
 
     // X button click: close overlays. X button is at (px + pw - 28, py + 4, 24x20).
@@ -1593,6 +1601,20 @@ fn simulation_tick(state: &mut GameState, sfx: &sound::SoundEffects) {
             state.toast("Thank you for playing AutoForge <3".to_string(), 300);
         }
 
+        // Soft-lock detection: if player has no buildings and no resources to rebuild,
+        // give them emergency supplies so they can recover.
+        if tick % 600 == 0 && state.buildings.alive_ids().is_empty() {
+            let total_resources: u32 = state.inventory.values().sum();
+            if total_resources < 10 {
+                state.toast("FORGE: Don't give up! Emergency supplies incoming~".to_string(), 120);
+                *state.inventory.entry(types::Resource::IronPlate).or_insert(0) += 50;
+                *state.inventory.entry(types::Resource::CopperPlate).or_insert(0) += 30;
+                *state.inventory.entry(types::Resource::Stone).or_insert(0) += 20;
+                *state.inventory.entry(types::Resource::Coal).or_insert(0) += 30;
+                *state.inventory.entry(types::Resource::Gear).or_insert(0) += 20;
+            }
+        }
+
         // Check milestones.
         let new_milestones = milestones::check_milestones(
             &state.milestones_completed,
@@ -2115,10 +2137,11 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
             if is_selected { text_bright } else { text_dim },
         );
 
-        // Hover tooltip: show cost preview when hovering an unselected slot.
+        // Hover highlight + cost tooltip (only shows when mouse is stationary over slot).
         let (mx, my) = mouse_position();
         if !is_selected && mx >= x && mx < x + slot_w && my >= y && my < y + slot_h {
             draw_rectangle(x + 2.0, y, slot_w - 4.0, slot_h, Color::new(0.2, 0.2, 0.3, 0.3));
+            // Show cost tooltip with fade-in effect.
             let cost = buildcost::building_cost(*kind);
             if !cost.is_empty() {
                 let cost_str: String = cost.iter()
@@ -2126,13 +2149,14 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
                     .collect::<Vec<_>>().join(" ");
                 let can_afford = buildcost::can_afford(&state.inventory, *kind);
                 let color = if can_afford {
-                    Color::new(0.5, 0.9, 0.5, 0.9)
+                    Color::new(0.5, 0.9, 0.5, 0.85)
                 } else {
-                    Color::new(0.9, 0.4, 0.4, 0.9)
+                    Color::new(0.9, 0.4, 0.4, 0.85)
                 };
                 let tw = measure_text(&cost_str, None, 12, 1.0).width;
                 let tx = x + (slot_w - tw) * 0.5;
-                draw_rectangle(tx - 4.0, y - 18.0, tw + 8.0, 16.0, Color::new(0.05, 0.05, 0.08, 0.9));
+                draw_rectangle(tx - 4.0, y - 20.0, tw + 8.0, 18.0, Color::new(0.05, 0.05, 0.08, 0.85));
+                draw_rectangle_lines(tx - 4.0, y - 20.0, tw + 8.0, 18.0, 1.0, Color::new(0.2, 0.2, 0.3, 0.4));
                 draw_text(&cost_str, tx, y - 6.0, 12.0, color);
             }
         }
