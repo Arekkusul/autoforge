@@ -294,12 +294,19 @@ pub fn load_game(state: &mut GameState) -> bool {
         }
     }
     if !save.research_completed.is_empty() {
-        state.research.completed = save.research_completed;
-        state.research.current_tech = save.research_current;
+        // Ensure completed vec is large enough for all technologies (forward compat).
+        let mut completed = save.research_completed;
+        completed.resize(crate::research::TECHNOLOGIES.len(), false);
+        state.research.completed = completed;
+        state.research.current_tech = save.research_current
+            .filter(|&idx| idx < crate::research::TECHNOLOGIES.len());
         state.research.progress = save.research_progress;
     }
     if !save.story_triggered.is_empty() {
-        state.story.triggered = save.story_triggered;
+        // Ensure triggered vec is large enough for all story beats.
+        let mut triggered = save.story_triggered;
+        triggered.resize(crate::story::STORY_BEATS.len(), false);
+        state.story.triggered = triggered;
         state.story.first_miner_placed = save.story_first_miner;
         state.story.first_wave_arrived = save.story_first_wave;
     }
