@@ -234,6 +234,8 @@ pub struct SpriteAtlas {
 
     // Enemies & special (variable sizes, 2-frame walk cycle)
     pub r_enemy_small_biter: [Rect; 2],
+    pub r_enemy_big_biter: [Rect; 2],
+    pub r_enemy_spitter: [Rect; 2],
     pub r_crashed_ship: Rect,
 }
 
@@ -409,11 +411,18 @@ impl SpriteAtlas {
         let r_item_nuclear_fuel = pack(&mut atlas_img, &make_item_sprite(62, 61), si*18, y6b);        // hot green
         let r_item_low_density  = pack(&mut atlas_img, &make_item_sprite(5, 7), si*19, y6b);          // silver-white
 
-        // Row 7: Enemy (2 walk frames) + crashed ship
-        let y7 = 120u32; // pushed down to make room for extra item row
+        // Row 7: Enemies (2 walk frames each) + crashed ship
+        let y7 = 120u32;
+        // Small biter (red-brown)
         let r_enemy_0           = pack(&mut atlas_img, &make_enemy_sprite(23, 24, 0), 0, y7);
         let r_enemy_1           = pack(&mut atlas_img, &make_enemy_sprite(23, 24, 1), 14, y7);
-        let r_crashed_ship      = pack(&mut atlas_img, &make_crashed_ship_sprite(), 28, y7);
+        // Big biter (dark armored)
+        let r_big_biter_0       = pack(&mut atlas_img, &make_big_biter_sprite(1, 2, 0), 28, y7);
+        let r_big_biter_1       = pack(&mut atlas_img, &make_big_biter_sprite(1, 2, 1), 44, y7);
+        // Spitter (green, ranged)
+        let r_spitter_0         = pack(&mut atlas_img, &make_spitter_sprite(9, 10, 0), 60, y7);
+        let r_spitter_1         = pack(&mut atlas_img, &make_spitter_sprite(9, 10, 1), 76, y7);
+        let r_crashed_ship      = pack(&mut atlas_img, &make_crashed_ship_sprite(), 92, y7);
 
         // Row 8-9: Additional buildings (16×16)
         let y8 = 170u32;
@@ -457,6 +466,8 @@ impl SpriteAtlas {
         let r_assembler = [r_assembler_0, r_assembler_1];
         let r_lab = [r_lab_0, r_lab_1];
         let r_enemy_small_biter = [r_enemy_0, r_enemy_1];
+        let r_enemy_big_biter = [r_big_biter_0, r_big_biter_1];
+        let r_enemy_spitter = [r_spitter_0, r_spitter_1];
         let r_forge_avatar = [r_forge_0, r_forge_1];
 
         // Export atlas as PNG for inspection / art replacement.
@@ -505,7 +516,7 @@ impl SpriteAtlas {
             r_item_uranium_235, r_item_uranium_238, r_item_nuclear_fuel,
             r_item_low_density,
 
-            r_enemy_small_biter, r_crashed_ship,
+            r_enemy_small_biter, r_enemy_big_biter, r_enemy_spitter, r_crashed_ship,
             r_forge_avatar,
         }
     }
@@ -1391,6 +1402,61 @@ fn make_enemy_sprite(body: u8, shadow: u8, frame: u8) -> Image {
         vec![l1,shadow, l0,shadow,body,body,body,body,shadow, l0,shadow, l1],
         vec![l0, l1, 0,shadow,shadow,body,body,shadow,shadow, 0, l1, l0],
         vec![0, 0, 0, 0,shadow,shadow,shadow,shadow, 0, 0, 0, 0],
+        vec![0, 0, 0, 0, 0,shadow,shadow, 0, 0, 0, 0, 0],
+        vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    ];
+    let refs: Vec<&[u8]> = pixels.iter().map(|r| r.as_slice()).collect();
+    make_image(&refs, 12)
+}
+
+/// Big biter — heavier armored body with thicker legs and a spiked carapace.
+/// Uses dark shadow colors for armored feel.
+fn make_big_biter_sprite(body: u8, shadow: u8, frame: u8) -> Image {
+    let (l0, l1) = if frame == 0 { (shadow, 0u8) } else { (0u8, shadow) };
+    let armor = 3u8; // mid gray for armor plates
+    let pixels: Vec<Vec<u8>> = vec![
+        // mandibles (wider)
+        vec![shadow, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,shadow],
+        vec![body,shadow, 0,shadow,shadow,shadow,shadow,shadow,shadow, 0,shadow,body],
+        // head with armored plates + eyes
+        vec![0,shadow,shadow,body,armor,63, 8,63,armor,body,shadow, 0],
+        vec![0,shadow,body,armor,body,shadow,shadow,body,armor,body,shadow, 0],
+        // armored thorax (thicker)
+        vec![l0,shadow,armor,body,armor,body,body,armor,body,armor,shadow, l0],
+        vec![l1,body,armor,armor,shadow,armor,armor,shadow,armor,armor,body, l1],
+        vec![l0,shadow,armor,body,armor,body,body,armor,body,armor,shadow, l0],
+        // abdomen with spikes
+        vec![l1,shadow,body,shadow,body,body,body,body,shadow,body,shadow, l1],
+        vec![l0,body, 0,shadow,armor,body,body,armor,shadow, 0,body, l0],
+        vec![0,shadow, 0, 0,shadow,shadow,shadow,shadow, 0, 0,shadow, 0],
+        vec![0, 0, 0, 0,shadow,body,body,shadow, 0, 0, 0, 0],
+        vec![0, 0, 0, 0, 0,shadow,shadow, 0, 0, 0, 0, 0],
+    ];
+    let refs: Vec<&[u8]> = pixels.iter().map(|r| r.as_slice()).collect();
+    make_image(&refs, 12)
+}
+
+/// Spitter — slender body with bulbous acid sac and thin legs.
+/// Green-tinted with glowing projectile organ on the abdomen.
+fn make_spitter_sprite(body: u8, shadow: u8, frame: u8) -> Image {
+    let (l0, l1) = if frame == 0 { (shadow, 0u8) } else { (0u8, shadow) };
+    let glow = 62u8; // bright green for acid sac
+    let pixels: Vec<Vec<u8>> = vec![
+        // thin mandibles
+        vec![0, 0, 0, 0,shadow, 0, 0,shadow, 0, 0, 0, 0],
+        vec![0, 0, 0,shadow,body,shadow,shadow,body,shadow, 0, 0, 0],
+        // small head with glowing eyes
+        vec![0, 0,shadow,body,glow, 8,glow, 8,body,shadow, 0, 0],
+        vec![0, 0,shadow,body,body,shadow,shadow,body,body,shadow, 0, 0],
+        // thin thorax
+        vec![l0, 0,shadow,body,body,body,body,body,body,shadow, 0, l0],
+        vec![0,l1,shadow,body,shadow,body,body,shadow,body,shadow,l1, 0],
+        // acid sac (glowing bulge)
+        vec![l0, 0,shadow,body,glow,glow,glow,glow,body,shadow, 0, l0],
+        vec![0,l1, 0,shadow,glow, 8, 8,glow,shadow, 0,l1, 0],
+        vec![l0, 0, 0,shadow,glow,glow,glow,glow,shadow, 0, 0, l0],
+        // tapered tail
+        vec![0, 0, 0, 0,shadow,body,body,shadow, 0, 0, 0, 0],
         vec![0, 0, 0, 0, 0,shadow,shadow, 0, 0, 0, 0, 0],
         vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     ];
