@@ -1811,8 +1811,12 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
         else { Color::new(0.9, 0.2, 0.2, 1.0) };
     draw_rectangle(cx, cy, bar_w, bar_h, Color::new(0.15, 0.15, 0.2, 0.8));
     draw_rectangle(cx, cy, bar_w * power_fill, bar_h, power_color);
-    draw_text(&format!("{:.0}%", power_fill * 100.0), cx + bar_w + 6.0, cy + 10.0, 13.0, power_color);
-    draw_text("Power", cx + bar_w + 35.0, cy + 10.0, 12.0, text_dim);
+    if state.power.demand > 0.0 {
+        draw_text(&format!("{:.0}% ({:.0}/{:.0}kW)", power_fill * 100.0, state.power.supply, state.power.demand),
+            cx + bar_w + 6.0, cy + 10.0, 11.0, power_color);
+    } else {
+        draw_text("No demand", cx + bar_w + 6.0, cy + 10.0, 11.0, text_dim);
+    }
     cy += 18.0;
 
     // Line 3: Items crafted + production rate
@@ -1999,6 +2003,14 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
                     lines.push((desc.to_string(), Color::new(0.6, 0.6, 0.7, 0.7)));
                 }
                 lines.push((format!("Facing: {:?}  (R to rotate)", b.direction), text_dim));
+                // Miner: show what ore it's extracting.
+                if b.kind == types::BuildingKind::Miner || b.kind == types::BuildingKind::PumpJack {
+                    if let Some(deposit) = tile.deposit {
+                        lines.push((format!("Mining: {}", deposit.display_name()), Color::new(0.9, 0.7, 0.3, 0.9)));
+                    } else {
+                        lines.push(("No ore remaining!".to_string(), Color::new(0.9, 0.3, 0.3, 0.9)));
+                    }
+                }
                 // Show HP if damaged.
                 if b.hp < b.max_hp {
                     let hp_pct = (b.hp / b.max_hp * 100.0) as u32;
@@ -2644,7 +2656,17 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
         sy += 20.0;
         draw_text(&format!("Rockets launched: {}", state.stats.rockets_launched), sx, sy, 14.0, text_bright);
         sy += 20.0;
-        draw_text(&format!("World seed: {}", state.seed), sx, sy, 13.0, text_dim);
+        let seed_str = format!("World seed: {}", state.seed);
+        draw_text(&seed_str, sx, sy, 13.0, text_dim);
+        // Click seed to copy to toast for easy sharing.
+        let seed_w = measure_text(&seed_str, None, 13, 1.0).width;
+        let (smx, smy) = mouse_position();
+        if smx >= sx && smx <= sx + seed_w && smy >= sy - 12.0 && smy <= sy + 4.0 {
+            draw_rectangle(sx - 2.0, sy - 12.0, seed_w + 4.0, 16.0, Color::new(0.2, 0.2, 0.3, 0.4));
+            if is_mouse_button_pressed(MouseButton::Left) {
+                state.toast(format!("Seed: {} (share this to recreate your map!)", state.seed), 200);
+            }
+        }
         sy += 24.0;
 
         // Building count by type.
