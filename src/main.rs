@@ -1425,7 +1425,18 @@ fn simulation_tick(state: &mut GameState, sfx: &sound::SoundEffects) {
         let buildings_after = state.buildings.alive_ids().len();
         if buildings_after < buildings_before {
             let lost = buildings_before - buildings_after;
-            state.toast(format!("Building destroyed! ({} lost)", lost), 60);
+            // Check if any walls/turrets were lost (defense breach).
+            let wall_count_after = state.buildings.iter()
+                .filter(|(_, b)| b.kind == types::BuildingKind::Wall || b.kind == types::BuildingKind::Gate
+                    || b.kind == types::BuildingKind::GunTurret || b.kind == types::BuildingKind::LaserTurret)
+                .count();
+            let had_defenses = buildings_before > buildings_after; // any building lost
+            if wall_count_after == 0 && had_defenses {
+                state.toast("!! DEFENSES BREACHED — Factory under attack! !!".to_string(), 120);
+                sfx.play(&sfx.wave_warning);
+            } else {
+                state.toast(format!("Building destroyed! ({} lost)", lost), 60);
+            }
         }
 
         if state.enemies.wave_number > wave_before {
@@ -1800,7 +1811,7 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
 
     // Line 1: Time + FPS (standardized 14px body)
     draw_text(
-        &format!("{}:{:02}  |  FPS: {}", state.stats.total_ticks / 1200, (state.stats.total_ticks / 20) % 60, get_fps()),
+        &format!("Play {}:{:02}  |  FPS: {}", state.stats.total_ticks / 1200, (state.stats.total_ticks / 20) % 60, get_fps()),
         cx, cy + 4.0, 14.0, text_dim,
     );
     // Speed badge (highlighted when not 1x).
@@ -1895,7 +1906,8 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
             draw_text(desc, cx + 50.0, cy, 14.0, Color::new(0.8, 0.8, 0.85, 0.9));
             cy += 24.0;
         }
-        draw_text("Click outside or press Space to resume", px + 40.0, py + ph - 24.0, 12.0, text_dim);
+        draw_text("You can still place buildings while paused!", px + 30.0, py + ph - 36.0, 11.0, Color::new(0.5, 0.7, 0.5, 0.6));
+        draw_text("Click outside or press Space to resume", px + 40.0, py + ph - 20.0, 12.0, text_dim);
         draw_text("AutoForge v0.2.0", px + pw - 110.0, py + ph - 8.0, 11.0, Color::new(0.4, 0.4, 0.5, 0.5));
 
         // Click outside the pause panel to unpause.
