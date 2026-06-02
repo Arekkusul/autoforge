@@ -295,8 +295,8 @@ pub fn tick_machine_output(
             direction.rotated_ccw(),
         ];
 
-        // Eject up to 2 items per tick to prevent output backup.
-        for _ in 0..2 {
+        // Eject up to 4 items per tick to prevent output backup.
+        for _ in 0..4 {
             let has_output = buildings.get(bid)
                 .and_then(|b| b.machine_state.as_ref())
                 .map(|ms| !ms.output_buffer.is_empty())
@@ -309,6 +309,7 @@ pub fn tick_machine_output(
                 if let Some(tile) = grid.get_tile(check_pos) {
                     if let Some(check_bid) = tile.building {
                         if let Some(check_b) = buildings.get(check_bid) {
+                            // Eject onto belts with space.
                             if check_b.kind.is_belt() && grid.items_at(check_pos).is_empty() {
                                 eject_pos = Some(check_pos);
                                 break;
