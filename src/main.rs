@@ -1731,7 +1731,7 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
         let bright = Color::new(0.9, 0.9, 0.95, 1.0);
         let dim = Color::new(0.6, 0.6, 0.7, 0.9);
 
-        draw_text("I found them. All 4,000 colonists. Alive. Safe.", cx, cy, 16.0, gold);
+        draw_text("I found them. All 4,000 colonists. Alive. Safe.", cx, cy, 18.0, gold);
         cy += 22.0;
         draw_text("Thank you for helping me remember who I am. <3", cx, cy, 14.0, Color::new(1.0, 0.7, 0.85, 0.9));
         cy += 30.0;
@@ -2349,7 +2349,7 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
             } else {
                 Color::new(0.9, 0.9, 0.95, 1.0) // white = can't craft yet
             };
-            draw_text(r.name, px + 15.0, ry + 4.0, 15.0, name_color);
+            draw_text(r.name, px + 15.0, ry + 4.0, 14.0, name_color);
 
             // Inputs → Output with per-input availability coloring.
             let inputs: String = r.inputs.iter()
@@ -2467,7 +2467,7 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
                 let reward_str: String = milestone.reward.iter()
                     .map(|(r, c)| format!("{}x{}", c, short_resource_name(*r)))
                     .collect::<Vec<_>>().join(" ");
-                draw_text(&format!("Reward: {}", reward_str), ax + 180.0, ay + 14.0, 10.0,
+                draw_text(&format!("Reward: {}", reward_str), ax + 180.0, ay + 14.0, 11.0,
                     Color::new(0.4, 0.8, 0.4, 0.6));
             }
 
@@ -2479,6 +2479,7 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
     if state.show_help {
         let sw = screen_width();
         let sh = screen_height();
+        draw_rectangle(0.0, 0.0, sw, sh, Color::new(0.0, 0.0, 0.0, 0.4));
         let pw = (sw * 0.65).min(620.0);
         let ph = (sh * 0.85).min(650.0);
         let px = (sw - pw) * 0.5;
@@ -2528,7 +2529,7 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
             if key.is_empty() { continue; }
             if desc.is_empty() {
                 // Section header
-                draw_text(key, px + 20.0, y, 16.0, Color::new(0.7, 0.6, 0.9, 1.0));
+                draw_text(key, px + 20.0, y, 18.0, Color::new(0.7, 0.6, 0.9, 1.0));
             } else {
                 draw_text(key, px + 20.0, y, 14.0, Color::new(0.9, 0.85, 0.4, 0.9));
                 draw_text(desc, px + 200.0, y, 14.0, Color::new(0.75, 0.75, 0.8, 0.8));
@@ -2700,8 +2701,8 @@ fn draw_research_screen(state: &GameState) {
             "[LOCKED]"
         };
 
-        draw_text(&format!("{} {}", tech.name, status), col1, y, 16.0, color);
-        draw_text(tech.description, col2, y, 14.0, Color::new(0.5, 0.5, 0.6, 0.8));
+        draw_text(&format!("{} {}", tech.name, status), col1, y, 14.0, color);
+        draw_text(tech.description, col2, y, 13.0, Color::new(0.5, 0.5, 0.6, 0.8));
 
         // Click to start research
         if can_research && !is_current {
