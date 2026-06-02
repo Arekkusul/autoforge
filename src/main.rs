@@ -97,7 +97,7 @@ async fn main() {
     // Request VSync to cap frame rate and reduce power usage on low-end devices.
     // macroquad respects the display refresh rate by default (60Hz typically).
     let atlas = SpriteAtlas::generate();
-    let sfx = sound::SoundEffects::generate().await;
+    let mut sfx = sound::SoundEffects::generate().await;
     let mut intro = cutscene::CutsceneState::new();
 
     // --- Intro cutscene loop ---
@@ -129,18 +129,30 @@ async fn main() {
         }
 
         // Edge-scroll: move camera when mouse is near screen edges.
+        // Disabled when mouse is over UI panels (toolbar, status, minimap) to prevent
+        // accidental scrolling when clicking UI elements.
         {
             let edge_margin = 10.0;
             let edge_speed = 300.0 * get_frame_time().min(0.05) / state.camera.zoom;
             let (mx, my) = mouse_position();
-            if mx < edge_margin { state.camera.target.x -= edge_speed; }
-            if mx > screen_width() - edge_margin { state.camera.target.x += edge_speed; }
-            if my < edge_margin { state.camera.target.y -= edge_speed; }
-            if my > screen_height() - edge_margin { state.camera.target.y += edge_speed; }
+            let toolbar_y = screen_height() - 88.0;
+            let over_toolbar = my > toolbar_y;
+            let over_status = mx < 250.0 && my < 120.0;
+            let over_minimap = mx > screen_width() - 160.0 && my > screen_height() - 380.0 && my < toolbar_y;
+            let any_overlay = state.paused || state.show_recipes || state.show_research
+                || state.show_stats || state.show_achievements || state.show_help
+                || state.recipe_picker.is_some();
+
+            if !over_toolbar && !over_status && !over_minimap && !any_overlay {
+                if mx < edge_margin { state.camera.target.x -= edge_speed; }
+                if mx > screen_width() - edge_margin { state.camera.target.x += edge_speed; }
+                if my < edge_margin { state.camera.target.y -= edge_speed; }
+                if my > screen_height() - edge_margin { state.camera.target.y += edge_speed; }
+            }
         }
 
         // 1. Input (every frame, independent of simulation tick rate).
-        handle_input(&mut state, &sfx);
+        handle_input(&mut state, &mut sfx);
         state.camera.update(get_frame_time());
 
         // 2. Fixed-timestep simulation (with game speed multiplier).
@@ -291,7 +303,7 @@ async fn main() {
 }
 
 /// Handles player input for building selection, placement, and hotkeys.
-fn handle_input(state: &mut GameState, sfx: &sound::SoundEffects) {
+fn handle_input(state: &mut GameState, sfx: &mut sound::SoundEffects) {
     // Pause toggle
     if is_key_pressed(KeyCode::Space) {
         state.paused = !state.paused;
@@ -411,6 +423,17 @@ fn handle_input(state: &mut GameState, sfx: &sound::SoundEffects) {
     // Toggle tutorial
     if is_key_pressed(KeyCode::H) {
         state.show_tutorial = !state.show_tutorial;
+    }
+
+    // F2: Toggle sound mute
+    if is_key_pressed(KeyCode::F2) {
+        if sfx.volume > 0.0 {
+            sfx.volume = 0.0;
+            state.toast("Sound: OFF".to_string(), 40);
+        } else {
+            sfx.volume = 0.5;
+            state.toast("Sound: ON".to_string(), 40);
+        }
     }
 
     // Toggle full help overlay
@@ -1951,12 +1974,12 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
         let help_y = toolbar_y - 120.0;
         let hint_color = Color::new(0.5, 0.5, 0.5, 0.6);
         let hints = [
-            "WASD: Pan | Scroll: Zoom | Edge: Scroll",
+            "WASD: Pan | Scroll: Zoom | M: Map",
             "LClick: Place | RClick: Remove (hold=drag)",
             "R: Rotate | Q: Copy | Ctrl+Z: Undo",
             "E: Recipes | Tab: Research | H: Tutorial",
-            "Space: Pause | +/-: Speed | F5/F9: Save/Load",
-            "Middle-Click: Hand-insert item into machine",
+            "Space: Pause | +/-: Speed | F2: Mute",
+            "F5: Save | F9: Load | F1: Help",
         ];
         for (i, line) in hints.iter().enumerate() {
             draw_text(line, help_x, help_y + i as f32 * 18.0, 15.0, hint_color);

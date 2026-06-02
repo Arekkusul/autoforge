@@ -256,6 +256,14 @@ impl CutsceneState {
             }
             CutscenePhase::Done => {}
         }
+
+        // Skip hint (fades in after 2 seconds).
+        if self.timer > 2.0 && self.phase != CutscenePhase::Done {
+            let alpha = ((self.timer - 2.0) * 0.5).min(0.6);
+            let hint = "Press Space to skip";
+            let w = measure_text(hint, None, 16, 1.0).width;
+            draw_text(hint, (sw - w) * 0.5, sh - 30.0, 16.0, Color::new(0.5, 0.5, 0.5, alpha));
+        }
     }
 
     /// Draws the starfield background.
