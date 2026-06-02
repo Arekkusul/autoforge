@@ -844,6 +844,21 @@ pub fn draw_ghost_preview(
             },
         );
 
+        // Inserter direction labels: show pickup ← and delivery → sides.
+        if kind.is_inserter() {
+            let (dx, dy) = direction.delta();
+            let cx = world.x + TILE_SIZE * 0.5;
+            let cy = world.y + TILE_SIZE * 0.5;
+            // Delivery side (front): green "OUT" label.
+            let fx = cx + dx as f32 * TILE_SIZE * 0.7;
+            let fy = cy + dy as f32 * TILE_SIZE * 0.7;
+            draw_text("OUT", fx - 10.0, fy + 4.0, 11.0, Color::new(0.3, 1.0, 0.3, 0.7));
+            // Pickup side (behind): yellow "IN" label.
+            let bx = cx - dx as f32 * TILE_SIZE * 0.7;
+            let by = cy - dy as f32 * TILE_SIZE * 0.7;
+            draw_text("IN", bx - 6.0, by + 4.0, 11.0, Color::new(1.0, 0.9, 0.3, 0.7));
+        }
+
         // Range indicators for turrets and roboports.
         let center_x = world.x + TILE_SIZE * 0.5;
         let center_y = world.y + TILE_SIZE * 0.5;
