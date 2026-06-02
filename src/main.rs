@@ -1793,6 +1793,13 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
             if let Some(b) = state.buildings.get(bid) {
                 lines.push((b.kind.display_name().to_string(), text_accent));
                 lines.push((format!("Facing: {:?}  (R to rotate)", b.direction), text_dim));
+                // Show HP if damaged.
+                if b.hp < b.max_hp {
+                    let hp_pct = (b.hp / b.max_hp * 100.0) as u32;
+                    let hp_color = if hp_pct > 50 { Color::new(0.9, 0.8, 0.2, 1.0) }
+                        else { Color::new(0.9, 0.3, 0.3, 1.0) };
+                    lines.push((format!("HP: {}%  ({:.0}/{:.0})", hp_pct, b.hp, b.max_hp), hp_color));
+                }
                 // Belt speed info.
                 if b.kind.is_belt() {
                     let (tier, speed) = match b.kind {
@@ -2297,7 +2304,7 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
         let sh = screen_height();
         let pw: f32 = 340.0;
         let ph: f32 = 50.0 + recipes.len() as f32 * 28.0;
-        let capped_ph: f32 = ph.min(500.0);
+        let capped_ph: f32 = ph.min(screen_height() * 0.7).min(600.0);
         let px = (sw - pw) * 0.5;
         let py = (sh - capped_ph) * 0.5;
 
@@ -2608,8 +2615,8 @@ fn draw_research_screen(state: &GameState) {
     // Darken background for modal consistency.
     draw_rectangle(0.0, 0.0, sw, sh, Color::new(0.0, 0.0, 0.0, 0.4));
 
-    let pw = (sw * 0.7).min(700.0);
-    let ph = (sh * 0.8).min(600.0);
+    let pw = (sw * 0.75).min(750.0);
+    let ph = (sh * 0.9).min(850.0);
     let px = (sw - pw) * 0.5;
     let py = (sh - ph) * 0.5;
 
@@ -2646,7 +2653,7 @@ fn draw_research_screen(state: &GameState) {
 
     // Tech list with prerequisite lines.
     let start_y = py + 110.0;
-    let row_h = 28.0;
+    let row_h = 24.0;
     let col1 = px + 20.0;
     let col2 = px + 220.0;
 
