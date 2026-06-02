@@ -237,6 +237,9 @@ pub struct SpriteAtlas {
     pub r_enemy_big_biter: [Rect; 2],
     pub r_enemy_spitter: [Rect; 2],
     pub r_crashed_ship: Rect,
+
+    // Robot worker (10×10, 2 flight animation frames)
+    pub r_robot: [Rect; 2],
 }
 
 impl SpriteAtlas {
@@ -390,11 +393,11 @@ impl SpriteAtlas {
         let r_item_plastic      = pack(&mut atlas_img, &make_item_sprite(5, 7), si*19, y6);          // white
         // Row 6b: more items
         let y6b = y6 + si;
-        let r_item_battery      = pack(&mut atlas_img, &make_item_sprite(9, 10), 0, y6b);            // green cell
-        let r_item_ammo         = pack(&mut atlas_img, &make_item_sprite(16, 17), si, y6b);          // brass
-        let r_item_grenade      = pack(&mut atlas_img, &make_item_sprite(9, 11), si*2, y6b);         // green sphere
-        let r_item_engine       = pack(&mut atlas_img, &make_item_sprite(3, 53), si*3, y6b);         // gray mechanical
-        let r_item_rocket_part  = pack(&mut atlas_img, &make_item_sprite(7, 22), si*4, y6b);         // white+red
+        let r_item_battery      = pack(&mut atlas_img, &make_battery_item_sprite(), 0, y6b);
+        let r_item_ammo         = pack(&mut atlas_img, &make_ammo_item_sprite(), si, y6b);
+        let r_item_grenade      = pack(&mut atlas_img, &make_grenade_item_sprite(), si*2, y6b);
+        let r_item_engine       = pack(&mut atlas_img, &make_engine_item_sprite(), si*3, y6b);
+        let r_item_rocket_part  = pack(&mut atlas_img, &make_rocket_part_item_sprite(), si*4, y6b);
         let r_item_rocket_fuel  = pack(&mut atlas_img, &make_item_sprite(17, 19), si*5, y6b);        // orange
         let r_item_inserter     = pack(&mut atlas_img, &make_item_sprite(3, 17), si*6, y6b);         // gray+orange
         let r_item_iron_stick   = pack(&mut atlas_img, &make_item_sprite(3, 5), si*7, y6b);          // thin bar
@@ -454,10 +457,12 @@ impl SpriteAtlas {
         let r_assembler_1     = pack(&mut atlas_img, &make_assembler_sprite(1), s*3, y10);
         let r_lab_1           = pack(&mut atlas_img, &make_lab_sprite(1), s*4, y10);
 
-        // Row 11: FORGE avatar (24×24, 2 expressions)
+        // Row 11: FORGE avatar (24×24, 2 expressions) + Robot worker (10×10, 2 frames)
         let y11 = 221u32;
         let r_forge_0 = pack(&mut atlas_img, &make_forge_avatar_sprite(0), 0, y11);
         let r_forge_1 = pack(&mut atlas_img, &make_forge_avatar_sprite(1), 25, y11);
+        let r_robot_0 = pack(&mut atlas_img, &make_robot_sprite(0), 50, y11);
+        let r_robot_1 = pack(&mut atlas_img, &make_robot_sprite(1), 61, y11);
 
         // Combine into 2-frame arrays.
         let r_miner = [r_miner_0, r_miner_1];
@@ -466,6 +471,7 @@ impl SpriteAtlas {
         let r_assembler = [r_assembler_0, r_assembler_1];
         let r_lab = [r_lab_0, r_lab_1];
         let r_enemy_small_biter = [r_enemy_0, r_enemy_1];
+        let r_robot = [r_robot_0, r_robot_1];
         let r_enemy_big_biter = [r_big_biter_0, r_big_biter_1];
         let r_enemy_spitter = [r_spitter_0, r_spitter_1];
         let r_forge_avatar = [r_forge_0, r_forge_1];
@@ -517,6 +523,7 @@ impl SpriteAtlas {
             r_item_low_density,
 
             r_enemy_small_biter, r_enemy_big_biter, r_enemy_spitter, r_crashed_ship,
+            r_robot,
             r_forge_avatar,
         }
     }
@@ -1240,14 +1247,94 @@ fn make_wall_sprite() -> Image {
 fn make_item_sprite(dark: u8, light: u8) -> Image {
     #[rustfmt::skip]
     let pixels: &[&[u8]] = &[
+        &[0, 0, 1, 1, 1, 1, 0, 0],
+        &[0, 1,light,light,light, 8, 1, 0],
+        &[1,light,light,dark,dark,light,light, 1],
+        &[1,light,dark,dark,dark,dark,light, 1],
+        &[1,dark,dark,dark,dark,dark,dark, 1],
+        &[1,dark,dark,dark,dark,dark, 1, 0],
+        &[0, 1, 1,dark,dark, 1, 1, 0],
         &[0, 0, 0, 1, 1, 0, 0, 0],
-        &[0, 0, 1,light, 8,light, 1, 0],
-        &[0, 1,light,dark,light,dark, 1, 0],
-        &[1,light,dark,light,dark,light,dark, 1],
-        &[1,dark,light,dark,light,dark, 1, 0],
-        &[0, 1,dark,dark,dark, 1, 0, 0],
+    ];
+    make_image(pixels, 8)
+}
+
+/// Battery — green rectangular cell with terminals.
+fn make_battery_item_sprite() -> Image {
+    #[rustfmt::skip]
+    let pixels: &[&[u8]] = &[
+        &[0, 0, 0, 4, 4, 0, 0, 0],
+        &[0, 0, 1, 3, 3, 1, 0, 0],
+        &[0, 1, 9,10,10, 9, 1, 0],
+        &[0, 1, 9,10,11, 9, 1, 0],
+        &[0, 1, 9,10,10, 9, 1, 0],
+        &[0, 1, 9, 9, 9, 9, 1, 0],
         &[0, 0, 1, 1, 1, 1, 0, 0],
         &[0, 0, 0, 0, 0, 0, 0, 0],
+    ];
+    make_image(pixels, 8)
+}
+
+/// Ammo — brass cartridge shape.
+fn make_ammo_item_sprite() -> Image {
+    #[rustfmt::skip]
+    let pixels: &[&[u8]] = &[
+        &[0, 0, 0, 17, 0, 0, 0, 0],
+        &[0, 0,17,19,17, 0, 0, 0],
+        &[0, 0,16,17,16, 0, 0, 0],
+        &[0, 0,16,17,16, 0, 0, 0],
+        &[0, 0,16,16,16, 0, 0, 0],
+        &[0, 0,16,16,16, 0, 0, 0],
+        &[0, 0, 1,16, 1, 0, 0, 0],
+        &[0, 0, 0, 0, 0, 0, 0, 0],
+    ];
+    make_image(pixels, 8)
+}
+
+/// Grenade — green sphere with pin.
+fn make_grenade_item_sprite() -> Image {
+    #[rustfmt::skip]
+    let pixels: &[&[u8]] = &[
+        &[0, 0, 0, 4, 3, 0, 0, 0],
+        &[0, 0, 1, 1, 1, 1, 0, 0],
+        &[0, 1, 9,10,11,10, 1, 0],
+        &[0, 1, 9,10,10,10, 1, 0],
+        &[0, 1, 9, 9,10, 9, 1, 0],
+        &[0, 0, 1, 9, 9, 1, 0, 0],
+        &[0, 0, 0, 1, 1, 0, 0, 0],
+        &[0, 0, 0, 0, 0, 0, 0, 0],
+    ];
+    make_image(pixels, 8)
+}
+
+/// Engine unit — mechanical assembly with piston.
+fn make_engine_item_sprite() -> Image {
+    #[rustfmt::skip]
+    let pixels: &[&[u8]] = &[
+        &[0, 1, 3, 3, 3, 3, 1, 0],
+        &[1, 3, 4, 5, 4, 5, 3, 1],
+        &[1, 4,53,54,53,54, 4, 1],
+        &[1, 3, 4, 4, 4, 4, 3, 1],
+        &[1, 4,53, 3,53, 3, 4, 1],
+        &[1, 3, 4, 4, 4, 4, 3, 1],
+        &[0, 1, 3, 3, 3, 3, 1, 0],
+        &[0, 0, 1, 1, 1, 1, 0, 0],
+    ];
+    make_image(pixels, 8)
+}
+
+/// Rocket part — white cylinder with red stripe.
+fn make_rocket_part_item_sprite() -> Image {
+    #[rustfmt::skip]
+    let pixels: &[&[u8]] = &[
+        &[0, 0, 0, 7, 7, 0, 0, 0],
+        &[0, 0, 5, 6, 7, 5, 0, 0],
+        &[0, 1, 5, 6, 7, 5, 1, 0],
+        &[0, 1,22,23,23,22, 1, 0],
+        &[0, 1, 5, 6, 7, 5, 1, 0],
+        &[0, 1, 5, 6, 7, 5, 1, 0],
+        &[0, 0, 1, 3, 3, 1, 0, 0],
+        &[0, 0, 0, 1, 1, 0, 0, 0],
     ];
     make_image(pixels, 8)
 }
@@ -1407,6 +1494,34 @@ fn make_enemy_sprite(body: u8, shadow: u8, frame: u8) -> Image {
     ];
     let refs: Vec<&[u8]> = pixels.iter().map(|r| r.as_slice()).collect();
     make_image(&refs, 12)
+}
+
+/// Robot worker — cute flying construction bot with propeller and glowing eye.
+/// 10×10 sprite. Frame 0: propeller left. Frame 1: propeller right.
+fn make_robot_sprite(frame: u8) -> Image {
+    // Palette: 25=deep blue, 26=mid blue, 27=periwinkle, 28=sky blue
+    //          3=mid gray, 4=light gray, 5=silver, 6=pale, 8=white
+    //          29=purple, 30=mid purple, 62=bright green (eye)
+    let (p0, p1) = if frame == 0 { (4u8, 0u8) } else { (0u8, 4u8) }; // propeller alternation
+    #[rustfmt::skip]
+    let pixels: &[&[u8]] = &[
+        // Row 0-1: Propeller blades (alternate per frame)
+        &[0, 0, p0, 4, 5, 5, 4, p1, 0, 0],
+        &[0, 0, 0, 0, 3, 3, 0, 0, 0, 0],
+        // Row 2-3: Head (rounded top with antenna)
+        &[0, 0, 1,26,27,27,26, 1, 0, 0],
+        &[0, 1,26,27,62, 8,27,26, 1, 0],
+        // Row 4-5: Body (boxy with panel detail)
+        &[0, 1,25,26, 5, 5,26,25, 1, 0],
+        &[1,25,26, 4, 3, 3, 4,26,25, 1],
+        // Row 6-7: Lower body + arm stubs
+        &[0, 1,25,26,27,27,26,25, 1, 0],
+        &[0, 3, 1,25,26,26,25, 1, 3, 0],
+        // Row 8-9: Thruster glow
+        &[0, 0, 0, 1,29,29, 1, 0, 0, 0],
+        &[0, 0, 0, 0,30,30, 0, 0, 0, 0],
+    ];
+    make_image_rect(pixels, 10, 10)
 }
 
 /// Big biter — heavier armored body with thicker legs and a spiked carapace.
