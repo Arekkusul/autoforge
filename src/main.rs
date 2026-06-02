@@ -1773,16 +1773,31 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
                     {
                         lines.push(("Click to set recipe!".to_string(), Color::new(0.9, 0.7, 0.3, 1.0)));
                     }
-                    // Progress indicator.
-                    if ms.progress_ticks > 0 && ms.total_ticks > 0 {
+                    // Progress/status indicator (different for inserters vs machines).
+                    if b.kind.is_inserter() {
+                        if ms.progress_ticks > 0 {
+                            lines.push(("Swinging...".to_string(), Color::new(0.4, 0.8, 1.0, 0.9)));
+                        } else {
+                            lines.push(("Ready".to_string(), Color::new(0.6, 0.6, 0.4, 0.8)));
+                        }
+                    } else if ms.progress_ticks > 0 && ms.total_ticks > 0 {
                         let pct = ((ms.total_ticks - ms.progress_ticks) as f32 / ms.total_ticks as f32 * 100.0) as u32;
                         lines.push((format!("Progress: {}%", pct), Color::new(0.4, 0.8, 1.0, 0.9)));
                     } else if ms.selected_recipe.is_some() && ms.progress_ticks == 0 {
                         lines.push(("Idle — waiting for inputs".to_string(), Color::new(0.6, 0.6, 0.4, 0.8)));
                     }
-                    // Buffer contents.
+                    // Buffer contents — show item names for chests, counts for machines.
                     if !ms.input_buffer.is_empty() {
-                        lines.push((format!("Input buffer: {}/8", ms.input_buffer.len()), text_dim));
+                        if b.kind == types::BuildingKind::StorageChest {
+                            // Show first few item names.
+                            let items: String = ms.input_buffer.iter().take(4)
+                                .map(|r| short_resource_name(*r))
+                                .collect::<Vec<_>>().join(", ");
+                            let more = if ms.input_buffer.len() > 4 { format!(" +{}", ms.input_buffer.len() - 4) } else { String::new() };
+                            lines.push((format!("Stored: {}{}", items, more), text_dim));
+                        } else {
+                            lines.push((format!("Input: {}/8", ms.input_buffer.len()), text_dim));
+                        }
                     }
                     if !ms.output_buffer.is_empty() {
                         lines.push((format!("Output buffer: {}/8", ms.output_buffer.len()), text_dim));
