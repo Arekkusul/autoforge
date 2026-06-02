@@ -124,6 +124,8 @@ pub struct GameState {
     pub recipe_picker: Option<(BuildingId, Vec<recipe::RecipeId>)>,
     /// Active robot workers (start pos, target pos, progress 0.0-1.0).
     pub robots: Vec<(macroquad::prelude::Vec2, macroquad::prelude::Vec2, f32)>,
+    /// Combat visual effects: (from_x, from_y, to_x, to_y, ticks_remaining, color_r, color_g, color_b).
+    pub combat_fx: Vec<(f32, f32, f32, f32, u32, f32, f32, f32)>,
     /// Narrative/story progression state.
     pub story: StoryState,
     /// Seed used for map generation (stored for save/load).
@@ -194,6 +196,7 @@ impl GameState {
             build_radius: 30.0,
             recipe_picker: None,
             robots: Vec::new(),
+            combat_fx: Vec::new(),
             story: StoryState::new(),
             seed: actual_seed,
         }
