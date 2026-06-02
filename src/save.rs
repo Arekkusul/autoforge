@@ -51,6 +51,10 @@ pub struct SaveData {
     pub build_radius: f32,
     #[serde(default)]
     pub game_won: bool,
+    #[serde(default)]
+    pub milestones_completed: Vec<bool>,
+    #[serde(default)]
+    pub tutorial_step: u32,
 }
 
 /// Serialized tile (only non-default tiles are saved for efficiency).
@@ -131,6 +135,8 @@ pub fn save_game(state: &GameState) -> bool {
         game_speed: state.game_speed,
         build_radius: state.build_radius,
         game_won: state.game_won,
+        milestones_completed: state.milestones_completed.clone(),
+        tutorial_step: state.tutorial_step as u32,
     };
 
     // Save tiles that differ from default (have deposits, pollution, or non-grass terrain).
@@ -267,6 +273,32 @@ pub fn load_game(state: &mut GameState) -> bool {
         buildings.place(b, &mut grid);
     }
 
+    // Reconstruct underground belt pairs.
+    let ug_ids = buildings.alive_ids();
+    for bid in &ug_ids {
+        let (kind, pos, dir) = match buildings.get(*bid) {
+            Some(b) if b.kind.is_underground_belt() => (b.kind, b.pos, b.direction),
+            _ => continue,
+        };
+        // Search forward for a matching underground belt exit.
+        let mut check = pos;
+        for _ in 1..=6 {
+            check = check.neighbor(dir);
+            if let Some(tile) = grid.get_tile(check) {
+                if let Some(other_bid) = tile.building {
+                    if let Some(other) = buildings.get(other_bid) {
+                        if other.kind == kind && other.direction == dir && *bid != other_bid {
+                            if let Some(b) = buildings.get_mut(*bid) {
+                                b.underground_pair = Some(check);
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     // Rebuild items.
     let mut items = ItemPool::new(4096);
     for si in &save.items {
@@ -320,6 +352,19 @@ pub fn load_game(state: &mut GameState) -> bool {
         state.build_radius = save.build_radius;
     }
     state.game_won = save.game_won;
+
+    // Milestones: restore and resize for forward compat.
+    if !save.milestones_completed.is_empty() {
+        let mut mc = save.milestones_completed;
+        mc.resize(crate::milestones::MILESTONES.len(), false);
+        state.milestones_completed = mc;
+    }
+
+    // Tutorial state.
+    if save.tutorial_step > 0 {
+        state.tutorial_step = save.tutorial_step;
+        state.show_tutorial = state.tutorial_step < 6;
+    }
 
     true
 }

@@ -1253,9 +1253,9 @@ fn simulation_tick(state: &mut GameState, sfx: &sound::SoundEffects) {
         sfx.play(&sfx.recipe_done);
     }
 
-    // Check for depleted miners (every 200 ticks to avoid spam).
-    if tick % 200 == 0 {
-        let depleted: Vec<(i32, i32)> = state.buildings.iter()
+    // Check for depleted miners (once at tick 200, then every 2000 ticks to avoid spam).
+    if tick == 200 || (tick > 200 && tick % 2000 == 0) {
+        let depleted: Vec<String> = state.buildings.iter()
             .filter(|(_, b)| b.kind == types::BuildingKind::Miner)
             .filter(|(_, b)| {
                 state.grid.get_tile(b.pos)
@@ -1265,10 +1265,13 @@ fn simulation_tick(state: &mut GameState, sfx: &sound::SoundEffects) {
                         .map(|ms| ms.progress_ticks == 0 && ms.output_buffer.is_empty())
                         .unwrap_or(false)
             })
-            .map(|(_, b)| (b.pos.x, b.pos.y))
+            .map(|(_, b)| format!("Miner at ({},{}) — ore depleted!", b.pos.x, b.pos.y))
             .collect();
-        for (x, y) in depleted.into_iter().take(1) {
-            state.toast(format!("Miner at ({},{}) — ore depleted!", x, y), 120);
+        for msg in depleted.into_iter().take(1) {
+            // Only notify if we haven't already shown this exact message.
+            if !state.notification_log.iter().any(|m| *m == msg) {
+                state.toast(msg, 120);
+            }
         }
     }
 
