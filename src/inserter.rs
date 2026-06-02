@@ -153,7 +153,7 @@ pub fn tick_inserters(grid: &mut Grid, buildings: &mut Buildings, items: &mut It
     }
 }
 
-/// Tries to pick one item from a source tile (belt or machine output buffer).
+/// Tries to pick one item from a source tile (belt, machine output buffer, or ground).
 fn pick_from_source(
     grid: &mut Grid,
     buildings: &mut Buildings,
@@ -162,6 +162,19 @@ fn pick_from_source(
     src_bid: Option<BuildingId>,
     _inserter_id: BuildingId,
 ) -> Option<Resource> {
+    // If no building on source tile, try to pick items from the ground.
+    if src_bid.is_none() {
+        let item_ids: Vec<ItemId> = grid.items_at(pos).to_vec();
+        for item_id in item_ids {
+            if let Some(item) = items.get(item_id) {
+                let resource = item.resource;
+                items.despawn(item_id);
+                grid.remove_item_from_tile(pos, item_id);
+                return Some(resource);
+            }
+        }
+        return None;
+    }
     let bid = src_bid?;
     let src = buildings.get(bid)?;
 

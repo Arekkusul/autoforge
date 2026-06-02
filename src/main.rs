@@ -173,24 +173,27 @@ async fn main() {
         // World-space rendering (affected by camera).
         if state.camera.map_view {
             // Map overview: zoom way out to show entire base area.
+            let map_target = Vec2::new(
+                state.grid.width as f32 * TILE_SIZE * 0.5,
+                state.grid.height as f32 * TILE_SIZE * 0.5,
+            );
+            let map_zoom = 0.15;
             let map_cam = Camera2D {
-                target: Vec2::new(
-                    state.grid.width as f32 * TILE_SIZE * 0.5,
-                    state.grid.height as f32 * TILE_SIZE * 0.5,
-                ),
-                zoom: vec2(
-                    0.15 * 2.0 / screen_width(),
-                    0.15 * 2.0 / screen_height(),
-                ),
+                target: map_target,
+                zoom: vec2(map_zoom * 2.0 / screen_width(), map_zoom * 2.0 / screen_height()),
                 ..Default::default()
             };
             set_camera(&map_cam);
+            // Create a temporary camera with map-view zoom for correct frustum culling.
+            let mut map_camera = camera::GameCamera::new();
+            map_camera.target = map_target;
+            map_camera.zoom = map_zoom;
             render::draw_world(
                 &state.grid,
                 &state.buildings,
                 &state.items,
                 &state.enemies,
-                &state.camera, // pass real camera for frustum (will show everything at this zoom)
+                &map_camera,
                 &atlas,
                 state.stats.total_ticks,
             );
@@ -1207,6 +1210,7 @@ fn simulation_tick(state: &mut GameState, sfx: &sound::SoundEffects) {
     // --- EVERY TICK (20 Hz) --- Critical path for smooth gameplay ---
 
     // 1. Machines process: count down timers, complete recipes, start new ones.
+    let crafted_before = state.stats.items_crafted;
     machine::tick_machines(
         &mut state.grid,
         &mut state.buildings,
@@ -1214,6 +1218,29 @@ fn simulation_tick(state: &mut GameState, sfx: &sound::SoundEffects) {
         &mut state.stats,
         state.power.satisfaction,
     );
+    // Play a subtle ding every 50 items crafted (not every single craft — too noisy).
+    if state.stats.items_crafted / 50 > crafted_before / 50 {
+        sfx.play(&sfx.recipe_done);
+    }
+
+    // Check for depleted miners (every 200 ticks to avoid spam).
+    if tick % 200 == 0 {
+        let depleted: Vec<(i32, i32)> = state.buildings.iter()
+            .filter(|(_, b)| b.kind == types::BuildingKind::Miner)
+            .filter(|(_, b)| {
+                state.grid.get_tile(b.pos)
+                    .map(|t| t.deposit.is_none())
+                    .unwrap_or(false)
+                    && b.machine_state.as_ref()
+                        .map(|ms| ms.progress_ticks == 0 && ms.output_buffer.is_empty())
+                        .unwrap_or(false)
+            })
+            .map(|(_, b)| (b.pos.x, b.pos.y))
+            .collect();
+        for (x, y) in depleted.into_iter().take(1) {
+            state.toast(format!("Miner at ({},{}) — ore depleted!", x, y), 120);
+        }
+    }
 
     // 2. Machine output: eject finished items onto output belts.
     machine::tick_machine_output(&mut state.grid, &mut state.buildings, &mut state.items);
@@ -1312,9 +1339,10 @@ fn simulation_tick(state: &mut GameState, sfx: &sound::SoundEffects) {
             &mut state.enemies,
             &mut state.stats.enemies_killed,
         );
-        // Loot drops + death sound.
+        // Loot drops + sounds.
         let new_kills = state.stats.enemies_killed - kills_before;
         if new_kills > 0 {
+            sfx.play(&sfx.turret_fire);
             sfx.play(&sfx.enemy_death);
             let n = new_kills as u32;
             *state.inventory.entry(types::Resource::IronPlate).or_insert(0) += n * 2;
