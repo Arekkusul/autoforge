@@ -810,9 +810,13 @@ fn handle_input(state: &mut GameState, sfx: &mut sound::SoundEffects) {
                 "The ship's name: 'Horizon's Promise'. Your ship.",
                 "Data core intact but encrypted. You need more processing power.",
                 "A photo is stuck to the console: Dr. Vasquez and her team, smiling.",
+                "The emergency beacon is pulsing faintly... someone might hear it.",
+                "FORGE's memory banks are scattered across the crash site.",
+                "The colony manifest: 4,000 souls in cryosleep. Destination: New Horizon.",
             ];
-            let idx = (state.stats.total_ticks / 100) as usize % lore_messages.len();
-            state.toast(lore_messages[idx].to_string(), 100);
+            // Cycle through lore on each click (uses notification count as click counter).
+            let idx = state.notification_log.len() % lore_messages.len();
+            state.toast(lore_messages[idx].to_string(), 120);
         }
 
         if let Some(tile) = state.grid.get_tile(grid_pos) {
@@ -1777,6 +1781,13 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
         lines.push((format!("({}, {})", grid_pos.x, grid_pos.y), text_dim));
         lines.push((format!("{:?}", tile.terrain), text_bright));
 
+        // Show pollution level if significant.
+        if tile.pollution > 0.1 {
+            let pol_color = if tile.pollution > 1.0 { Color::new(0.9, 0.4, 0.2, 0.9) }
+                else { Color::new(0.7, 0.6, 0.2, 0.8) };
+            lines.push((format!("Pollution: {:.1}", tile.pollution), pol_color));
+        }
+
         if let Some(deposit) = tile.deposit {
             let amount_str = if tile.ore_amount == u32::MAX {
                 "Infinite".to_string()
@@ -2040,6 +2051,32 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
             .join(" + ");
 
         let info = format!("{} — {:?}", name, state.placement_direction);
+        let desc = match kind {
+            types::BuildingKind::BeltYellow => "Moves items at 1x speed",
+            types::BuildingKind::BeltRed => "Moves items at 2x speed",
+            types::BuildingKind::BeltBlue => "Moves items at 3x speed",
+            types::BuildingKind::Miner => "Extracts ore from deposits",
+            types::BuildingKind::StoneFurnace => "Smelts ore into plates (needs coal)",
+            types::BuildingKind::SteelFurnace => "1.5x smelting speed (needs coal)",
+            types::BuildingKind::ElectricFurnace => "2x smelting speed (uses power)",
+            types::BuildingKind::InserterRegular => "Moves items between buildings",
+            types::BuildingKind::InserterFast => "2x inserter speed",
+            types::BuildingKind::InserterStack => "Moves 4 items at once",
+            types::BuildingKind::AssemblerT1 => "Crafts items from recipes",
+            types::BuildingKind::AssemblerT2 => "1.33x crafting speed",
+            types::BuildingKind::AssemblerT3 => "2x crafting speed",
+            types::BuildingKind::Lab => "Consumes science packs for research",
+            types::BuildingKind::Boiler => "Burns coal to heat water",
+            types::BuildingKind::SteamEngine => "Generates 900kW from steam",
+            types::BuildingKind::SolarPanel => "Generates 60kW during daytime",
+            types::BuildingKind::StorageChest => "Stores items, feeds your inventory",
+            types::BuildingKind::GunTurret => "Shoots enemies (needs ammo)",
+            types::BuildingKind::LaserTurret => "Shoots enemies (uses power)",
+            types::BuildingKind::Wall => "Blocks enemies, absorbs damage",
+            types::BuildingKind::ChemicalPlant => "Advanced chemical recipes",
+            types::BuildingKind::Roboport => "Auto-delivers items to nearby machines",
+            _ => "",
+        };
         let can_afford = buildcost::can_afford(&state.inventory, kind);
         let cost_color = if can_afford {
             Color::new(0.5, 0.9, 0.5, 0.9)
@@ -2047,13 +2084,19 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
             Color::new(0.9, 0.3, 0.3, 0.9)
         };
 
-        let total_w = measure_text(&info, None, 20, 1.0).width.max(measure_text(&cost_str, None, 14, 1.0).width) + 28.0;
+        let total_w = measure_text(&info, None, 18, 1.0).width
+            .max(measure_text(&cost_str, None, 13, 1.0).width)
+            .max(measure_text(desc, None, 12, 1.0).width) + 28.0;
         let panel_x = (screen_width() - total_w) * 0.5;
+        let panel_h = if desc.is_empty() { 48.0 } else { 62.0 };
 
-        draw_rectangle(panel_x, toolbar_y - 50.0, total_w, 46.0, panel_bg);
-        draw_rectangle_lines(panel_x, toolbar_y - 50.0, total_w, 46.0, 1.0, panel_border);
-        draw_text(&info, panel_x + 10.0, toolbar_y - 32.0, 20.0, text_bright);
-        draw_text(&cost_str, panel_x + 10.0, toolbar_y - 12.0, 14.0, cost_color);
+        draw_rectangle(panel_x, toolbar_y - panel_h - 4.0, total_w, panel_h, panel_bg);
+        draw_rectangle_lines(panel_x, toolbar_y - panel_h - 4.0, total_w, panel_h, 1.0, panel_border);
+        draw_text(&info, panel_x + 10.0, toolbar_y - panel_h + 14.0, 18.0, text_bright);
+        if !desc.is_empty() {
+            draw_text(desc, panel_x + 10.0, toolbar_y - panel_h + 30.0, 12.0, text_dim);
+        }
+        draw_text(&cost_str, panel_x + 10.0, toolbar_y - 10.0, 13.0, cost_color);
     }
 
     // --- Minimap (top-right corner, below info panel) ---
@@ -2371,8 +2414,8 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
     if state.show_stats {
         let sw = screen_width();
         let sh = screen_height();
-        let pw = (sw * 0.5).min(480.0);
-        let ph = (sh * 0.6).min(400.0);
+        let pw = (sw * 0.5).min(500.0);
+        let ph = (sh * 0.65).min(450.0);
         let px = (sw - pw) * 0.5;
         let py = (sh - ph) * 0.5;
 
@@ -2401,7 +2444,8 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
         sy += 24.0;
 
         // Building count by type.
-        draw_text("Building Counts:", sx, sy, 14.0, Color::new(0.95, 0.82, 0.35, 0.9));
+        let total_buildings = state.buildings.alive_ids().len();
+        draw_text(&format!("Buildings ({} total):", total_buildings), sx, sy, 14.0, Color::new(0.95, 0.82, 0.35, 0.9));
         sy += 18.0;
         let mut counts: std::collections::HashMap<&str, u32> = std::collections::HashMap::new();
         for (_, b) in state.buildings.iter() {
@@ -2409,7 +2453,7 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
         }
         let mut sorted: Vec<(&&str, &u32)> = counts.iter().collect();
         sorted.sort_by(|a, b| b.1.cmp(a.1));
-        for (name, count) in sorted.iter().take(10) {
+        for (name, count) in sorted.iter().take(12) {
             draw_text(&format!("{}: {}", name, count), sx, sy, 13.0, text_dim);
             sy += 16.0;
         }
