@@ -2709,6 +2709,12 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
         sy += 20.0;
         draw_text(&format!("Rockets launched: {}", state.stats.rockets_launched), sx, sy, 14.0, text_bright);
         sy += 20.0;
+        let evo_pct = (state.evolution * 100.0) as u32;
+        let evo_color = if evo_pct > 70 { Color::new(0.9, 0.3, 0.3, 1.0) }
+            else if evo_pct > 40 { Color::new(0.9, 0.7, 0.2, 1.0) }
+            else { Color::new(0.5, 0.8, 0.5, 1.0) };
+        draw_text(&format!("Enemy evolution: {}%", evo_pct), sx, sy, 14.0, evo_color);
+        sy += 20.0;
         let seed_str = format!("World seed: {}", state.seed);
         draw_text(&seed_str, sx, sy, 13.0, text_dim);
         // Click seed to copy to toast for easy sharing.
@@ -2861,6 +2867,11 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
                 draw_text(desc, px + 200.0, y, 14.0, Color::new(0.75, 0.75, 0.8, 0.8));
             }
         }
+        // Credits at bottom.
+        draw_text("AutoForge v0.2.0 — A narrative factory automation game", px + 20.0, py + ph - 28.0, 12.0,
+            Color::new(0.5, 0.5, 0.6, 0.5));
+        draw_text("Built with Rust + macroquad | MIT License", px + 20.0, py + ph - 12.0, 11.0,
+            Color::new(0.4, 0.4, 0.5, 0.4));
     }
 
     // --- Recipe Browser (E key) ---
