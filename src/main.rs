@@ -119,8 +119,8 @@ async fn main() {
     loop {
         let dt = get_frame_time() as f64;
 
-        // Auto-save every 5 minutes.
-        autosave_timer += dt as f32;
+        // Auto-save every 5 minutes (pauses when game is paused).
+        if !state.paused { autosave_timer += dt as f32; }
         if autosave_timer > 300.0 {
             autosave_timer = 0.0;
             if save::save_game(&state) {
@@ -1668,7 +1668,7 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
         types::Direction::South => "S", types::Direction::West => "W",
     };
     draw_text(&state.daynight.display(), cx, cy + 4.0, 13.0, dn_color);
-    draw_text(&format!("Dir:{} | Kills:{}", dir_text, state.stats.enemies_killed), cx + 85.0, cy + 4.0, 13.0, text_dim);
+    draw_text(&format!("Dir:{}  Kills:{}  Wave:{}", dir_text, state.stats.enemies_killed, state.enemies.wave_number), cx + 85.0, cy + 4.0, 12.0, text_dim);
 
     // Pause menu overlay (uses unified panel)
     if state.paused {
@@ -2710,12 +2710,12 @@ fn draw_research_screen(state: &GameState) {
         if can_research && !is_current {
             let mouse = Vec2::new(mouse_position().0, mouse_position().1);
             if mouse.x >= col1
-                && mouse.x <= col1 + 400.0
-                && mouse.y >= y - 14.0
-                && mouse.y <= y + 4.0
+                && mouse.x <= col1 + pw - 40.0
+                && mouse.y >= y - 16.0
+                && mouse.y <= y + 8.0
             {
-                // Highlight on hover
-                draw_rectangle(col1 - 5.0, y - 14.0, 400.0, row_h - 2.0, Color::new(0.2, 0.3, 0.5, 0.3));
+                // Highlight on hover (full row width).
+                draw_rectangle(col1 - 5.0, y - 16.0, pw - 40.0, row_h, Color::new(0.2, 0.3, 0.5, 0.3));
             }
         }
     }
