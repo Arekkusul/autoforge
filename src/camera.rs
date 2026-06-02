@@ -90,6 +90,9 @@ impl GameCamera {
         if is_key_pressed(KeyCode::M) {
             self.map_view = !self.map_view;
         }
+        if self.map_view && is_key_pressed(KeyCode::Escape) {
+            self.map_view = false;
+        }
     }
 
     /// Converts a screen-space position to world-space coordinates.

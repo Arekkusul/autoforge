@@ -1471,6 +1471,14 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
     let selected_border = Color::new(0.45, 0.75, 1.0, 1.0);
 
     // --- Top-left: Status Panel (compact, 4 lines) ---
+    // Map view indicator.
+    if state.camera.map_view {
+        let label = "MAP VIEW — Press M or Esc to return";
+        let w = measure_text(label, None, 22, 1.0).width;
+        draw_rectangle((screen_width() - w) * 0.5 - 12.0, 6.0, w + 24.0, 28.0, Color::new(0.1, 0.1, 0.15, 0.85));
+        draw_text(label, (screen_width() - w) * 0.5, 26.0, 22.0, Color::new(0.9, 0.8, 0.3, 1.0));
+    }
+
     let (cx, mut cy) = draw_panel(8.0, 8.0, 240.0, 112.0, Some("FORGE"), false);
 
     // Line 1: Time + FPS
