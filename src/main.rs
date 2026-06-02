@@ -112,6 +112,19 @@ async fn main() {
     let mut state = GameState::new(0);
     state.toast("Welcome to AutoForge! Press H for tutorial, F1 for help~".to_string(), 120);
     state.toast("Starting supplies: 50 Iron, 30 Copper, 20 Stone, 30 Coal, 25 Gears".to_string(), 150);
+    // Random tip of the day.
+    let tips = [
+        "Tip: Scroll wheel on a selected building to cycle tiers!",
+        "Tip: Press Q on a building to copy its type (eyedropper)!",
+        "Tip: Inserters grab from BEHIND and deliver FORWARD (R to rotate)!",
+        "Tip: Click the crashed ship for lore messages~",
+        "Tip: Press M for a map overview of your whole base!",
+        "Tip: Furnaces need coal AND ore — use 2 inserters!",
+        "Tip: Storage Chests auto-feed your building inventory!",
+        "Tip: Press N to see your achievement roadmap!",
+    ];
+    let tip_idx = (macroquad::miniquad::date::now() * 1000.0) as usize % tips.len();
+    state.toast(tips[tip_idx].to_string(), 200);
 
     // --- Main game loop ---
     let mut autosave_timer = 0.0f32;
@@ -495,7 +508,7 @@ fn handle_input(state: &mut GameState, sfx: &mut sound::SoundEffects) {
             if bp.is_empty() {
                 state.toast("No buildings to copy nearby.".to_string(), 40);
             } else {
-                state.toast(format!("Copied {} buildings! Click to paste.", bp.len()), 60);
+                state.toast(format!("Copied {} buildings (5-tile radius)! Click to paste, B to cancel.", bp.len()), 80);
                 state.blueprint = bp;
                 state.pasting_blueprint = true;
                 state.selected_building = None;
@@ -1705,6 +1718,15 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
             draw_text(desc, cx + 50.0, cy, 14.0, Color::new(0.8, 0.8, 0.85, 0.9));
             cy += 24.0;
         }
+        draw_text("Click outside or press Space to resume", px + 40.0, py + ph - 12.0, 12.0, text_dim);
+
+        // Click outside the pause panel to unpause.
+        if is_mouse_button_pressed(MouseButton::Left) {
+            let (mx, my) = mouse_position();
+            if mx < px || mx > px + pw || my < py || my > py + ph {
+                state.paused = false;
+            }
+        }
     }
 
     // --- Victory screen overlay ---
@@ -2541,7 +2563,7 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
             ("R", "Rotate direction"),
             ("Q", "Copy building from world (eyedropper)"),
             ("Ctrl+Z", "Undo last placement (20 levels)"),
-            ("B", "Blueprint copy/paste"),
+            ("B", "Blueprint (copies 5-tile radius, click to paste)"),
             ("Esc", "Deselect building"),
             ("", ""),
             ("INTERACTION", ""),
