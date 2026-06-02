@@ -448,8 +448,16 @@ pub fn draw_world(
 
             // (Belt arrows removed — direction is clear from the sprite texture itself.)
         } else {
-            // LOD 2: Simple colored rectangle (very fast).
-            let color = building_lod_color(building.kind);
+            // LOD 2: Simple colored rectangle with activity indicator.
+            let mut color = building_lod_color(building.kind);
+            // Brighten active machines slightly.
+            if let Some(ref ms) = building.machine_state {
+                if ms.progress_ticks > 0 {
+                    color.r = (color.r + 0.15).min(1.0);
+                    color.g = (color.g + 0.15).min(1.0);
+                    color.b = (color.b + 0.15).min(1.0);
+                }
+            }
             draw_rectangle(world.x + 1.0, world.y + 1.0, TILE_SIZE - 2.0, TILE_SIZE - 2.0, color);
         }
     }
@@ -925,21 +933,24 @@ fn item_lod_color(resource: Resource) -> Color {
 
 fn building_lod_color(kind: BuildingKind) -> Color {
     match kind {
-        BuildingKind::BeltYellow => Color::new(0.4, 0.4, 0.15, 1.0),
-        BuildingKind::BeltRed => Color::new(0.5, 0.2, 0.15, 1.0),
-        BuildingKind::BeltBlue => Color::new(0.15, 0.2, 0.5, 1.0),
+        BuildingKind::BeltYellow => Color::new(0.45, 0.4, 0.15, 1.0),
+        BuildingKind::BeltRed => Color::new(0.55, 0.2, 0.15, 1.0),
+        BuildingKind::BeltBlue => Color::new(0.15, 0.2, 0.55, 1.0),
         BuildingKind::Miner | BuildingKind::PumpJack => Color::new(0.6, 0.4, 0.1, 1.0),
         BuildingKind::StoneFurnace | BuildingKind::SteelFurnace | BuildingKind::ElectricFurnace => {
-            Color::new(0.5, 0.2, 0.15, 1.0)
+            Color::new(0.55, 0.35, 0.15, 1.0) // warm orange-brown (distinct from red belts)
         }
         BuildingKind::AssemblerT1 | BuildingKind::AssemblerT2 | BuildingKind::AssemblerT3 => {
-            Color::new(0.15, 0.25, 0.5, 1.0)
+            Color::new(0.2, 0.3, 0.55, 1.0) // darker blue (distinct from solar)
         }
-        BuildingKind::Lab => Color::new(0.4, 0.2, 0.5, 1.0),
-        BuildingKind::GunTurret | BuildingKind::LaserTurret => Color::new(0.4, 0.4, 0.4, 1.0),
+        BuildingKind::Lab => Color::new(0.45, 0.2, 0.55, 1.0),
+        BuildingKind::GunTurret => Color::new(0.45, 0.45, 0.4, 1.0),  // warm gray
+        BuildingKind::LaserTurret => Color::new(0.3, 0.4, 0.7, 1.0),  // blue-gray (distinct from gun)
         BuildingKind::Wall | BuildingKind::Gate => Color::new(0.35, 0.35, 0.3, 1.0),
-        BuildingKind::Boiler | BuildingKind::SteamEngine => Color::new(0.15, 0.35, 0.35, 1.0),
-        BuildingKind::SolarPanel => Color::new(0.15, 0.2, 0.5, 1.0),
+        BuildingKind::Boiler | BuildingKind::SteamEngine => Color::new(0.15, 0.4, 0.35, 1.0),
+        BuildingKind::SolarPanel => Color::new(0.1, 0.15, 0.45, 1.0), // deep blue (distinct from assembler)
+        BuildingKind::NuclearReactor => Color::new(0.2, 0.5, 0.3, 1.0), // green glow
+        BuildingKind::StorageChest => Color::new(0.5, 0.4, 0.2, 1.0),   // wooden brown
         _ => Color::new(0.3, 0.3, 0.3, 1.0),
     }
 }

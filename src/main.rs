@@ -567,6 +567,10 @@ fn handle_input(state: &mut GameState, sfx: &sound::SoundEffects) {
     if is_key_pressed(KeyCode::T) {
         state.selected_building = Some(types::BuildingKind::GunTurret);
     }
+    // L: Laser Turret
+    if is_key_pressed(KeyCode::L) {
+        state.selected_building = Some(types::BuildingKind::LaserTurret);
+    }
     // G: Wall
     if is_key_pressed(KeyCode::G) {
         state.selected_building = Some(types::BuildingKind::Wall);
@@ -1623,7 +1627,7 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
         if let Some(bid) = tile.building {
             if let Some(b) = state.buildings.get(bid) {
                 lines.push((b.kind.display_name().to_string(), text_accent));
-                lines.push((format!("Facing: {:?}", b.direction), text_dim));
+                lines.push((format!("Facing: {:?}  (R to rotate)", b.direction), text_dim));
                 if let Some(ref ms) = b.machine_state {
                     // Show recipe with inputs → outputs clearly.
                     if let Some(rid) = ms.selected_recipe {
@@ -1650,6 +1654,13 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
                         || b.kind == types::BuildingKind::ChemicalPlant
                     {
                         lines.push(("Click to set recipe!".to_string(), Color::new(0.9, 0.7, 0.3, 1.0)));
+                    }
+                    // Progress indicator.
+                    if ms.progress_ticks > 0 && ms.total_ticks > 0 {
+                        let pct = ((ms.total_ticks - ms.progress_ticks) as f32 / ms.total_ticks as f32 * 100.0) as u32;
+                        lines.push((format!("Progress: {}%", pct), Color::new(0.4, 0.8, 1.0, 0.9)));
+                    } else if ms.selected_recipe.is_some() && ms.progress_ticks == 0 {
+                        lines.push(("Idle — waiting for inputs".to_string(), Color::new(0.6, 0.6, 0.4, 0.8)));
                     }
                     // Buffer contents.
                     if !ms.input_buffer.is_empty() {
@@ -1709,11 +1720,13 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
         ("0", "Splitter", types::BuildingKind::Splitter, atlas.r_splitter),
         ("T", "Turret", types::BuildingKind::GunTurret, atlas.r_gun_turret),
         ("G", "Wall", types::BuildingKind::Wall, atlas.r_wall),
+        ("U", "UG Belt", types::BuildingKind::UndergroundBeltYellow, atlas.r_underground_belt),
         ("C", "Chemical", types::BuildingKind::ChemicalPlant, atlas.r_chemical_plant),
+        ("L", "Laser", types::BuildingKind::LaserTurret, atlas.r_laser_turret),
         ("P", "Solar", types::BuildingKind::SolarPanel, atlas.r_solar_panel),
     ];
 
-    let slot_w = 76.0;
+    let slot_w = (screen_width() / toolbar_items.len() as f32).min(76.0);
     let slot_h = 66.0;
     let total_w = toolbar_items.len() as f32 * slot_w;
     let start_x = (screen_width() - total_w) * 0.5; // center the toolbar
