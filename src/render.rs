@@ -905,6 +905,10 @@ pub fn draw_ghost_preview(
             },
         );
 
+        // Contextual hint below ghost preview.
+        draw_text("R:rotate  Esc:cancel", world.x - 12.0, world.y + TILE_SIZE + 12.0, 10.0,
+            Color::new(0.7, 0.7, 0.8, 0.5));
+
         // Inserter direction labels: show pickup ← and delivery → sides.
         if kind.is_inserter() {
             let (dx, dy) = direction.delta();

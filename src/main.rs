@@ -1753,7 +1753,8 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
         draw_text(label, (screen_width() - w) * 0.5, 26.0, 20.0, Color::new(0.9, 0.8, 0.3, 1.0));
     }
 
-    let (cx, mut cy) = draw_panel(8.0, 8.0, 250.0, 120.0, Some("FORGE"), false);
+    let status_h = if state.research.current_tech.is_some() { 138.0 } else { 120.0 };
+    let (cx, mut cy) = draw_panel(8.0, 8.0, 250.0, status_h, Some("FORGE"), false);
 
     // Line 1: Time + FPS (standardized 14px body)
     draw_text(
@@ -1799,7 +1800,23 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
         types::Direction::South => "S", types::Direction::West => "W",
     };
     draw_text(&state.daynight.display(), cx, cy + 4.0, 13.0, dn_color);
-    draw_text(&format!("Dir:{}  Kills:{}  Wave:{}", dir_text, state.stats.enemies_killed, state.enemies.wave_number), cx + 85.0, cy + 4.0, 12.0, text_dim);
+    // Wave info with estimated time to next wave.
+    let next_wave_ticks = (6000 + state.enemies.wave_number as u64 * 1200).saturating_sub(state.stats.total_ticks);
+    let wave_eta = if next_wave_ticks > 0 { format!(" ~{}s", next_wave_ticks / 20) } else { String::new() };
+    draw_text(&format!("Dir:{}  Kills:{}  Wave:{}{}", dir_text, state.stats.enemies_killed, state.enemies.wave_number, wave_eta), cx + 85.0, cy + 4.0, 11.0, text_dim);
+
+    // Line 5: Current research (if active).
+    if let Some(tech_idx) = state.research.current_tech {
+        if tech_idx < research::TECHNOLOGIES.len() {
+            cy += 16.0;
+            let tech = &research::TECHNOLOGIES[tech_idx];
+            let pct = if tech.units_needed > 0 {
+                (state.research.progress as f32 / tech.units_needed as f32 * 100.0) as u32
+            } else { 100 };
+            let research_color = Color::new(0.4, 0.7, 1.0, 0.9);
+            draw_text(&format!("Research: {} ({}%)", tech.name, pct), cx, cy + 4.0, 12.0, research_color);
+        }
+    }
 
     // Pause menu overlay (uses unified panel)
     if state.paused {
@@ -2090,7 +2107,13 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
     let slot_w = (screen_width() / toolbar_items.len() as f32).min(76.0);
     let slot_h = 66.0;
     let total_w = toolbar_items.len() as f32 * slot_w;
-    let start_x = (screen_width() - total_w) * 0.5; // center the toolbar
+    let start_x = (screen_width() - total_w) * 0.5;
+
+    // Pre-count buildings by kind for toolbar badges.
+    let mut kind_counts: std::collections::HashMap<types::BuildingKind, u32> = std::collections::HashMap::new();
+    for (_, b) in state.buildings.iter() {
+        *kind_counts.entry(b.kind).or_insert(0) += 1;
+    }
 
     for (i, (hotkey, name, kind, src_rect)) in toolbar_items.iter().enumerate() {
         let x = start_x + i as f32 * slot_w;
@@ -2125,6 +2148,15 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
         // Hotkey badge (top-left corner with background)
         draw_rectangle(x + 3.0, y + 1.0, 16.0, 16.0, Color::new(0.0, 0.0, 0.0, 0.6));
         draw_text(hotkey, x + 6.0, y + 14.0, 16.0, Color::new(1.0, 1.0, 0.5, 0.9));
+
+        // Placed count badge (top-right corner, only if > 0).
+        let count = kind_counts.get(kind).copied().unwrap_or(0);
+        if count > 0 {
+            let count_str = format!("{}", count);
+            let cw = measure_text(&count_str, None, 10, 1.0).width;
+            draw_rectangle(x + slot_w - cw - 8.0, y + 1.0, cw + 6.0, 12.0, Color::new(0.0, 0.0, 0.0, 0.5));
+            draw_text(&count_str, x + slot_w - cw - 5.0, y + 11.0, 10.0, Color::new(0.6, 0.7, 0.8, 0.7));
+        }
 
         // Label below icon (auto-shrink font if slot is narrow).
         let label_font = if slot_w < 68.0 { 11.0 } else { 13.0 };
@@ -2412,7 +2444,8 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
 
     // --- Inventory (left side, below status, compact two-column) ---
     // Dynamically shows ALL resources the player has (not a hardcoded subset).
-    let mut inv_panel_bottom = 136.0;
+    let inv_start_y = 8.0 + status_h + 4.0; // below status panel
+    let mut inv_panel_bottom = inv_start_y;
     {
         let mut show: Vec<(&str, u32)> = state.inventory.iter()
             .filter(|(_, &c)| c > 0)
@@ -2423,8 +2456,8 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
         if !show.is_empty() {
             let rows = (show.len() + 1) / 2; // two columns
             let inv_h = 34.0 + rows.min(10) as f32 * 16.0;
-            let (ix, mut iy) = draw_panel(8.0, 136.0, 220.0, inv_h, Some("Inventory"), false);
-            inv_panel_bottom = 136.0 + inv_h;
+            let (ix, mut iy) = draw_panel(8.0, inv_start_y, 220.0, inv_h, Some("Inventory"), false);
+            inv_panel_bottom = inv_start_y + inv_h;
 
             for chunk in show.chunks(2) {
                 for (col, (name, count)) in chunk.iter().enumerate() {
