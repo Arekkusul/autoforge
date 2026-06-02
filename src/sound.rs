@@ -17,6 +17,7 @@ pub struct SoundEffects {
     pub wave_warning: Sound,
     pub research_done: Sound,
     pub error: Sound,
+    pub ambient: Sound,
     /// Master volume (0.0–1.0).
     pub volume: f32,
 }
@@ -33,8 +34,17 @@ impl SoundEffects {
             wave_warning: load_wav(&gen_wave_warning_sound()).await,
             research_done: load_wav(&gen_research_done_sound()).await,
             error: load_wav(&gen_error_sound()).await,
+            ambient: load_wav(&gen_ambient_sound()).await,
             volume: 0.5,
         }
+    }
+
+    /// Start the ambient background loop.
+    pub fn start_ambient(&self) {
+        audio::play_sound(&self.ambient, PlaySoundParams {
+            looped: true,
+            volume: self.volume * 0.15, // very quiet background
+        });
     }
 
     /// Play a sound at the current master volume.
@@ -204,6 +214,25 @@ fn gen_error_sound() -> Vec<u8> {
         let square = if (t * 150.0 * std::f32::consts::TAU).sin() > 0.0 { 1.0f32 } else { -1.0 };
         let env = (1.0 - t / 0.1).max(0.0);
         samples.push((square * env * 0.25 * 32000.0) as i16);
+    }
+    make_wav(&samples)
+}
+
+/// Ambient background: gentle low drone with subtle modulation (~8 seconds loop).
+fn gen_ambient_sound() -> Vec<u8> {
+    let duration = 8.0;
+    let n = (SAMPLE_RATE as f32 * duration) as usize;
+    let mut samples = Vec::with_capacity(n);
+    for i in 0..n {
+        let t = i as f32 / SAMPLE_RATE as f32;
+        // Deep bass drone (55 Hz = A1).
+        let bass = (t * 55.0 * std::f32::consts::TAU).sin() * 0.15;
+        // Subtle harmonic (110 Hz, phase-shifted).
+        let harm = (t * 110.0 * std::f32::consts::TAU + 0.5).sin() * 0.06;
+        // Very slow modulation for texture (0.3 Hz wobble).
+        let mod_env = (t * 0.3 * std::f32::consts::TAU).sin() * 0.3 + 0.7;
+        let val = (bass + harm) * mod_env;
+        samples.push((val * 32000.0) as i16);
     }
     make_wav(&samples)
 }

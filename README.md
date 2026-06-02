@@ -32,7 +32,7 @@ A narrative-driven 2D factory automation game built in Rust. You are **FORGE** �
 - **Recipe picker** (click assembler → visual popup with all recipes and availability)
 - **Recipe browser** (E key — full reference of what makes what)
 - **Production stats** (V key — playtime, items/min, building counts)
-- **Achievements** (N key — 14 milestones with resource rewards)
+- **Achievement roadmap** (N key — 17 guided milestones across 4 phases with hints and rewards)
 - **Blueprint tool** (B key — copy buildings near cursor, click to stamp)
 - **Undo** (Ctrl+Z — removes last placed building)
 - **Auto-save** every 5 minutes
@@ -100,9 +100,13 @@ The compiled binary is at `target/release/autoforge` — you can run it directly
 | **V** | Production stats |
 | **H** | Toggle tutorial |
 | **F1** | Full help / controls |
+| **F2** | Mute / unmute sound |
+| **F12** | Screenshot |
 | **Space** | Pause (shows menu) |
 | **+/-** | Game speed (1x–5x) |
 | **Home** | Center camera on base |
+| **M** | Map overview (zoom out) |
+| **L** | Laser turret |
 | **F5 / F9** | Save / Load |
 | **Esc** | Close overlay / deselect |
 

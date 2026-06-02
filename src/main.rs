@@ -129,6 +129,7 @@ async fn main() {
     // Start with a zoom-in animation from the cutscene.
     state.camera.zoom = 0.3;
     let mut startup_zoom_timer = 0.0f32;
+    sfx.start_ambient();
 
     // --- Main game loop ---
     let mut autosave_timer = 0.0f32;
@@ -492,9 +493,11 @@ fn handle_input(state: &mut GameState, sfx: &mut sound::SoundEffects) {
     if is_key_pressed(KeyCode::F2) {
         if sfx.volume > 0.0 {
             sfx.volume = 0.0;
+            macroquad::audio::stop_sound(&sfx.ambient);
             state.toast("Sound: OFF".to_string(), 40);
         } else {
             sfx.volume = 0.5;
+            sfx.start_ambient();
             state.toast("Sound: ON".to_string(), 40);
         }
     }
