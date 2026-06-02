@@ -1273,7 +1273,13 @@ fn simulation_tick(state: &mut GameState, sfx: &sound::SoundEffects) {
     let tick = state.stats.total_ticks;
 
     // Day/night cycle advances every tick for smooth transitions.
+    let was_day = state.daynight.is_day();
     state.daynight.tick();
+    if was_day && !state.daynight.is_day() {
+        state.toast("Night is falling... solar power reduces.".to_string(), 80);
+    } else if !was_day && state.daynight.is_day() {
+        state.toast("Dawn breaks! Solar panels at full power.".to_string(), 80);
+    }
 
     // Tick toast notifications.
     state.tick_toasts();
@@ -1310,8 +1316,11 @@ fn simulation_tick(state: &mut GameState, sfx: &sound::SoundEffects) {
         &mut state.stats,
         state.power.satisfaction,
     );
-    // Play a subtle ding every 50 items crafted (not every single craft — too noisy).
-    if state.stats.items_crafted / 50 > crafted_before / 50 {
+    // First item celebration + periodic ding.
+    if crafted_before == 0 && state.stats.items_crafted > 0 {
+        sfx.play(&sfx.research_done);
+        state.toast("Your first item! You're on your way~".to_string(), 100);
+    } else if state.stats.items_crafted / 50 > crafted_before / 50 {
         sfx.play(&sfx.recipe_done);
     }
 
@@ -1632,6 +1641,7 @@ fn simulation_tick(state: &mut GameState, sfx: &sound::SoundEffects) {
             for &(resource, count) in milestone.reward {
                 *state.inventory.entry(resource).or_insert(0) += count;
             }
+            sfx.play(&sfx.research_done); // celebratory arpeggio
             state.toast(format!("*** MILESTONE: {} ***", milestone.name), 120);
             state.toast(format!("+{} resource types rewarded!", milestone.reward.len()), 80);
         }
