@@ -1733,6 +1733,19 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
             if let Some(b) = state.buildings.get(bid) {
                 lines.push((b.kind.display_name().to_string(), text_accent));
                 lines.push((format!("Facing: {:?}  (R to rotate)", b.direction), text_dim));
+                // Belt speed info.
+                if b.kind.is_belt() {
+                    let (tier, speed) = match b.kind {
+                        types::BuildingKind::BeltYellow => ("Yellow", "1x"),
+                        types::BuildingKind::BeltRed => ("Red", "2x"),
+                        types::BuildingKind::BeltBlue => ("Blue", "3x"),
+                        _ => ("", ""),
+                    };
+                    if !tier.is_empty() {
+                        lines.push((format!("{} belt — {} speed (scroll to upgrade)", tier, speed),
+                            Color::new(0.7, 0.7, 0.5, 0.8)));
+                    }
+                }
                 if let Some(ref ms) = b.machine_state {
                     // Show recipe with inputs → outputs clearly.
                     if let Some(rid) = ms.selected_recipe {
@@ -1879,6 +1892,28 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
             14.0,
             if is_selected { text_bright } else { text_dim },
         );
+
+        // Hover tooltip: show cost preview when hovering an unselected slot.
+        let (mx, my) = mouse_position();
+        if !is_selected && mx >= x && mx < x + slot_w && my >= y && my < y + slot_h {
+            draw_rectangle(x + 2.0, y, slot_w - 4.0, slot_h, Color::new(0.2, 0.2, 0.3, 0.3));
+            let cost = buildcost::building_cost(*kind);
+            if !cost.is_empty() {
+                let cost_str: String = cost.iter()
+                    .map(|(r, c)| format!("{}x{}", c, short_resource_name(*r)))
+                    .collect::<Vec<_>>().join(" ");
+                let can_afford = buildcost::can_afford(&state.inventory, *kind);
+                let color = if can_afford {
+                    Color::new(0.5, 0.9, 0.5, 0.9)
+                } else {
+                    Color::new(0.9, 0.4, 0.4, 0.9)
+                };
+                let tw = measure_text(&cost_str, None, 12, 1.0).width;
+                let tx = x + (slot_w - tw) * 0.5;
+                draw_rectangle(tx - 4.0, y - 18.0, tw + 8.0, 16.0, Color::new(0.05, 0.05, 0.08, 0.9));
+                draw_text(&cost_str, tx, y - 6.0, 12.0, color);
+            }
+        }
     }
 
     // --- Selected building name + cost (above toolbar, centered) ---
