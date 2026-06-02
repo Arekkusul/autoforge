@@ -558,6 +558,10 @@ fn handle_input(state: &mut GameState, sfx: &mut sound::SoundEffects) {
     // Load (F9)
     if is_key_pressed(KeyCode::F9) {
         if save::load_game(state) {
+            // Reset UI state after loading.
+            close_all_overlays(state);
+            state.toasts.clear();
+            state.selected_building = None;
             state.toast("Game loaded!".to_string(), 60);
         } else {
             state.toast("No save file found.".to_string(), 60);
@@ -1086,6 +1090,10 @@ fn handle_input(state: &mut GameState, sfx: &mut sound::SoundEffects) {
                     state.tutorial_step = 4;
                 } else if state.tutorial_step == 4 && kind == types::BuildingKind::StoneFurnace {
                     state.tutorial_step = 5;
+                } else if state.tutorial_step == 5 && kind == types::BuildingKind::StorageChest {
+                    state.tutorial_step = 6;
+                    state.show_tutorial = false;
+                    state.toast("Tutorial complete! Press N for your roadmap~".to_string(), 120);
                 }
 
                 // Track first miner for story.
@@ -1869,8 +1877,24 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
             }
         }
 
+        // Check for enemies near the cursor.
+        let mouse_world = state.camera.screen_to_world(mouse_screen);
+        for enemy in &state.enemies.list {
+            if !enemy.alive { continue; }
+            let dx = enemy.x - mouse_world.x;
+            let dy = enemy.y - mouse_world.y;
+            if dx * dx + dy * dy < (TILE_SIZE * TILE_SIZE) {
+                let hp_pct = (enemy.hp / enemy.kind.max_hp() * 100.0) as u32;
+                lines.push((format!("{:?} — HP: {}%", enemy.kind, hp_pct),
+                    Color::new(1.0, 0.4, 0.3, 1.0)));
+                lines.push((format!("Dmg: {:.0}  Spd: {:.1}", enemy.kind.damage(), enemy.kind.speed()),
+                    Color::new(0.8, 0.5, 0.4, 0.8)));
+                break; // only show one enemy
+            }
+        }
+
         // Only show panel if there's meaningful info (skip bare grass tiles).
-        let has_info = tile.deposit.is_some() || tile.building.is_some() || !items_here.is_empty();
+        let has_info = tile.deposit.is_some() || tile.building.is_some() || !items_here.is_empty() || lines.len() > 2;
         let panel_h = 8.0 + lines.len() as f32 * 20.0 + 8.0;
         if has_info || lines.len() > 2 {
             let (tx, mut ty) = draw_panel(panel_x, 8.0, panel_w, panel_h, None, false);
