@@ -225,16 +225,17 @@ async fn main() {
         }
         render::draw_night_overlay(state.daynight.darkness(), &state.buildings, &state.camera);
 
-        // Placement flash effect (brief white glow on last placed building).
+        // Placement flash effect (bright glow expanding outward).
         if let Some((pos, ticks)) = state.placement_flash {
-            let alpha = ticks as f32 / 10.0 * 0.4;
+            let t = ticks as f32 / 10.0;
+            let expand = (1.0 - t) * 4.0; // expands as it fades
             let world = grid::Grid::grid_to_world(pos);
             draw_rectangle(
-                world.x - 2.0,
-                world.y - 2.0,
-                TILE_SIZE + 4.0,
-                TILE_SIZE + 4.0,
-                Color::new(0.8, 0.9, 1.0, alpha),
+                world.x - 2.0 - expand,
+                world.y - 2.0 - expand,
+                TILE_SIZE + 4.0 + expand * 2.0,
+                TILE_SIZE + 4.0 + expand * 2.0,
+                Color::new(0.6, 0.85, 1.0, t * 0.6),
             );
         }
 
@@ -1233,11 +1234,20 @@ fn simulation_tick(state: &mut GameState, sfx: &sound::SoundEffects) {
 
     if tick % 2 == 0 {
         // 5. Labs: consume science packs, advance research.
-        let techs_before = state.research.completed.iter().filter(|&&c| c).count();
+        let techs_before: Vec<bool> = state.research.completed.clone();
         research::tick_labs(&mut state.buildings, &mut state.research);
-        let techs_after = state.research.completed.iter().filter(|&&c| c).count();
-        if techs_after > techs_before {
-            sfx.play(&sfx.research_done);
+        // Check for newly completed research.
+        let newly_completed: Vec<usize> = techs_before.iter()
+            .zip(state.research.completed.iter())
+            .enumerate()
+            .filter(|(_, (&was, &now))| !was && now)
+            .map(|(i, _)| i)
+            .collect();
+        for i in newly_completed {
+            if i < research::TECHNOLOGIES.len() {
+                sfx.play(&sfx.research_done);
+                state.toast(format!("Research complete: {}!", research::TECHNOLOGIES[i].name), 120);
+            }
         }
 
         // 5b. Storage chests feed player inventory (the key progression mechanic).
@@ -1271,6 +1281,7 @@ fn simulation_tick(state: &mut GameState, sfx: &sound::SoundEffects) {
 
         // 6. Enemy AI: movement, attacking buildings.
         let wave_before = state.enemies.wave_number;
+        let buildings_before = state.buildings.alive_ids().len();
         enemy::tick_enemies(
             &mut state.grid,
             &mut state.buildings,
@@ -1280,6 +1291,11 @@ fn simulation_tick(state: &mut GameState, sfx: &sound::SoundEffects) {
             tick,
             &mut state.stats.enemies_killed,
         );
+        let buildings_after = state.buildings.alive_ids().len();
+        if buildings_after < buildings_before {
+            let lost = buildings_before - buildings_after;
+            state.toast(format!("Building destroyed! ({} lost)", lost), 60);
+        }
 
         if state.enemies.wave_number > wave_before {
             sfx.play(&sfx.wave_warning);
