@@ -186,9 +186,18 @@ pub fn save_game(state: &GameState) -> bool {
         });
     }
 
-    // Save as binary (bincode) — much smaller and faster than JSON.
+    // Save as binary (bincode) — atomic write via temp file + rename.
     match bincode::serialize(&save) {
         Ok(bytes) => {
+            let temp = save_path().with_extension("tmp");
+            if fs::write(&temp, &bytes).is_ok() {
+                if fs::rename(&temp, save_path()).is_ok() {
+                    return true;
+                }
+                // Rename failed — try direct write as fallback.
+                let _ = fs::remove_file(&temp);
+            }
+            // Fallback: direct write (less safe but works on all platforms).
             if fs::write(save_path(), bytes).is_ok() {
                 return true;
             }
