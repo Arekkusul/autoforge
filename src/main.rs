@@ -215,6 +215,13 @@ async fn main() {
                 state.selected_building,
                 state.placement_direction,
             );
+            // Build zone circle (subtle outline when a building is selected).
+            if state.selected_building.is_some() {
+                let cx = state.grid.width as f32 * TILE_SIZE * 0.5;
+                let cy = state.grid.height as f32 * TILE_SIZE * 0.5;
+                let radius = state.build_radius * TILE_SIZE;
+                draw_circle_lines(cx, cy, radius, 1.5, Color::new(0.3, 0.5, 0.8, 0.15));
+            }
         }
         render::draw_night_overlay(state.daynight.darkness(), &state.buildings, &state.camera);
 
@@ -605,6 +612,48 @@ fn handle_input(state: &mut GameState, sfx: &mut sound::SoundEffects) {
     // P: Solar Panel
     if is_key_pressed(KeyCode::P) {
         state.selected_building = Some(types::BuildingKind::SolarPanel);
+    }
+
+    // Scroll wheel cycles through building tiers when a tiered building is selected.
+    if let Some(kind) = state.selected_building {
+        let (_, wheel_y) = mouse_wheel();
+        if wheel_y.abs() > 0.1 {
+            let up = wheel_y > 0.0;
+            let next = match kind {
+                // Belt tiers
+                types::BuildingKind::BeltYellow if up => Some(types::BuildingKind::BeltRed),
+                types::BuildingKind::BeltRed if up => Some(types::BuildingKind::BeltBlue),
+                types::BuildingKind::BeltBlue if !up => Some(types::BuildingKind::BeltRed),
+                types::BuildingKind::BeltRed if !up => Some(types::BuildingKind::BeltYellow),
+                // Inserter tiers
+                types::BuildingKind::InserterRegular if up => Some(types::BuildingKind::InserterLong),
+                types::BuildingKind::InserterLong if up => Some(types::BuildingKind::InserterFast),
+                types::BuildingKind::InserterFast if up => Some(types::BuildingKind::InserterStack),
+                types::BuildingKind::InserterStack if !up => Some(types::BuildingKind::InserterFast),
+                types::BuildingKind::InserterFast if !up => Some(types::BuildingKind::InserterLong),
+                types::BuildingKind::InserterLong if !up => Some(types::BuildingKind::InserterRegular),
+                // Assembler tiers
+                types::BuildingKind::AssemblerT1 if up => Some(types::BuildingKind::AssemblerT2),
+                types::BuildingKind::AssemblerT2 if up => Some(types::BuildingKind::AssemblerT3),
+                types::BuildingKind::AssemblerT3 if !up => Some(types::BuildingKind::AssemblerT2),
+                types::BuildingKind::AssemblerT2 if !up => Some(types::BuildingKind::AssemblerT1),
+                // Furnace tiers
+                types::BuildingKind::StoneFurnace if up => Some(types::BuildingKind::SteelFurnace),
+                types::BuildingKind::SteelFurnace if up => Some(types::BuildingKind::ElectricFurnace),
+                types::BuildingKind::ElectricFurnace if !up => Some(types::BuildingKind::SteelFurnace),
+                types::BuildingKind::SteelFurnace if !up => Some(types::BuildingKind::StoneFurnace),
+                // Underground belt tiers
+                types::BuildingKind::UndergroundBeltYellow if up => Some(types::BuildingKind::UndergroundBeltRed),
+                types::BuildingKind::UndergroundBeltRed if up => Some(types::BuildingKind::UndergroundBeltBlue),
+                types::BuildingKind::UndergroundBeltBlue if !up => Some(types::BuildingKind::UndergroundBeltRed),
+                types::BuildingKind::UndergroundBeltRed if !up => Some(types::BuildingKind::UndergroundBeltYellow),
+                _ => None,
+            };
+            if let Some(new_kind) = next {
+                state.selected_building = Some(new_kind);
+                state.toast(format!("Selected: {:?}", new_kind), 20);
+            }
+        }
     }
 
     // Eyedropper (Q): pick building type from hovered tile.
@@ -1895,7 +1944,7 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
                         Color::new(0.2, 0.3, 0.6, 1.0) // water = dark blue
                     } else if tile.terrain == types::Terrain::Forest {
                         Color::new(0.1, 0.4, 0.1, 1.0) // forest = green
-                    } else if tile.pollution > 0.5 {
+                    } else if tile.pollution > 0.15 {
                         Color::new(0.4, 0.4, 0.1, 0.8) // pollution = yellow-green
                     } else {
                         Color::new(0.15, 0.15, 0.12, 1.0) // ground = dark
@@ -1908,6 +1957,15 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
                 let screen_py = mm_y + py as f32 * (mm_size / map_pixels as f32);
                 let pixel_size = mm_size / map_pixels as f32;
                 draw_rectangle(screen_px, screen_py, pixel_size, pixel_size, color);
+            }
+        }
+
+        // Draw enemy nests as dark red diamonds on minimap.
+        for nest_pos in &state.nests {
+            let npx = (nest_pos.x - (cam_grid.x - half_range)) as f32 / (map_pixels * tiles_per_pixel) as f32 * mm_size;
+            let npy = (nest_pos.y - (cam_grid.y - half_range)) as f32 / (map_pixels * tiles_per_pixel) as f32 * mm_size;
+            if npx >= 0.0 && npx < mm_size && npy >= 0.0 && npy < mm_size {
+                draw_circle(mm_x + npx, mm_y + npy, 3.0, Color::new(0.6, 0.1, 0.1, 0.8));
             }
         }
 
