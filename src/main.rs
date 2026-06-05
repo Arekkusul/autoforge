@@ -2075,6 +2075,13 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
                             Color::new(0.7, 0.7, 0.5, 0.8)));
                     }
                 }
+                // Splitter next-output indicator.
+                if b.kind == types::BuildingKind::Splitter {
+                    if let Some(ref ms) = b.machine_state {
+                        let next_dir = if ms.fuel_ticks % 2 == 0 { "straight" } else { "right" };
+                        lines.push((format!("Next item goes: {}", next_dir), Color::new(0.6, 0.7, 0.8, 0.8)));
+                    }
+                }
                 if let Some(ref ms) = b.machine_state {
                     // Show recipe with inputs → outputs clearly.
                     if let Some(rid) = ms.selected_recipe {
@@ -2531,11 +2538,25 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
     let inv_start_y = 8.0 + status_h + 4.0; // below status panel
     let mut inv_panel_bottom = inv_start_y;
     {
-        let mut show: Vec<(&str, u32)> = state.inventory.iter()
+        // Resource category ordering: plates first, then ores, intermediates, science, ammo.
+        fn resource_sort_key(r: &types::Resource) -> u32 {
+            match r {
+                types::Resource::IronPlate | types::Resource::CopperPlate | types::Resource::SteelPlate => 0,
+                types::Resource::Stone | types::Resource::Coal | types::Resource::StoneBrick => 1,
+                types::Resource::IronOre | types::Resource::CopperOre | types::Resource::UraniumOre => 2,
+                types::Resource::Gear | types::Resource::Wire | types::Resource::Pipe | types::Resource::IronStick => 3,
+                types::Resource::GreenCircuit | types::Resource::RedCircuit | types::Resource::BlueCircuit => 4,
+                types::Resource::ScienceRed | types::Resource::ScienceGreen | types::Resource::ScienceBlue
+                    | types::Resource::SciencePurple | types::Resource::ScienceYellow => 5,
+                types::Resource::BasicAmmo | types::Resource::PiercingAmmo | types::Resource::Grenade => 6,
+                _ => 7,
+            }
+        }
+        let mut show: Vec<(types::Resource, &str, u32)> = state.inventory.iter()
             .filter(|(_, &c)| c > 0)
-            .map(|(r, &c)| (short_resource_name(*r), c))
+            .map(|(r, &c)| (*r, short_resource_name(*r), c))
             .collect();
-        show.sort_by(|a, b| b.1.cmp(&a.1)); // most items first
+        show.sort_by(|a, b| resource_sort_key(&a.0).cmp(&resource_sort_key(&b.0)).then(b.2.cmp(&a.2)));
 
         if !show.is_empty() {
             let rows = (show.len() + 1) / 2; // two columns
@@ -2544,7 +2565,7 @@ fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
             inv_panel_bottom = inv_start_y + inv_h;
 
             for chunk in show.chunks(2) {
-                for (col, (name, count)) in chunk.iter().enumerate() {
+                for (col, (_, name, count)) in chunk.iter().enumerate() {
                     let x = ix + col as f32 * 102.0;
                     draw_text(&format!("{}: {}", name, count), x, iy + 4.0, 12.0, text_bright);
                 }

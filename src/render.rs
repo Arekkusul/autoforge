@@ -376,6 +376,15 @@ pub fn draw_world(
                         }
                     }
 
+                    // Electric furnace active glow (blue energy ring).
+                    if ms.progress_ticks > 0 && building.kind == BuildingKind::ElectricFurnace {
+                        let glow_phase = (tick as f32 * 0.15).sin() * 0.15 + 0.35;
+                        let cx = world.x + TILE_SIZE * 0.5;
+                        let cy = world.y + TILE_SIZE * 0.5;
+                        draw_circle(cx, cy, TILE_SIZE * 0.45, Color::new(0.3, 0.5, 1.0, glow_phase * 0.3));
+                        draw_circle(cx, cy, TILE_SIZE * 0.3, Color::new(0.4, 0.6, 1.0, glow_phase * 0.2));
+                    }
+
                     // Item count badge (top-right corner) showing buffer contents.
                     let total_items = ms.input_buffer.len() + ms.output_buffer.len();
                     if total_items > 0 {
