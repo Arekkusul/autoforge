@@ -506,6 +506,71 @@ fn buffer_satisfies(buffer: &[Resource], requirements: &[(Resource, u32)]) -> bo
     true
 }
 
+/// Returns the first recipe whose outputs include `resource`, if any.
+///
+/// Preference is given to the recipe with the lowest index, which corresponds to
+/// the earliest/most basic production path for that item.
+pub fn recipe_producing(resource: Resource) -> Option<RecipeId> {
+    RECIPES
+        .iter()
+        .position(|r| r.outputs.iter().any(|&(res, _)| res == resource))
+        .map(RecipeId)
+}
+
+/// Whether a resource is a raw material (mined directly, never crafted).
+///
+/// Raw materials form the leaves of the production tree and have no recipe.
+#[allow(dead_code)] // Public planner predicate; exercised by tests and callers.
+pub fn is_raw_material(resource: Resource) -> bool {
+    recipe_producing(resource).is_none()
+}
+
+/// Recursively computes the total raw-material cost to produce one unit of
+/// `resource`, expanding every intermediate recipe down to mined ores.
+///
+/// The returned map sums raw inputs (ores, coal) needed for a single output
+/// unit. Recipes that yield multiple outputs divide their input cost across the
+/// batch. A `depth` guard prevents infinite recursion on any accidental cycle.
+pub fn raw_material_cost(resource: Resource) -> std::collections::HashMap<Resource, f32> {
+    let mut acc = std::collections::HashMap::new();
+    accumulate_raw_cost(resource, 1.0, 0, &mut acc);
+    acc
+}
+
+fn accumulate_raw_cost(
+    resource: Resource,
+    quantity: f32,
+    depth: u32,
+    acc: &mut std::collections::HashMap<Resource, f32>,
+) {
+    // Guard against pathological recursion depth (e.g. a cyclic recipe set).
+    if depth > 32 {
+        *acc.entry(resource).or_insert(0.0) += quantity;
+        return;
+    }
+    match recipe_producing(resource) {
+        None => {
+            // Raw material — record it directly.
+            *acc.entry(resource).or_insert(0.0) += quantity;
+        }
+        Some(rid) => {
+            let recipe = &RECIPES[rid.0];
+            // How many of `resource` a single craft yields.
+            let per_craft = recipe
+                .outputs
+                .iter()
+                .filter(|&&(res, _)| res == resource)
+                .map(|&(_, count)| count)
+                .sum::<u32>()
+                .max(1) as f32;
+            let crafts = quantity / per_craft;
+            for &(input, count) in recipe.inputs {
+                accumulate_raw_cost(input, count as f32 * crafts, depth + 1, acc);
+            }
+        }
+    }
+}
+
 /// Consumes the required inputs from the buffer for a given recipe.
 ///
 /// Call this only after [`buffer_satisfies`] returns true.
@@ -520,5 +585,57 @@ pub fn consume_inputs(buffer: &mut Vec<Resource>, recipe: &Recipe) {
                 true
             }
         });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn raw_ores_have_no_recipe() {
+        assert!(is_raw_material(Resource::IronOre));
+        assert!(is_raw_material(Resource::CopperOre));
+        assert!(is_raw_material(Resource::Coal));
+        assert!(!is_raw_material(Resource::Gear));
+    }
+
+    #[test]
+    fn recipe_producing_finds_the_output() {
+        let rid = recipe_producing(Resource::Gear).expect("gear has a recipe");
+        assert!(RECIPES[rid.0]
+            .outputs
+            .iter()
+            .any(|&(r, _)| r == Resource::Gear));
+    }
+
+    #[test]
+    fn gear_costs_two_iron_ore() {
+        // Gear = 2 IronPlate, each IronPlate = 1 IronOre smelted.
+        let cost = raw_material_cost(Resource::Gear);
+        assert_eq!(cost.get(&Resource::IronOre).copied().unwrap_or(0.0), 2.0);
+        assert_eq!(cost.len(), 1);
+    }
+
+    #[test]
+    fn wire_batch_output_divides_input_cost() {
+        // Wire recipe: 1 CopperPlate -> 2 Wire, so one Wire = 0.5 CopperOre.
+        let cost = raw_material_cost(Resource::Wire);
+        let copper = cost.get(&Resource::CopperOre).copied().unwrap_or(0.0);
+        assert!(
+            (copper - 0.5).abs() < 1e-6,
+            "expected 0.5 copper ore, got {copper}"
+        );
+    }
+
+    #[test]
+    fn green_circuit_reduces_to_raw_ores_only() {
+        let cost = raw_material_cost(Resource::GreenCircuit);
+        for resource in cost.keys() {
+            assert!(
+                is_raw_material(*resource),
+                "{resource:?} should be a raw material at the leaves"
+            );
+        }
     }
 }

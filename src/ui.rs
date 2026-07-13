@@ -2080,33 +2080,18 @@ fn draw_recipe_browser() {
 
     // Dynamically generated from the actual RECIPES array — always complete.
     let col_name = px + 20.0;
-    let col_input = px + 180.0;
-    let col_output = px + pw - 180.0;
+    let col_input = px + 170.0;
+    let col_output = px + pw - 250.0;
+    let col_raw = px + pw - 120.0;
     let start_y = py + 75.0;
     let row_h = 18.0;
 
     // Column headers.
-    draw_text(
-        "Recipe",
-        col_name,
-        start_y - 5.0,
-        14.0,
-        Color::new(0.7, 0.7, 0.8, 0.7),
-    );
-    draw_text(
-        "Inputs",
-        col_input,
-        start_y - 5.0,
-        14.0,
-        Color::new(0.7, 0.7, 0.8, 0.7),
-    );
-    draw_text(
-        "Output",
-        col_output,
-        start_y - 5.0,
-        14.0,
-        Color::new(0.7, 0.7, 0.8, 0.7),
-    );
+    let header = Color::new(0.7, 0.7, 0.8, 0.7);
+    draw_text("Recipe", col_name, start_y - 5.0, 14.0, header);
+    draw_text("Inputs", col_input, start_y - 5.0, 14.0, header);
+    draw_text("Output", col_output, start_y - 5.0, 14.0, header);
+    draw_text("Raw ore", col_raw, start_y - 5.0, 14.0, header);
 
     for (i, r) in recipe::RECIPES.iter().enumerate() {
         let y = start_y + 10.0 + i as f32 * row_h;
@@ -2140,6 +2125,19 @@ fn draw_recipe_browser() {
             12.0,
             Color::new(0.5, 0.9, 0.5, 0.9),
         );
+
+        // Total raw-material cost of the primary output, expanded to ores.
+        if let Some(&(primary, _)) = r.outputs.first() {
+            let raw = recipe::raw_material_cost(primary);
+            let mut entries: Vec<(types::Resource, f32)> = raw.into_iter().collect();
+            entries.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+            let raw_text: String = entries
+                .iter()
+                .map(|(res, amt)| format!("{:.1}{}", amt, short_resource_name(*res)))
+                .collect::<Vec<_>>()
+                .join("+");
+            draw_text(&raw_text, col_raw, y, 11.0, Color::new(0.8, 0.7, 0.5, 0.85));
+        }
     }
 }
 
