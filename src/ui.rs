@@ -2170,6 +2170,18 @@ fn draw_research_screen(state: &GameState) {
         14.0,
         Color::new(0.6, 0.6, 0.6, 1.0),
     );
+    // Overall tech-tree completion summary.
+    draw_text(
+        &format!(
+            "Tech tree: {:.0}% complete  |  {} available now",
+            state.research.percent_complete() * 100.0,
+            state.research.available_techs().len(),
+        ),
+        px + pw - 300.0,
+        py + 55.0,
+        13.0,
+        Color::new(0.55, 0.8, 0.95, 0.9),
+    );
 
     // Current research
     if let Some(idx) = state.research.current_tech {
@@ -2270,6 +2282,16 @@ fn draw_research_screen(state: &GameState) {
             13.0,
             Color::new(0.5, 0.5, 0.6, 0.8),
         );
+        // Total science-pack cost to complete this technology.
+        if !completed {
+            draw_text(
+                &format!("{} sci", state.research.total_science_cost(i)),
+                px + pw - 70.0,
+                y,
+                12.0,
+                Color::new(0.7, 0.65, 0.45, 0.8),
+            );
+        }
 
         // Click to start research
         if can_research && !is_current {
