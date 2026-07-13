@@ -1757,6 +1757,19 @@ pub fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
         );
         sy += 20.0;
         draw_text(
+            &format!(
+                "Belt throughput: Y {:.0}/s  R {:.0}/s  B {:.0}/s",
+                types::BuildingKind::BeltYellow.belt_items_per_second(),
+                types::BuildingKind::BeltRed.belt_items_per_second(),
+                types::BuildingKind::BeltBlue.belt_items_per_second(),
+            ),
+            sx,
+            sy,
+            14.0,
+            text_dim,
+        );
+        sy += 20.0;
+        draw_text(
             &format!("Rockets launched: {}", state.stats.rockets_launched),
             sx,
             sy,
