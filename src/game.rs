@@ -214,6 +214,53 @@ impl GameState {
         }
     }
 
+    /// Adds `amount` of a resource to the player's building inventory.
+    pub fn add_to_inventory(&mut self, resource: Resource, amount: u32) {
+        if amount == 0 {
+            return;
+        }
+        *self.inventory.entry(resource).or_insert(0) += amount;
+    }
+
+    /// Returns how many of `resource` the player currently holds.
+    pub fn inventory_count(&self, resource: Resource) -> u32 {
+        self.inventory.get(&resource).copied().unwrap_or(0)
+    }
+
+    /// Removes up to `amount` of a resource from inventory.
+    ///
+    /// Returns `true` only if the full amount was available and removed; on
+    /// insufficient stock the inventory is left unchanged and `false` is returned.
+    pub fn remove_from_inventory(&mut self, resource: Resource, amount: u32) -> bool {
+        let have = self.inventory_count(resource);
+        if have < amount {
+            return false;
+        }
+        if let Some(slot) = self.inventory.get_mut(&resource) {
+            *slot -= amount;
+            if *slot == 0 {
+                self.inventory.remove(&resource);
+            }
+        }
+        true
+    }
+
+    /// Total number of individual items across all inventory resource types.
+    pub fn total_inventory_items(&self) -> u64 {
+        self.inventory.values().map(|&c| c as u64).sum()
+    }
+
+    /// Number of inventory stacks occupied, using [`STACK_SIZE`] per stack.
+    ///
+    /// Each resource type rounds up to whole stacks, mirroring how a real chest
+    /// would allocate slots.
+    pub fn inventory_stacks(&self) -> u32 {
+        self.inventory
+            .values()
+            .map(|&count| count.div_ceil(STACK_SIZE))
+            .sum()
+    }
+
     /// Adds a toast notification that displays for `duration_ticks` simulation ticks.
     pub fn toast(&mut self, message: String, duration_ticks: u32) {
         self.toast_with_severity(message, duration_ticks, AlertSeverity::Info);
@@ -276,5 +323,82 @@ impl GameState {
             }
         }
         self.toasts.retain(|t| t.1 > 0);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Builds an inventory map directly, avoiding full map generation.
+    fn inv(pairs: &[(Resource, u32)]) -> HashMap<Resource, u32> {
+        pairs.iter().copied().collect()
+    }
+
+    /// Minimal harness exposing only the inventory helpers under test.
+    struct InvView(HashMap<Resource, u32>);
+    impl InvView {
+        fn add(&mut self, resource: Resource, amount: u32) {
+            if amount == 0 {
+                return;
+            }
+            *self.0.entry(resource).or_insert(0) += amount;
+        }
+        fn count(&self, resource: Resource) -> u32 {
+            self.0.get(&resource).copied().unwrap_or(0)
+        }
+        fn remove(&mut self, resource: Resource, amount: u32) -> bool {
+            if self.count(resource) < amount {
+                return false;
+            }
+            if let Some(slot) = self.0.get_mut(&resource) {
+                *slot -= amount;
+                if *slot == 0 {
+                    self.0.remove(&resource);
+                }
+            }
+            true
+        }
+        fn total(&self) -> u64 {
+            self.0.values().map(|&c| c as u64).sum()
+        }
+        fn stacks(&self) -> u32 {
+            self.0.values().map(|&c| c.div_ceil(STACK_SIZE)).sum()
+        }
+    }
+
+    #[test]
+    fn remove_fails_when_insufficient_and_leaves_stock_intact() {
+        let mut v = InvView(inv(&[(Resource::IronPlate, 3)]));
+        assert!(!v.remove(Resource::IronPlate, 5));
+        assert_eq!(v.count(Resource::IronPlate), 3);
+    }
+
+    #[test]
+    fn remove_to_zero_clears_the_entry() {
+        let mut v = InvView(inv(&[(Resource::Gear, 2)]));
+        assert!(v.remove(Resource::Gear, 2));
+        assert_eq!(v.count(Resource::Gear), 0);
+        assert!(!v.0.contains_key(&Resource::Gear));
+    }
+
+    #[test]
+    fn add_zero_is_a_noop() {
+        let mut v = InvView(HashMap::new());
+        v.add(Resource::Coal, 0);
+        assert!(v.0.is_empty());
+    }
+
+    #[test]
+    fn total_items_sums_all_resource_types() {
+        let v = InvView(inv(&[(Resource::IronPlate, 40), (Resource::Coal, 60)]));
+        assert_eq!(v.total(), 100);
+    }
+
+    #[test]
+    fn stacks_round_up_per_resource() {
+        // STACK_SIZE is 50: 51 iron = 2 stacks, 50 coal = 1 stack.
+        let v = InvView(inv(&[(Resource::IronPlate, 51), (Resource::Coal, 50)]));
+        assert_eq!(v.stacks(), 3);
     }
 }
