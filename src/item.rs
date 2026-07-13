@@ -90,10 +90,7 @@ impl ItemPool {
     /// Returns a reference to the item if the handle is still valid.
     pub fn get(&self, id: ItemId) -> Option<&Item> {
         let i = id.index as usize;
-        if i < self.items.len()
-            && self.generations[i] == id.generation
-            && self.items[i].alive
-        {
+        if i < self.items.len() && self.generations[i] == id.generation && self.items[i].alive {
             Some(&self.items[i])
         } else {
             None
@@ -103,10 +100,7 @@ impl ItemPool {
     /// Returns a mutable reference to the item if the handle is still valid.
     pub fn get_mut(&mut self, id: ItemId) -> Option<&mut Item> {
         let i = id.index as usize;
-        if i < self.items.len()
-            && self.generations[i] == id.generation
-            && self.items[i].alive
-        {
+        if i < self.items.len() && self.generations[i] == id.generation && self.items[i].alive {
             Some(&mut self.items[i])
         } else {
             None

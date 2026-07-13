@@ -21,10 +21,11 @@ use crate::types::*;
 /// input/output buffers using special Resource variants.
 ///
 /// Fluid buildings use their machine_state buffers:
+///
 /// - PumpJack: produces items representing fluid units (1 item = 100 units)
 /// - Refinery: consumes oil items, produces petroleum/heavy oil/light oil items
 /// - Chemical Plant: consumes petroleum + other items, produces products
-
+///
 /// Ticks fluid production for pump jacks.
 ///
 /// Pump jacks work like miners but for oil — they extract crude oil items from

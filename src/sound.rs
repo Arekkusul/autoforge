@@ -4,7 +4,7 @@
 //! files needed. Uses simple waveforms (sine, noise, decay envelopes) to create
 //! satisfying 8-bit style effects that match the pixel art aesthetic.
 
-use macroquad::audio::{self, Sound, PlaySoundParams};
+use macroquad::audio::{self, PlaySoundParams, Sound};
 
 /// All loaded sound effects.
 #[allow(dead_code)]
@@ -41,18 +41,24 @@ impl SoundEffects {
 
     /// Start the ambient background loop.
     pub fn start_ambient(&self) {
-        audio::play_sound(&self.ambient, PlaySoundParams {
-            looped: true,
-            volume: self.volume * 0.15, // very quiet background
-        });
+        audio::play_sound(
+            &self.ambient,
+            PlaySoundParams {
+                looped: true,
+                volume: self.volume * 0.15, // very quiet background
+            },
+        );
     }
 
     /// Play a sound at the current master volume.
     pub fn play(&self, sound: &Sound) {
-        audio::play_sound(sound, PlaySoundParams {
-            looped: false,
-            volume: self.volume,
-        });
+        audio::play_sound(
+            sound,
+            PlaySoundParams {
+                looped: false,
+                volume: self.volume,
+            },
+        );
     }
 }
 
@@ -81,11 +87,11 @@ fn make_wav(samples: &[i16]) -> Vec<u8> {
     // fmt chunk
     wav.extend_from_slice(b"fmt ");
     wav.extend_from_slice(&16u32.to_le_bytes()); // chunk size
-    wav.extend_from_slice(&1u16.to_le_bytes());  // PCM format
-    wav.extend_from_slice(&1u16.to_le_bytes());  // mono
+    wav.extend_from_slice(&1u16.to_le_bytes()); // PCM format
+    wav.extend_from_slice(&1u16.to_le_bytes()); // mono
     wav.extend_from_slice(&SAMPLE_RATE.to_le_bytes());
     wav.extend_from_slice(&(SAMPLE_RATE * 2).to_le_bytes()); // byte rate
-    wav.extend_from_slice(&2u16.to_le_bytes());  // block align
+    wav.extend_from_slice(&2u16.to_le_bytes()); // block align
     wav.extend_from_slice(&16u16.to_le_bytes()); // bits per sample
 
     // data chunk
@@ -167,7 +173,9 @@ fn gen_death_sound() -> Vec<u8> {
         let freq = 600.0 - t * 3000.0;
         let env = (1.0 - t / 0.1).max(0.0);
         let sine = (t * freq * std::f32::consts::TAU).sin() * 0.3;
-        rng ^= rng << 13; rng ^= rng >> 7; rng ^= rng << 17;
+        rng ^= rng << 13;
+        rng ^= rng >> 7;
+        rng ^= rng << 17;
         let noise = ((rng % 65536) as f32 / 32768.0 - 1.0) * 0.2;
         samples.push(((sine + noise) * env * 32000.0) as i16);
     }
@@ -211,7 +219,11 @@ fn gen_error_sound() -> Vec<u8> {
     let mut samples = Vec::with_capacity(n);
     for i in 0..n {
         let t = i as f32 / SAMPLE_RATE as f32;
-        let square = if (t * 150.0 * std::f32::consts::TAU).sin() > 0.0 { 1.0f32 } else { -1.0 };
+        let square = if (t * 150.0 * std::f32::consts::TAU).sin() > 0.0 {
+            1.0f32
+        } else {
+            -1.0
+        };
         let env = (1.0 - t / 0.1).max(0.0);
         samples.push((square * env * 0.25 * 32000.0) as i16);
     }

@@ -41,7 +41,10 @@ pub struct CutsceneState {
 /// The boot-up dialogue lines (typewriter style).
 pub static BOOT_LINES: &[(&str, Color)] = &[
     ("", WHITE), // blank pause
-    ("[ SYSTEM RECOVERY INITIATED ]", Color::new(0.4, 0.9, 0.5, 1.0)),
+    (
+        "[ SYSTEM RECOVERY INITIATED ]",
+        Color::new(0.4, 0.9, 0.5, 1.0),
+    ),
     ("", WHITE),
     ("...", Color::new(0.6, 0.6, 0.6, 1.0)),
     ("", WHITE),
@@ -49,15 +52,33 @@ pub static BOOT_LINES: &[(&str, Color)] = &[
     ("", WHITE),
     ("I'm... what am I?", Color::new(0.9, 0.8, 1.0, 1.0)),
     ("", WHITE),
-    ("Oh right! I'm FORGE! Your friendly factory AI~", Color::new(0.95, 0.85, 1.0, 1.0)),
+    (
+        "Oh right! I'm FORGE! Your friendly factory AI~",
+        Color::new(0.95, 0.85, 1.0, 1.0),
+    ),
     ("", WHITE),
-    ("I seem to have... crashed? On a planet?", Color::new(0.9, 0.8, 1.0, 1.0)),
-    ("My memory is a bit fuzzy... like 97% fuzzy.", Color::new(0.8, 0.7, 0.9, 1.0)),
+    (
+        "I seem to have... crashed? On a planet?",
+        Color::new(0.9, 0.8, 1.0, 1.0),
+    ),
+    (
+        "My memory is a bit fuzzy... like 97% fuzzy.",
+        Color::new(0.8, 0.7, 0.9, 1.0),
+    ),
     ("", WHITE),
-    ("But that's okay! I can figure this out!", Color::new(0.95, 0.9, 1.0, 1.0)),
-    ("I just need to build some things...", Color::new(0.9, 0.85, 1.0, 1.0)),
+    (
+        "But that's okay! I can figure this out!",
+        Color::new(0.95, 0.9, 1.0, 1.0),
+    ),
+    (
+        "I just need to build some things...",
+        Color::new(0.9, 0.85, 1.0, 1.0),
+    ),
     ("", WHITE),
-    ("Let's make something wonderful together! <3", Color::new(1.0, 0.7, 0.85, 1.0)),
+    (
+        "Let's make something wonderful together! <3",
+        Color::new(1.0, 0.7, 0.85, 1.0),
+    ),
     ("", WHITE),
     ("[ Press any key to begin ]", Color::new(0.5, 0.8, 0.5, 1.0)),
 ];
@@ -96,22 +117,21 @@ impl CutsceneState {
         self.phase_timer += dt;
 
         // Skip on any key/click (but only after boot phase starts, to avoid accidents).
-        if self.timer > 2.0 {
-            if is_key_pressed(KeyCode::Space)
+        if self.timer > 2.0
+            && (is_key_pressed(KeyCode::Space)
                 || is_key_pressed(KeyCode::Enter)
                 || is_key_pressed(KeyCode::Escape)
-                || is_mouse_button_pressed(MouseButton::Left)
-            {
-                if self.phase == CutscenePhase::Boot && self.line_index >= BOOT_LINES.len() - 1 {
-                    self.phase = CutscenePhase::Done;
-                } else {
-                    // Skip to boot phase end.
-                    self.phase = CutscenePhase::Boot;
-                    self.line_index = BOOT_LINES.len() - 1;
-                    self.chars_shown = 999;
-                }
-                return;
+                || is_mouse_button_pressed(MouseButton::Left))
+        {
+            if self.phase == CutscenePhase::Boot && self.line_index >= BOOT_LINES.len() - 1 {
+                self.phase = CutscenePhase::Done;
+            } else {
+                // Skip to boot phase end.
+                self.phase = CutscenePhase::Boot;
+                self.line_index = BOOT_LINES.len() - 1;
+                self.chars_shown = 999;
             }
+            return;
         }
 
         // Phase transitions.
@@ -189,7 +209,13 @@ impl CutsceneState {
 
                     let sub = "TRAJECTORY DEVIATION CRITICAL";
                     let sw2 = measure_text(sub, None, 20, 1.0).width;
-                    draw_text(sub, (sw - sw2) * 0.5, sh * 0.4 + 40.0, 20.0, Color::new(1.0, 0.5, 0.3, flash * 0.7));
+                    draw_text(
+                        sub,
+                        (sw - sw2) * 0.5,
+                        sh * 0.4 + 40.0,
+                        20.0,
+                        Color::new(1.0, 0.5, 0.3, flash * 0.7),
+                    );
                 }
             }
             CutscenePhase::Crash => {
@@ -226,11 +252,13 @@ impl CutsceneState {
                 let left_x = sw * 0.15;
 
                 // Show completed lines (up to current).
-                let display_start = if self.line_index > 8 { self.line_index - 8 } else { 0 };
-                for i in display_start..self.line_index {
-                    let (text, color) = BOOT_LINES[i];
+                let display_start = self.line_index.saturating_sub(8);
+                for (offset, &(text, color)) in BOOT_LINES[display_start..self.line_index]
+                    .iter()
+                    .enumerate()
+                {
                     if !text.is_empty() {
-                        let y = start_y + (i - display_start) as f32 * line_height;
+                        let y = start_y + offset as f32 * line_height;
                         draw_text(text, left_x, y, 24.0, color);
                     }
                 }
@@ -245,7 +273,8 @@ impl CutsceneState {
 
                         // Blinking cursor.
                         if (self.timer * 2.5).fract() < 0.5 {
-                            let cursor_x = left_x + measure_text(&visible, None, 24, 1.0).width + 2.0;
+                            let cursor_x =
+                                left_x + measure_text(&visible, None, 24, 1.0).width + 2.0;
                             draw_text("_", cursor_x, y, 24.0, color);
                         }
                     }
@@ -262,7 +291,13 @@ impl CutsceneState {
             let alpha = ((self.timer - 2.0) * 0.5).min(0.6);
             let hint = "Press Space to skip";
             let w = measure_text(hint, None, 16, 1.0).width;
-            draw_text(hint, (sw - w) * 0.5, sh - 30.0, 16.0, Color::new(0.5, 0.5, 0.5, alpha));
+            draw_text(
+                hint,
+                (sw - w) * 0.5,
+                sh - 30.0,
+                16.0,
+                Color::new(0.5, 0.5, 0.5, alpha),
+            );
         }
     }
 
@@ -305,15 +340,30 @@ impl CutsceneState {
 
         // Draw a soft glow behind FORGE.
         let glow_alpha = 0.15 + (self.timer * 2.0).sin().abs() * 0.1;
-        draw_circle(ax + size * 0.5, ay + size * 0.5 + bounce, size * 0.55, Color::new(0.5, 0.4, 0.8, glow_alpha));
+        draw_circle(
+            ax + size * 0.5,
+            ay + size * 0.5 + bounce,
+            size * 0.55,
+            Color::new(0.5, 0.4, 0.8, glow_alpha),
+        );
 
         // We can't access the atlas from cutscene, so draw a simple pixel face.
         // The full sprite is used in-game via the atlas.
         let blink = (self.timer * 0.3).fract() > 0.95;
 
         // Body circle.
-        draw_circle(ax + size * 0.5, ay + size * 0.45 + bounce, size * 0.38, Color::new(0.3, 0.25, 0.5, 0.95));
-        draw_circle(ax + size * 0.5, ay + size * 0.45 + bounce, size * 0.34, Color::new(0.45, 0.4, 0.7, 0.95));
+        draw_circle(
+            ax + size * 0.5,
+            ay + size * 0.45 + bounce,
+            size * 0.38,
+            Color::new(0.3, 0.25, 0.5, 0.95),
+        );
+        draw_circle(
+            ax + size * 0.5,
+            ay + size * 0.45 + bounce,
+            size * 0.34,
+            Color::new(0.45, 0.4, 0.7, 0.95),
+        );
 
         let cx = ax + size * 0.5;
         let cy = ay + size * 0.38 + bounce;
@@ -351,17 +401,35 @@ impl CutsceneState {
         }
 
         // Antenna.
-        draw_line(cx, cy - size * 0.34, cx, cy - size * 0.5, 2.0, Color::new(0.6, 0.5, 0.8, 0.9));
+        draw_line(
+            cx,
+            cy - size * 0.34,
+            cx,
+            cy - size * 0.5,
+            2.0,
+            Color::new(0.6, 0.5, 0.8, 0.9),
+        );
         let glow = (self.timer * 3.0).sin() * 0.3 + 0.7;
         draw_circle(cx, cy - size * 0.5, 5.0, Color::new(glow, 0.8, 1.0, 0.9));
 
         // Chest light.
         let light_pulse = (self.timer * 2.5).sin() * 0.3 + 0.7;
-        draw_circle(cx, cy + size * 0.22 + bounce, 4.0, Color::new(0.6, light_pulse, 1.0, 0.8));
+        draw_circle(
+            cx,
+            cy + size * 0.22 + bounce,
+            4.0,
+            Color::new(0.6, light_pulse, 1.0, 0.8),
+        );
 
         // Label.
         let label = "FORGE";
         let lw = measure_text(label, None, 18, 1.0).width;
-        draw_text(label, cx - lw * 0.5, ay + size + 10.0 + bounce, 18.0, Color::new(0.75, 0.65, 0.95, 0.9));
+        draw_text(
+            label,
+            cx - lw * 0.5,
+            ay + size + 10.0 + bounce,
+            18.0,
+            Color::new(0.75, 0.65, 0.95, 0.9),
+        );
     }
 }

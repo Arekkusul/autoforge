@@ -83,7 +83,9 @@ pub fn generate_map(grid: &mut Grid, seed: u64) -> Vec<GridPos> {
         let dy = cy + (angle.sin() * dist) as i32;
         for oy in -1..=1 {
             for ox in -1..=1 {
-                if rng.next_f32() > 0.5 { continue; }
+                if rng.next_f32() > 0.5 {
+                    continue;
+                }
                 let pos = GridPos::new(dx + ox, dy + oy);
                 if let Some(tile) = grid.get_tile_mut(pos) {
                     if tile.terrain == Terrain::Grass && tile.deposit.is_none() {
@@ -120,10 +122,10 @@ pub fn generate_map(grid: &mut Grid, seed: u64) -> Vec<GridPos> {
     // --- Generate ore deposits (2×2 nodes) ---
     // Starter patches: ALL within 8 tiles of center so player can reach everything easily.
     // Arranged in a diamond pattern around the spawn point.
-    place_ore_cluster_2x2(grid, &mut rng, OreDeposit::Iron, cx - 7, cy - 5, 4, 10000);  // NW
+    place_ore_cluster_2x2(grid, &mut rng, OreDeposit::Iron, cx - 7, cy - 5, 4, 10000); // NW
     place_ore_cluster_2x2(grid, &mut rng, OreDeposit::Copper, cx + 6, cy - 4, 3, 8000); // NE
-    place_ore_cluster_2x2(grid, &mut rng, OreDeposit::Coal, cx - 5, cy + 5, 3, 8000);   // SW
-    place_ore_cluster_2x2(grid, &mut rng, OreDeposit::Stone, cx + 5, cy + 6, 3, 6000);  // SE
+    place_ore_cluster_2x2(grid, &mut rng, OreDeposit::Coal, cx - 5, cy + 5, 3, 8000); // SW
+    place_ore_cluster_2x2(grid, &mut rng, OreDeposit::Stone, cx + 5, cy + 6, 3, 6000); // SE
 
     // Common ores — scattered abundantly across the map.
     let common_ores = [

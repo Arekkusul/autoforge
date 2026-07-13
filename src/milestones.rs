@@ -87,7 +87,11 @@ pub static MILESTONES: &[Milestone] = &[
         hint: "Build an Assembler (5), click it to set a recipe (Gears are great!)",
         phase: Phase::Early,
         check: MilestoneCheck::ItemsCrafted(100),
-        reward: &[(Resource::Gear, 20), (Resource::Wire, 20), (Resource::GreenCircuit, 10)],
+        reward: &[
+            (Resource::Gear, 20),
+            (Resource::Wire, 20),
+            (Resource::GreenCircuit, 10),
+        ],
     },
     Milestone {
         name: "First Research",
@@ -120,7 +124,11 @@ pub static MILESTONES: &[Milestone] = &[
         hint: "Scale up! More miners, more furnaces, more assemblers. Use Storage Chests (9).",
         phase: Phase::Mid,
         check: MilestoneCheck::ItemsCrafted(500),
-        reward: &[(Resource::GreenCircuit, 30), (Resource::Gear, 30), (Resource::IronPlate, 50)],
+        reward: &[
+            (Resource::GreenCircuit, 30),
+            (Resource::Gear, 30),
+            (Resource::IronPlate, 50),
+        ],
     },
     Milestone {
         name: "Advanced Circuits",
@@ -166,7 +174,8 @@ pub static MILESTONES: &[Milestone] = &[
     Milestone {
         name: "Industrial Scale",
         description: "Craft 5,000 items",
-        hint: "Blue Belts, Assembler T3, Chemical Plants (C). Expand your build zone with research!",
+        hint:
+            "Blue Belts, Assembler T3, Chemical Plants (C). Expand your build zone with research!",
         phase: Phase::Late,
         check: MilestoneCheck::ItemsCrafted(5000),
         reward: &[(Resource::BlueCircuit, 20), (Resource::SpeedModule, 5)],
@@ -202,18 +211,21 @@ pub static MILESTONES: &[Milestone] = &[
         hint: "This is it! The final push to restore FORGE's consciousness!",
         phase: Phase::Endgame,
         check: MilestoneCheck::ItemsCrafted(50000),
-        reward: &[(Resource::RocketPart, 50), (Resource::SpeedModule, 20), (Resource::BlueCircuit, 50)],
+        reward: &[
+            (Resource::RocketPart, 50),
+            (Resource::SpeedModule, 20),
+            (Resource::BlueCircuit, 50),
+        ],
     },
 ];
 
 /// Returns the index of the next uncompleted milestone (the player's current goal).
 pub fn next_milestone(completed: &[bool]) -> Option<usize> {
-    for (i, _) in MILESTONES.iter().enumerate() {
-        if !completed.get(i).copied().unwrap_or(true) {
-            return Some(i);
-        }
-    }
-    None
+    MILESTONES
+        .iter()
+        .enumerate()
+        .map(|(i, _)| i)
+        .find(|&i| !completed.get(i).copied().unwrap_or(true))
 }
 
 /// Checks milestones and returns newly completed ones (indices).

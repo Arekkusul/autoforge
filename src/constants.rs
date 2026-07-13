@@ -127,6 +127,8 @@ pub const ROBOPORT_POWER_DRAW: f32 = 500.0;
 pub const BEACON_POWER_DRAW: f32 = 480.0;
 /// Base power draw of a rocket silo (kW).
 pub const ROCKET_SILO_POWER_DRAW: f32 = 4000.0;
+/// Rocket parts required per launch.
+pub const ROCKET_PARTS_PER_LAUNCH: usize = 100;
 
 // ---------------------------------------------------------------------------
 // Day / night cycle

@@ -215,10 +215,10 @@ impl OreDeposit {
             OreDeposit::Coal => Some(Resource::Coal),
             OreDeposit::Stone => Some(Resource::Stone),
             OreDeposit::Uranium => Some(Resource::UraniumOre),
-            OreDeposit::Tin => Some(Resource::IronOre),      // placeholder until TinOre added
-            OreDeposit::Gold => Some(Resource::CopperOre),   // placeholder until GoldOre added
-            OreDeposit::Sulfur => Some(Resource::Stone),     // placeholder until SulfurOre added
-            OreDeposit::Crystal => Some(Resource::Stone),    // placeholder until Crystal added
+            OreDeposit::Tin => Some(Resource::IronOre), // placeholder until TinOre added
+            OreDeposit::Gold => Some(Resource::CopperOre), // placeholder until GoldOre added
+            OreDeposit::Sulfur => Some(Resource::Stone), // placeholder until SulfurOre added
+            OreDeposit::Crystal => Some(Resource::Stone), // placeholder until Crystal added
             OreDeposit::Oil => None,
         }
     }
@@ -512,6 +512,45 @@ impl GridPos {
         let dx = (self.x - other.x) as f32;
         let dy = (self.y - other.y) as f32;
         (dx * dx + dy * dy).sqrt()
+    }
+}
+
+/// Severity level for toast notifications.
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+pub enum AlertSeverity {
+    /// Default: dark background, white text.
+    Info,
+    /// Amber background, yellow text — non-critical problems.
+    Warning,
+    /// Red background, red-tinted text — urgent problems.
+    Critical,
+}
+
+/// Alert categories for cooldown-based deduplication.
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+pub enum AlertKind {
+    /// Power satisfaction < 50%.
+    PowerBrownout,
+    /// Power satisfaction < 10% with nonzero demand.
+    PowerBlackout,
+    /// Gun turret(s) with <= 2 ammo.
+    TurretAmmoLow,
+    /// Gun turret(s) with 0 ammo while enemies are alive.
+    TurretAmmoEmpty,
+    /// Miner(s) sitting on depleted ore deposits.
+    MinerDepleted,
+}
+
+impl AlertKind {
+    /// Minimum ticks between repeated alerts of the same kind.
+    pub const fn cooldown_ticks(self) -> u64 {
+        match self {
+            AlertKind::PowerBrownout => 200,
+            AlertKind::PowerBlackout => 200,
+            AlertKind::TurretAmmoLow => 400,
+            AlertKind::TurretAmmoEmpty => 200,
+            AlertKind::MinerDepleted => 600,
+        }
     }
 }
 

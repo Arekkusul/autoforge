@@ -7,7 +7,7 @@
 //!
 //! Miners are a special case — they don't consume items, they extract from the tile's deposit.
 
-use crate::building::Buildings;
+use crate::building::{self, Buildings};
 use crate::constants::*;
 use crate::game::GameStats;
 use crate::grid::Grid;
@@ -69,7 +69,9 @@ pub fn tick_machines(
             // If no coal available, PAUSE (don't lose progress) — resume when coal arrives.
             if kind.needs_fuel() {
                 if ms.fuel_ticks == 0 {
-                    if let Some(coal_idx) = ms.input_buffer.iter().position(|&r| r == Resource::Coal) {
+                    if let Some(coal_idx) =
+                        ms.input_buffer.iter().position(|&r| r == Resource::Coal)
+                    {
                         ms.input_buffer.remove(coal_idx);
                         ms.fuel_ticks = COAL_FUEL_TICKS;
                     } else {
@@ -85,11 +87,27 @@ pub fn tick_machines(
                 // Crafting complete — push outputs.
                 if let Some(rid) = ms.selected_recipe {
                     let recipe = &RECIPES[rid.0];
+                    let (_, _, productivity) = building::module_effects(&ms.modules);
+                    let tick = stats.total_ticks;
                     for &(resource, count) in recipe.outputs {
                         for _ in 0..count {
                             if ms.output_buffer.len() < MACHINE_BUFFER_CAP {
                                 ms.output_buffer.push(resource);
                                 stats.items_crafted += 1;
+                                stats.production_log.push((resource, tick));
+                            }
+                            // Productivity bonus: chance of extra output per item.
+                            if productivity > 0.0 {
+                                let roll = ((bid.index as u64).wrapping_mul(31)
+                                    + stats.items_crafted)
+                                    % 1000;
+                                if (roll as f32) < productivity * 1000.0
+                                    && ms.output_buffer.len() < MACHINE_BUFFER_CAP
+                                {
+                                    ms.output_buffer.push(resource);
+                                    stats.items_crafted += 1;
+                                    stats.production_log.push((resource, tick));
+                                }
                             }
                         }
                     }
@@ -120,27 +138,33 @@ pub fn tick_machines(
             }
         }
 
-        if let Some(rid) = recipe::find_matching_recipe(kind, &ms.input_buffer, ms.selected_recipe) {
+        if let Some(rid) = recipe::find_matching_recipe(kind, &ms.input_buffer, ms.selected_recipe)
+        {
             let recipe = &RECIPES[rid.0];
             recipe::consume_inputs(&mut ms.input_buffer, recipe);
 
             // Lock assemblers to the first recipe they craft (prevents wrong-item bugs).
-            if ms.selected_recipe.is_none() && (kind == BuildingKind::AssemblerT1
-                || kind == BuildingKind::AssemblerT2
-                || kind == BuildingKind::AssemblerT3
-                || kind == BuildingKind::ChemicalPlant)
+            if ms.selected_recipe.is_none()
+                && (kind == BuildingKind::AssemblerT1
+                    || kind == BuildingKind::AssemblerT2
+                    || kind == BuildingKind::AssemblerT3
+                    || kind == BuildingKind::ChemicalPlant)
             {
                 ms.selected_recipe = Some(rid);
             }
 
             // Apply speed based on machine tier.
-            let ticks = match kind {
+            let base_ticks = match kind {
                 BuildingKind::SteelFurnace => recipe.base_ticks * 2 / 3, // 1.5× speed
                 BuildingKind::ElectricFurnace => recipe.base_ticks / 2,  // 2× speed
                 BuildingKind::AssemblerT2 => recipe.base_ticks * 3 / 4,  // 1.33× speed
                 BuildingKind::AssemblerT3 => recipe.base_ticks / 2,      // 2× speed
                 _ => recipe.base_ticks,
             };
+
+            // Apply module speed modifier (higher speed_mult = faster = fewer ticks).
+            let (speed_mult, _, _) = building::module_effects(&ms.modules);
+            let ticks = (base_ticks as f32 / speed_mult) as u32;
 
             ms.progress_ticks = ticks.max(1);
             ms.total_ticks = ticks.max(1);
@@ -210,6 +234,7 @@ fn tick_miner(
                         if ms.output_buffer.len() < MACHINE_BUFFER_CAP {
                             ms.output_buffer.push(resource);
                             stats.items_crafted += 1;
+                            stats.production_log.push((resource, stats.total_ticks));
                         }
                     }
                 }
@@ -253,11 +278,7 @@ fn tick_miner(
 /// This runs for non-miner machines (miners handle ejection internally).
 /// Machines try their facing direction first, then check all 4 neighbors
 /// for any belt with space. This makes placement more forgiving.
-pub fn tick_machine_output(
-    grid: &mut Grid,
-    buildings: &mut Buildings,
-    items: &mut ItemPool,
-) {
+pub fn tick_machine_output(grid: &mut Grid, buildings: &mut Buildings, items: &mut ItemPool) {
     let ids = buildings.alive_ids();
 
     for bid in ids {
@@ -297,11 +318,14 @@ pub fn tick_machine_output(
 
         // Eject up to 4 items per tick to prevent output backup.
         for _ in 0..4 {
-            let has_output = buildings.get(bid)
+            let has_output = buildings
+                .get(bid)
                 .and_then(|b| b.machine_state.as_ref())
                 .map(|ms| !ms.output_buffer.is_empty())
                 .unwrap_or(false);
-            if !has_output { break; }
+            if !has_output {
+                break;
+            }
 
             let mut eject_pos = None;
             for dir in &directions {

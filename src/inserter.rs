@@ -146,7 +146,6 @@ pub fn tick_inserters(grid: &mut Grid, buildings: &mut Buildings, items: &mut It
             }
         }
     }
-
 }
 
 /// Tries to pick one item from a source tile (belt, machine output buffer, or ground).
