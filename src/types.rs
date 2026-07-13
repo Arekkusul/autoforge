@@ -186,6 +186,24 @@ impl Resource {
             Resource::Grenade => "Grenade",
         }
     }
+
+    /// Number of ticks this resource burns for when used as solid fuel in a
+    /// furnace, boiler, or steam engine. Returns `0` for non-fuel resources.
+    ///
+    /// Coal is the baseline. Solid rocket fuel packs far more energy, letting a
+    /// single unit power a machine for much longer.
+    pub const fn fuel_value_ticks(self) -> u32 {
+        match self {
+            Resource::Coal => 120,
+            Resource::RocketFuel => 1200,
+            _ => 0,
+        }
+    }
+
+    /// Whether this resource can be burned as solid fuel.
+    pub const fn is_solid_fuel(self) -> bool {
+        self.fuel_value_ticks() > 0
+    }
 }
 
 /// Natural resource deposit type found on terrain tiles.
