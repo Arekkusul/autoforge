@@ -144,7 +144,11 @@ pub static TECHNOLOGIES: &[Technology] = &[
     // 14: Laser Turret
     Technology {
         name: "Laser Turret",
-        science_cost: &[Resource::ScienceRed, Resource::ScienceGreen, Resource::ScienceBlue],
+        science_cost: &[
+            Resource::ScienceRed,
+            Resource::ScienceGreen,
+            Resource::ScienceBlue,
+        ],
         units_needed: 30,
         description: "Unlocks Laser Turret (uses power, no ammo)",
         prerequisites: &[7, 10],
@@ -184,7 +188,11 @@ pub static TECHNOLOGIES: &[Technology] = &[
     // 19: Nuclear Power
     Technology {
         name: "Nuclear Power",
-        science_cost: &[Resource::ScienceRed, Resource::ScienceGreen, Resource::ScienceBlue],
+        science_cost: &[
+            Resource::ScienceRed,
+            Resource::ScienceGreen,
+            Resource::ScienceBlue,
+        ],
         units_needed: 60,
         description: "Unlocks Nuclear Reactor (40000 kW!)",
         prerequisites: &[7, 11],
@@ -192,7 +200,11 @@ pub static TECHNOLOGIES: &[Technology] = &[
     // 20: Rocketry
     Technology {
         name: "Rocketry",
-        science_cost: &[Resource::ScienceRed, Resource::ScienceGreen, Resource::ScienceBlue],
+        science_cost: &[
+            Resource::ScienceRed,
+            Resource::ScienceGreen,
+            Resource::ScienceBlue,
+        ],
         units_needed: 100,
         description: "Unlocks Rocket Silo + Rocket Parts",
         prerequisites: &[7, 14],
@@ -200,7 +212,11 @@ pub static TECHNOLOGIES: &[Technology] = &[
     // 21: Robot Logistics
     Technology {
         name: "Robot Logistics",
-        science_cost: &[Resource::ScienceRed, Resource::ScienceGreen, Resource::ScienceBlue],
+        science_cost: &[
+            Resource::ScienceRed,
+            Resource::ScienceGreen,
+            Resource::ScienceBlue,
+        ],
         units_needed: 50,
         description: "Unlocks Roboport + Construction Bots",
         prerequisites: &[8, 7],
@@ -208,7 +224,11 @@ pub static TECHNOLOGIES: &[Technology] = &[
     // 22: Assembler T3
     Technology {
         name: "Assembler T3",
-        science_cost: &[Resource::ScienceRed, Resource::ScienceGreen, Resource::ScienceBlue],
+        science_cost: &[
+            Resource::ScienceRed,
+            Resource::ScienceGreen,
+            Resource::ScienceBlue,
+        ],
         units_needed: 40,
         description: "Unlocks Assembler Tier 3 (2x speed)",
         prerequisites: &[15],
@@ -224,7 +244,11 @@ pub static TECHNOLOGIES: &[Technology] = &[
     // 24: Mining Productivity 2 (infinite-style, expensive)
     Technology {
         name: "Mining Productivity 2",
-        science_cost: &[Resource::ScienceRed, Resource::ScienceGreen, Resource::ScienceBlue],
+        science_cost: &[
+            Resource::ScienceRed,
+            Resource::ScienceGreen,
+            Resource::ScienceBlue,
+        ],
         units_needed: 100,
         description: "Miners +25% output (stacks with previous)",
         prerequisites: &[16],
@@ -232,7 +256,11 @@ pub static TECHNOLOGIES: &[Technology] = &[
     // 25: Turret Damage 2
     Technology {
         name: "Turret Damage 2",
-        science_cost: &[Resource::ScienceRed, Resource::ScienceGreen, Resource::ScienceBlue],
+        science_cost: &[
+            Resource::ScienceRed,
+            Resource::ScienceGreen,
+            Resource::ScienceBlue,
+        ],
         units_needed: 80,
         description: "All turrets deal +50% damage",
         prerequisites: &[14],
@@ -248,7 +276,11 @@ pub static TECHNOLOGIES: &[Technology] = &[
     // 27: FORGE Consciousness (endgame research — very expensive)
     Technology {
         name: "FORGE Consciousness",
-        science_cost: &[Resource::ScienceRed, Resource::ScienceGreen, Resource::ScienceBlue],
+        science_cost: &[
+            Resource::ScienceRed,
+            Resource::ScienceGreen,
+            Resource::ScienceBlue,
+        ],
         units_needed: 200,
         description: "Restore full consciousness. The final goal.",
         prerequisites: &[19, 20],
@@ -286,7 +318,9 @@ impl ResearchState {
             return false;
         }
         let tech = &TECHNOLOGIES[tech_idx];
-        tech.prerequisites.iter().all(|&prereq| self.completed[prereq])
+        tech.prerequisites
+            .iter()
+            .all(|&prereq| self.completed[prereq])
     }
 
     /// Sets the next technology to research.
@@ -333,9 +367,10 @@ pub fn tick_labs(buildings: &mut Buildings, research: &mut ResearchState) {
         }
 
         // Check if lab has all required science packs.
-        let has_all = tech.science_cost.iter().all(|&req| {
-            ms.input_buffer.iter().any(|&r| r == req)
-        });
+        let has_all = tech
+            .science_cost
+            .iter()
+            .all(|&req| ms.input_buffer.contains(&req));
 
         if !has_all {
             continue;

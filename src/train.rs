@@ -115,9 +115,17 @@ pub fn tick_trains(_grid: &Grid, _buildings: &Buildings, trains: &mut Trains) {
 
             // Update direction for rendering.
             if nx.abs() > ny.abs() {
-                train.direction = if nx > 0.0 { Direction::East } else { Direction::West };
+                train.direction = if nx > 0.0 {
+                    Direction::East
+                } else {
+                    Direction::West
+                };
             } else {
-                train.direction = if ny > 0.0 { Direction::South } else { Direction::North };
+                train.direction = if ny > 0.0 {
+                    Direction::South
+                } else {
+                    Direction::North
+                };
             }
         }
     }

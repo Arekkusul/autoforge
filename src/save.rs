@@ -55,6 +55,8 @@ pub struct SaveData {
     pub milestones_completed: Vec<bool>,
     #[serde(default)]
     pub tutorial_step: u32,
+    #[serde(default)]
+    pub blueprint_library: Vec<(String, Vec<(i32, i32, BuildingKind, Direction)>)>,
 }
 
 /// Serialized tile (only non-default tiles are saved for efficiency).
@@ -84,6 +86,8 @@ pub struct SaveBuilding {
     pub total_ticks: u32,
     pub fuel_ticks: u32,
     pub selected_recipe: Option<usize>,
+    #[serde(default)]
+    pub modules: Vec<Resource>,
 }
 
 /// Serialized item on a belt.
@@ -136,7 +140,8 @@ pub fn save_game(state: &GameState) -> bool {
         build_radius: state.build_radius,
         game_won: state.game_won,
         milestones_completed: state.milestones_completed.clone(),
-        tutorial_step: state.tutorial_step as u32,
+        tutorial_step: state.tutorial_step,
+        blueprint_library: state.blueprint_library.clone(),
     };
 
     // Save tiles that differ from default (have deposits, pollution, or non-grass terrain).
@@ -179,6 +184,7 @@ pub fn save_game(state: &GameState) -> bool {
             total_ticks: ms.map(|m| m.total_ticks).unwrap_or(0),
             fuel_ticks: ms.map(|m| m.fuel_ticks).unwrap_or(0),
             selected_recipe: ms.and_then(|m| m.selected_recipe.map(|r| r.0)),
+            modules: ms.map(|m| m.modules.clone()).unwrap_or_default(),
         });
     }
 
@@ -193,22 +199,19 @@ pub fn save_game(state: &GameState) -> bool {
     }
 
     // Save as binary (bincode) — atomic write via temp file + rename.
-    match bincode::serialize(&save) {
-        Ok(bytes) => {
-            let temp = save_path().with_extension("tmp");
-            if fs::write(&temp, &bytes).is_ok() {
-                if fs::rename(&temp, save_path()).is_ok() {
-                    return true;
-                }
-                // Rename failed — try direct write as fallback.
-                let _ = fs::remove_file(&temp);
-            }
-            // Fallback: direct write (less safe but works on all platforms).
-            if fs::write(save_path(), bytes).is_ok() {
+    if let Ok(bytes) = bincode::serialize(&save) {
+        let temp = save_path().with_extension("tmp");
+        if fs::write(&temp, &bytes).is_ok() {
+            if fs::rename(&temp, save_path()).is_ok() {
                 return true;
             }
+            // Rename failed — try direct write as fallback.
+            let _ = fs::remove_file(&temp);
         }
-        Err(_) => {}
+        // Fallback: direct write (less safe but works on all platforms).
+        if fs::write(save_path(), bytes).is_ok() {
+            return true;
+        }
     }
     false
 }
@@ -247,8 +250,8 @@ pub fn load_game(state: &mut GameState) -> bool {
     // Rebuild buildings.
     let mut buildings = Buildings::new();
     for sb in &save.buildings {
-        let needs_ms = !sb.kind.is_belt()
-            && !matches!(sb.kind, BuildingKind::Wall | BuildingKind::Gate);
+        let needs_ms =
+            !sb.kind.is_belt() && !matches!(sb.kind, BuildingKind::Wall | BuildingKind::Gate);
 
         let b = Building {
             kind: sb.kind,
@@ -261,7 +264,11 @@ pub fn load_game(state: &mut GameState) -> bool {
                     progress_ticks: sb.progress_ticks,
                     total_ticks: sb.total_ticks,
                     fuel_ticks: sb.fuel_ticks,
-                    selected_recipe: sb.selected_recipe.filter(|&idx| idx < crate::recipe::RECIPES.len()).map(RecipeId),
+                    selected_recipe: sb
+                        .selected_recipe
+                        .filter(|&idx| idx < crate::recipe::RECIPES.len())
+                        .map(RecipeId),
+                    modules: sb.modules.clone(),
                 })
             } else {
                 None
@@ -315,7 +322,11 @@ pub fn load_game(state: &mut GameState) -> bool {
     state.items = items;
     state.stats = save.stats;
     state.evolution = save.evolution;
-    state.nests = save.nests.iter().map(|&(x, y)| GridPos::new(x, y)).collect();
+    state.nests = save
+        .nests
+        .iter()
+        .map(|&(x, y)| GridPos::new(x, y))
+        .collect();
     state.seed = save.seed;
 
     // Restore v2 fields (gracefully handles old saves via serde defaults).
@@ -330,7 +341,8 @@ pub fn load_game(state: &mut GameState) -> bool {
         let mut completed = save.research_completed;
         completed.resize(crate::research::TECHNOLOGIES.len(), false);
         state.research.completed = completed;
-        state.research.current_tech = save.research_current
+        state.research.current_tech = save
+            .research_current
             .filter(|&idx| idx < crate::research::TECHNOLOGIES.len());
         state.research.progress = save.research_progress;
     }
@@ -365,6 +377,9 @@ pub fn load_game(state: &mut GameState) -> bool {
         state.tutorial_step = save.tutorial_step;
         state.show_tutorial = state.tutorial_step < 6;
     }
+
+    // Blueprint library.
+    state.blueprint_library = save.blueprint_library;
 
     true
 }

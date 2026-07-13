@@ -57,7 +57,7 @@ pub fn tick_splitters(grid: &mut Grid, buildings: &mut Buildings, items: &mut It
                 .map(|ms| ms.fuel_ticks) // reuse fuel_ticks as counter
                 .unwrap_or(0);
 
-            let target = if counter % 2 == 0 {
+            let target = if counter.is_multiple_of(2) {
                 out_straight
             } else {
                 out_right

@@ -28,84 +28,84 @@ pub static PALETTE: [(u8, u8, u8, u8); 64] = [
     // 0: Transparent
     (0, 0, 0, 0),
     // 1-4: Neutral grays (outlines, shadows, metals)
-    (25, 22, 40, 255),     // 1: Deepest shadow (soft black-purple)
-    (48, 44, 65, 255),     // 2: Dark shadow
-    (85, 80, 110, 255),    // 3: Mid gray-purple
-    (130, 125, 155, 255),  // 4: Light gray-purple
+    (25, 22, 40, 255),    // 1: Deepest shadow (soft black-purple)
+    (48, 44, 65, 255),    // 2: Dark shadow
+    (85, 80, 110, 255),   // 3: Mid gray-purple
+    (130, 125, 155, 255), // 4: Light gray-purple
     // 5-8: Whites and highlights
-    (175, 172, 195, 255),  // 5: Silver
-    (210, 208, 225, 255),  // 6: Pale highlight
-    (238, 236, 245, 255),  // 7: Near-white
-    (255, 253, 250, 255),  // 8: Pure specular
+    (175, 172, 195, 255), // 5: Silver
+    (210, 208, 225, 255), // 6: Pale highlight
+    (238, 236, 245, 255), // 7: Near-white
+    (255, 253, 250, 255), // 8: Pure specular
     // 9-12: Greens (ground, forest)
-    (35, 65, 40, 255),     // 9: Deep forest
-    (55, 95, 55, 255),     // 10: Dark grass
-    (78, 135, 72, 255),    // 11: Grass
-    (120, 180, 105, 255),  // 12: Light grass / highlight
+    (35, 65, 40, 255),    // 9: Deep forest
+    (55, 95, 55, 255),    // 10: Dark grass
+    (78, 135, 72, 255),   // 11: Grass
+    (120, 180, 105, 255), // 12: Light grass / highlight
     // 13-16: Browns (ores, wood)
-    (65, 38, 28, 255),     // 13: Dark brown
-    (105, 62, 42, 255),    // 14: Mid brown (iron ore)
-    (148, 95, 58, 255),    // 15: Warm brown
-    (192, 138, 85, 255),   // 16: Light brown / tan
+    (65, 38, 28, 255),   // 13: Dark brown
+    (105, 62, 42, 255),  // 14: Mid brown (iron ore)
+    (148, 95, 58, 255),  // 15: Warm brown
+    (192, 138, 85, 255), // 16: Light brown / tan
     // 17-20: Oranges/Coral (miner, copper)
-    (135, 58, 35, 255),    // 17: Dark coral
-    (180, 88, 52, 255),    // 18: Coral
-    (220, 135, 72, 255),   // 19: Light coral / amber
-    (245, 185, 110, 255),  // 20: Peach highlight
+    (135, 58, 35, 255),   // 17: Dark coral
+    (180, 88, 52, 255),   // 18: Coral
+    (220, 135, 72, 255),  // 19: Light coral / amber
+    (245, 185, 110, 255), // 20: Peach highlight
     // 21-24: Reds (furnace, enemies)
-    (95, 28, 28, 255),     // 21: Dark red
-    (148, 48, 45, 255),    // 22: Mid red
-    (205, 78, 65, 255),    // 23: Warm red
-    (240, 125, 105, 255),  // 24: Light salmon
+    (95, 28, 28, 255),    // 21: Dark red
+    (148, 48, 45, 255),   // 22: Mid red
+    (205, 78, 65, 255),   // 23: Warm red
+    (240, 125, 105, 255), // 24: Light salmon
     // 25-28: Blues (assembler, water)
-    (30, 48, 105, 255),    // 25: Deep blue
-    (52, 78, 155, 255),    // 26: Mid blue
-    (88, 125, 205, 255),   // 27: Periwinkle
-    (135, 175, 235, 255),  // 28: Light sky blue
+    (30, 48, 105, 255),   // 25: Deep blue
+    (52, 78, 155, 255),   // 26: Mid blue
+    (88, 125, 205, 255),  // 27: Periwinkle
+    (135, 175, 235, 255), // 28: Light sky blue
     // 29-32: Purples (lab, FORGE)
-    (68, 35, 105, 255),    // 29: Deep purple
-    (108, 62, 155, 255),   // 30: Mid purple
-    (155, 98, 205, 255),   // 31: Lilac
-    (198, 148, 235, 255),  // 32: Light lavender
+    (68, 35, 105, 255),   // 29: Deep purple
+    (108, 62, 155, 255),  // 30: Mid purple
+    (155, 98, 205, 255),  // 31: Lilac
+    (198, 148, 235, 255), // 32: Light lavender
     // 33-36: Teals (power, generators)
-    (28, 72, 72, 255),     // 33: Deep teal
-    (48, 115, 112, 255),   // 34: Mid teal
-    (82, 162, 155, 255),   // 35: Mint
-    (128, 205, 195, 255),  // 36: Light mint
+    (28, 72, 72, 255),    // 33: Deep teal
+    (48, 115, 112, 255),  // 34: Mid teal
+    (82, 162, 155, 255),  // 35: Mint
+    (128, 205, 195, 255), // 36: Light mint
     // 37-40: Yellows (belts, warnings)
-    (105, 95, 28, 255),    // 37: Dark gold
-    (165, 152, 42, 255),   // 38: Gold
-    (225, 210, 68, 255),   // 39: Yellow
-    (248, 238, 125, 255),  // 40: Light lemon
+    (105, 95, 28, 255),   // 37: Dark gold
+    (165, 152, 42, 255),  // 38: Gold
+    (225, 210, 68, 255),  // 39: Yellow
+    (248, 238, 125, 255), // 40: Light lemon
     // 41-44: Pinks (enemies, highlights)
-    (115, 35, 62, 255),    // 41: Dark rose
-    (172, 58, 88, 255),    // 42: Rose
-    (225, 95, 125, 255),   // 43: Pink
-    (248, 155, 175, 255),  // 44: Light pink
+    (115, 35, 62, 255),   // 41: Dark rose
+    (172, 58, 88, 255),   // 42: Rose
+    (225, 95, 125, 255),  // 43: Pink
+    (248, 155, 175, 255), // 44: Light pink
     // 45-48: Stone/Earth (walls, stone)
-    (72, 68, 62, 255),     // 45: Dark stone
-    (112, 108, 98, 255),   // 46: Mid stone
-    (155, 150, 138, 255),  // 47: Light stone
-    (198, 195, 185, 255),  // 48: Pale stone
+    (72, 68, 62, 255),    // 45: Dark stone
+    (112, 108, 98, 255),  // 46: Mid stone
+    (155, 150, 138, 255), // 47: Light stone
+    (198, 195, 185, 255), // 48: Pale stone
     // 49-52: Copper/Gold metallic
-    (125, 72, 22, 255),    // 49: Dark copper
-    (178, 108, 38, 255),   // 50: Mid copper
-    (225, 155, 65, 255),   // 51: Bright copper
-    (248, 205, 115, 255),  // 52: Gold highlight
+    (125, 72, 22, 255),   // 49: Dark copper
+    (178, 108, 38, 255),  // 50: Mid copper
+    (225, 155, 65, 255),  // 51: Bright copper
+    (248, 205, 115, 255), // 52: Gold highlight
     // 53-56: Cool metals (steel, inserters)
-    (62, 72, 85, 255),     // 53: Dark steel
-    (95, 108, 125, 255),   // 54: Mid steel
-    (135, 148, 168, 255),  // 55: Light steel
-    (178, 192, 208, 255),  // 56: Steel highlight
+    (62, 72, 85, 255),    // 53: Dark steel
+    (95, 108, 125, 255),  // 54: Mid steel
+    (135, 148, 168, 255), // 55: Light steel
+    (178, 192, 208, 255), // 56: Steel highlight
     // 57-60: Greens bright (circuits, science)
-    (22, 95, 45, 255),     // 57: Dark circuit green
-    (48, 155, 72, 255),    // 58: Circuit green
-    (82, 210, 105, 255),   // 59: Bright green
-    (145, 238, 158, 255),  // 60: Light green glow
+    (22, 95, 45, 255),    // 57: Dark circuit green
+    (48, 155, 72, 255),   // 58: Circuit green
+    (82, 210, 105, 255),  // 59: Bright green
+    (145, 238, 158, 255), // 60: Light green glow
     // 61-63: Special (fire glow, uranium, warning)
-    (255, 155, 32, 255),   // 61: Fire orange
-    (48, 225, 85, 255),    // 62: Uranium glow
-    (255, 68, 68, 255),    // 63: Alert red
+    (255, 155, 32, 255), // 61: Fire orange
+    (48, 225, 85, 255),  // 62: Uranium glow
+    (255, 68, 68, 255),  // 63: Alert red
 ];
 
 /// Holds all game sprites packed into a SINGLE texture atlas.
@@ -271,7 +271,12 @@ impl SpriteAtlas {
         /// Blit a sprite and return its source Rect.
         fn pack(atlas: &mut Image, sprite: &Image, ax: u32, ay: u32) -> Rect {
             blit(atlas, sprite, ax, ay);
-            Rect::new(ax as f32, ay as f32, sprite.width() as f32, sprite.height() as f32)
+            Rect::new(
+                ax as f32,
+                ay as f32,
+                sprite.width() as f32,
+                sprite.height() as f32,
+            )
         }
 
         // Atlas layout (512×512, 1px padding between rows):
@@ -287,40 +292,40 @@ impl SpriteAtlas {
         let s = 17u32; // stride for 16×16 sprites (16 + 1px padding)
 
         // Row 0: Ground (start at x=4 to avoid white pixel area)
-        let r_ground_grass     = pack(&mut atlas_img, &make_ground_image(10, 11, 12), 4, 0);
+        let r_ground_grass = pack(&mut atlas_img, &make_ground_image(10, 11, 12), 4, 0);
         let r_ground_grass_alt = pack(&mut atlas_img, &make_ground_image(10, 12, 11), 4 + s, 0);
-        let r_ground_desert    = pack(&mut atlas_img, &make_ground_image(16, 15, 14), 4 + s*2, 0);
-        let r_ground_forest    = pack(&mut atlas_img, &make_forest_image(), 4 + s*3, 0);
-        let r_ground_water     = pack(&mut atlas_img, &make_water_image(25, 27), 4 + s*4, 0);
-        let r_ground_water_alt = pack(&mut atlas_img, &make_water_image(26, 28), 4 + s*5, 0);
+        let r_ground_desert = pack(&mut atlas_img, &make_ground_image(16, 15, 14), 4 + s * 2, 0);
+        let r_ground_forest = pack(&mut atlas_img, &make_forest_image(), 4 + s * 3, 0);
+        let r_ground_water = pack(&mut atlas_img, &make_water_image(25, 27), 4 + s * 4, 0);
+        let r_ground_water_alt = pack(&mut atlas_img, &make_water_image(26, 28), 4 + s * 5, 0);
 
         // Row 1: Ore deposits
         let y1 = 17u32;
-        let r_ore_iron    = pack(&mut atlas_img, &make_ore_sprite(6, 7), 0, y1);
-        let r_ore_copper  = pack(&mut atlas_img, &make_ore_sprite(7, 28), s, y1);
-        let r_ore_coal    = pack(&mut atlas_img, &make_ore_sprite(27, 2), s*2, y1);
-        let r_ore_stone   = pack(&mut atlas_img, &make_ore_sprite(25, 26), s*3, y1);
-        let r_ore_uranium = pack(&mut atlas_img, &make_ore_sprite(22, 9), s*4, y1);
-        let r_ore_tin     = pack(&mut atlas_img, &make_ore_sprite(4, 5), s*5, y1);
-        let r_ore_gold    = pack(&mut atlas_img, &make_ore_sprite(30, 16), s*6, y1);
-        let r_ore_sulfur  = pack(&mut atlas_img, &make_ore_sprite(16, 31), s*7, y1);
-        let r_ore_crystal = pack(&mut atlas_img, &make_ore_sprite(19, 5), s*8, y1);
-        let r_ore_oil     = pack(&mut atlas_img, &make_oil_sprite(), s*9, y1);
+        let r_ore_iron = pack(&mut atlas_img, &make_ore_sprite(6, 7), 0, y1);
+        let r_ore_copper = pack(&mut atlas_img, &make_ore_sprite(7, 28), s, y1);
+        let r_ore_coal = pack(&mut atlas_img, &make_ore_sprite(27, 2), s * 2, y1);
+        let r_ore_stone = pack(&mut atlas_img, &make_ore_sprite(25, 26), s * 3, y1);
+        let r_ore_uranium = pack(&mut atlas_img, &make_ore_sprite(22, 9), s * 4, y1);
+        let r_ore_tin = pack(&mut atlas_img, &make_ore_sprite(4, 5), s * 5, y1);
+        let r_ore_gold = pack(&mut atlas_img, &make_ore_sprite(30, 16), s * 6, y1);
+        let r_ore_sulfur = pack(&mut atlas_img, &make_ore_sprite(16, 31), s * 7, y1);
+        let r_ore_crystal = pack(&mut atlas_img, &make_ore_sprite(19, 5), s * 8, y1);
+        let r_ore_oil = pack(&mut atlas_img, &make_oil_sprite(), s * 9, y1);
 
         // Row 2: Machines & structures (frame 0)
         let y2 = 34u32;
-        let r_miner_0         = pack(&mut atlas_img, &make_miner_sprite(0), 0, y2);
+        let r_miner_0 = pack(&mut atlas_img, &make_miner_sprite(0), 0, y2);
         let r_stone_furnace_0 = pack(&mut atlas_img, &make_stone_furnace_sprite(0), s, y2);
-        let r_steel_furnace_0 = pack(&mut atlas_img, &make_steel_furnace_sprite(0), s*2, y2);
-        let r_assembler_0     = pack(&mut atlas_img, &make_assembler_sprite(0), s*3, y2);
-        let r_lab_0           = pack(&mut atlas_img, &make_lab_sprite(0), s*4, y2);
-        let r_boiler        = pack(&mut atlas_img, &make_boiler_sprite(), s*5, y2);
-        let r_steam_engine  = pack(&mut atlas_img, &make_steam_engine_sprite(), s*6, y2);
-        let r_solar_panel   = pack(&mut atlas_img, &make_solar_panel_sprite(), s*7, y2);
-        let r_chest         = pack(&mut atlas_img, &make_chest_sprite(), s*8, y2);
-        let r_gun_turret    = pack(&mut atlas_img, &make_gun_turret_sprite(), s*9, y2);
-        let r_wall          = pack(&mut atlas_img, &make_wall_sprite(), s*10, y2);
-        let r_inserter      = pack(&mut atlas_img, &make_inserter_sprite(), s*11, y2);
+        let r_steel_furnace_0 = pack(&mut atlas_img, &make_steel_furnace_sprite(0), s * 2, y2);
+        let r_assembler_0 = pack(&mut atlas_img, &make_assembler_sprite(0), s * 3, y2);
+        let r_lab_0 = pack(&mut atlas_img, &make_lab_sprite(0), s * 4, y2);
+        let r_boiler = pack(&mut atlas_img, &make_boiler_sprite(), s * 5, y2);
+        let r_steam_engine = pack(&mut atlas_img, &make_steam_engine_sprite(), s * 6, y2);
+        let r_solar_panel = pack(&mut atlas_img, &make_solar_panel_sprite(), s * 7, y2);
+        let r_chest = pack(&mut atlas_img, &make_chest_sprite(), s * 8, y2);
+        let r_gun_turret = pack(&mut atlas_img, &make_gun_turret_sprite(), s * 9, y2);
+        let r_wall = pack(&mut atlas_img, &make_wall_sprite(), s * 10, y2);
+        let r_inserter = pack(&mut atlas_img, &make_inserter_sprite(), s * 11, y2);
 
         // Row 3: Belts straight (3 colors × 2 frames)
         let y3 = 51u32;
@@ -329,133 +334,207 @@ impl SpriteAtlas {
             pack(&mut atlas_img, &make_belt_sprite(17, 16, 1), s, y3),
         ];
         let r_belt_red = [
-            pack(&mut atlas_img, &make_belt_sprite(10, 11, 0), s*2, y3),
-            pack(&mut atlas_img, &make_belt_sprite(10, 11, 1), s*3, y3),
+            pack(&mut atlas_img, &make_belt_sprite(10, 11, 0), s * 2, y3),
+            pack(&mut atlas_img, &make_belt_sprite(10, 11, 1), s * 3, y3),
         ];
         let r_belt_blue = [
-            pack(&mut atlas_img, &make_belt_sprite(12, 13, 0), s*4, y3),
-            pack(&mut atlas_img, &make_belt_sprite(12, 13, 1), s*5, y3),
+            pack(&mut atlas_img, &make_belt_sprite(12, 13, 0), s * 4, y3),
+            pack(&mut atlas_img, &make_belt_sprite(12, 13, 1), s * 5, y3),
         ];
 
         // Row 4: Belt corners left
         let y4 = 68u32;
         let r_belt_corner_left_yellow = [
-            pack(&mut atlas_img, &make_belt_corner_sprite(17, 16, 0, false), 0, y4),
-            pack(&mut atlas_img, &make_belt_corner_sprite(17, 16, 1, false), s, y4),
+            pack(
+                &mut atlas_img,
+                &make_belt_corner_sprite(17, 16, 0, false),
+                0,
+                y4,
+            ),
+            pack(
+                &mut atlas_img,
+                &make_belt_corner_sprite(17, 16, 1, false),
+                s,
+                y4,
+            ),
         ];
         let r_belt_corner_left_red = [
-            pack(&mut atlas_img, &make_belt_corner_sprite(10, 11, 0, false), s*2, y4),
-            pack(&mut atlas_img, &make_belt_corner_sprite(10, 11, 1, false), s*3, y4),
+            pack(
+                &mut atlas_img,
+                &make_belt_corner_sprite(10, 11, 0, false),
+                s * 2,
+                y4,
+            ),
+            pack(
+                &mut atlas_img,
+                &make_belt_corner_sprite(10, 11, 1, false),
+                s * 3,
+                y4,
+            ),
         ];
         let r_belt_corner_left_blue = [
-            pack(&mut atlas_img, &make_belt_corner_sprite(12, 13, 0, false), s*4, y4),
-            pack(&mut atlas_img, &make_belt_corner_sprite(12, 13, 1, false), s*5, y4),
+            pack(
+                &mut atlas_img,
+                &make_belt_corner_sprite(12, 13, 0, false),
+                s * 4,
+                y4,
+            ),
+            pack(
+                &mut atlas_img,
+                &make_belt_corner_sprite(12, 13, 1, false),
+                s * 5,
+                y4,
+            ),
         ];
 
         // Row 5: Belt corners right
         let y5 = 85u32;
         let r_belt_corner_right_yellow = [
-            pack(&mut atlas_img, &make_belt_corner_sprite(17, 16, 0, true), 0, y5),
-            pack(&mut atlas_img, &make_belt_corner_sprite(17, 16, 1, true), s, y5),
+            pack(
+                &mut atlas_img,
+                &make_belt_corner_sprite(17, 16, 0, true),
+                0,
+                y5,
+            ),
+            pack(
+                &mut atlas_img,
+                &make_belt_corner_sprite(17, 16, 1, true),
+                s,
+                y5,
+            ),
         ];
         let r_belt_corner_right_red = [
-            pack(&mut atlas_img, &make_belt_corner_sprite(10, 11, 0, true), s*2, y5),
-            pack(&mut atlas_img, &make_belt_corner_sprite(10, 11, 1, true), s*3, y5),
+            pack(
+                &mut atlas_img,
+                &make_belt_corner_sprite(10, 11, 0, true),
+                s * 2,
+                y5,
+            ),
+            pack(
+                &mut atlas_img,
+                &make_belt_corner_sprite(10, 11, 1, true),
+                s * 3,
+                y5,
+            ),
         ];
         let r_belt_corner_right_blue = [
-            pack(&mut atlas_img, &make_belt_corner_sprite(12, 13, 0, true), s*4, y5),
-            pack(&mut atlas_img, &make_belt_corner_sprite(12, 13, 1, true), s*5, y5),
+            pack(
+                &mut atlas_img,
+                &make_belt_corner_sprite(12, 13, 0, true),
+                s * 4,
+                y5,
+            ),
+            pack(
+                &mut atlas_img,
+                &make_belt_corner_sprite(12, 13, 1, true),
+                s * 5,
+                y5,
+            ),
         ];
 
         // Row 6: Items (8×8, stride=9)
         let y6 = 102u32;
         let si = 9u32;
-        let r_item_iron_ore     = pack(&mut atlas_img, &make_item_sprite(14, 16), 0, y6);
-        let r_item_copper_ore   = pack(&mut atlas_img, &make_item_sprite(50, 52), si, y6);
-        let r_item_coal         = pack(&mut atlas_img, &make_coal_item_sprite(), si*2, y6);
-        let r_item_stone        = pack(&mut atlas_img, &make_stone_item_sprite(), si*3, y6);
-        let r_item_iron_plate   = pack(&mut atlas_img, &make_plate_item_sprite(3, 4), si*4, y6);
-        let r_item_copper_plate = pack(&mut atlas_img, &make_plate_item_sprite(28, 15), si*5, y6);
-        let r_item_gear         = pack(&mut atlas_img, &make_gear_item_sprite(), si*6, y6);
-        let r_item_wire         = pack(&mut atlas_img, &make_wire_item_sprite(), si*7, y6);
-        let r_item_green_circuit = pack(&mut atlas_img, &make_circuit_item_sprite(), si*8, y6);
-        let r_item_science_red  = pack(&mut atlas_img, &make_flask_item_sprite(10, 11), si*9, y6);
+        let r_item_iron_ore = pack(&mut atlas_img, &make_item_sprite(14, 16), 0, y6);
+        let r_item_copper_ore = pack(&mut atlas_img, &make_item_sprite(50, 52), si, y6);
+        let r_item_coal = pack(&mut atlas_img, &make_coal_item_sprite(), si * 2, y6);
+        let r_item_stone = pack(&mut atlas_img, &make_stone_item_sprite(), si * 3, y6);
+        let r_item_iron_plate = pack(&mut atlas_img, &make_plate_item_sprite(3, 4), si * 4, y6);
+        let r_item_copper_plate = pack(&mut atlas_img, &make_plate_item_sprite(28, 15), si * 5, y6);
+        let r_item_gear = pack(&mut atlas_img, &make_gear_item_sprite(), si * 6, y6);
+        let r_item_wire = pack(&mut atlas_img, &make_wire_item_sprite(), si * 7, y6);
+        let r_item_green_circuit = pack(&mut atlas_img, &make_circuit_item_sprite(), si * 8, y6);
+        let r_item_science_red = pack(&mut atlas_img, &make_flask_item_sprite(10, 11), si * 9, y6);
         // Extra items continued on same row (10+)
-        let r_item_steel_plate  = pack(&mut atlas_img, &make_plate_item_sprite(5, 6), si*10, y6);    // silver
-        let r_item_stone_brick  = pack(&mut atlas_img, &make_item_sprite(47, 48), si*11, y6);        // tan
-        let r_item_pipe         = pack(&mut atlas_img, &make_item_sprite(3, 4), si*12, y6);           // gray
-        let r_item_red_circuit  = pack(&mut atlas_img, &make_circuit_item_sprite_colored(22, 23), si*13, y6);
-        let r_item_blue_circuit = pack(&mut atlas_img, &make_circuit_item_sprite_colored(25, 27), si*14, y6);
-        let r_item_science_green = pack(&mut atlas_img, &make_flask_item_sprite(9, 10), si*15, y6);  // green
-        let r_item_science_blue  = pack(&mut atlas_img, &make_flask_item_sprite(25, 27), si*16, y6); // blue
-        let r_item_science_purple = pack(&mut atlas_img, &make_flask_item_sprite(29, 31), si*17, y6);// purple
-        let r_item_sulfur       = pack(&mut atlas_img, &make_item_sprite(16, 31), si*18, y6);        // yellow
-        let r_item_plastic      = pack(&mut atlas_img, &make_item_sprite(5, 7), si*19, y6);          // white
-        // Row 6b: more items
+        let r_item_steel_plate = pack(&mut atlas_img, &make_plate_item_sprite(5, 6), si * 10, y6); // silver
+        let r_item_stone_brick = pack(&mut atlas_img, &make_item_sprite(47, 48), si * 11, y6); // tan
+        let r_item_pipe = pack(&mut atlas_img, &make_item_sprite(3, 4), si * 12, y6); // gray
+        let r_item_red_circuit = pack(
+            &mut atlas_img,
+            &make_circuit_item_sprite_colored(22, 23),
+            si * 13,
+            y6,
+        );
+        let r_item_blue_circuit = pack(
+            &mut atlas_img,
+            &make_circuit_item_sprite_colored(25, 27),
+            si * 14,
+            y6,
+        );
+        let r_item_science_green =
+            pack(&mut atlas_img, &make_flask_item_sprite(9, 10), si * 15, y6); // green
+        let r_item_science_blue =
+            pack(&mut atlas_img, &make_flask_item_sprite(25, 27), si * 16, y6); // blue
+        let r_item_science_purple =
+            pack(&mut atlas_img, &make_flask_item_sprite(29, 31), si * 17, y6); // purple
+        let r_item_sulfur = pack(&mut atlas_img, &make_item_sprite(16, 31), si * 18, y6); // yellow
+        let r_item_plastic = pack(&mut atlas_img, &make_item_sprite(5, 7), si * 19, y6); // white
+                                                                                         // Row 6b: more items
         let y6b = y6 + si;
-        let r_item_battery      = pack(&mut atlas_img, &make_battery_item_sprite(), 0, y6b);
-        let r_item_ammo         = pack(&mut atlas_img, &make_ammo_item_sprite(), si, y6b);
-        let r_item_grenade      = pack(&mut atlas_img, &make_grenade_item_sprite(), si*2, y6b);
-        let r_item_engine       = pack(&mut atlas_img, &make_engine_item_sprite(), si*3, y6b);
-        let r_item_rocket_part  = pack(&mut atlas_img, &make_rocket_part_item_sprite(), si*4, y6b);
-        let r_item_rocket_fuel  = pack(&mut atlas_img, &make_item_sprite(17, 19), si*5, y6b);        // orange
-        let r_item_inserter     = pack(&mut atlas_img, &make_item_sprite(3, 17), si*6, y6b);         // gray+orange
-        let r_item_iron_stick   = pack(&mut atlas_img, &make_item_sprite(3, 5), si*7, y6b);          // thin bar
-        let r_item_speed_module = pack(&mut atlas_img, &make_item_sprite(25, 28), si*8, y6b);        // blue module
-        let r_item_science_yellow = pack(&mut atlas_img, &make_flask_item_sprite(16, 17), si*9, y6b);// yellow
-        let r_item_uranium_ore  = pack(&mut atlas_img, &make_item_sprite(9, 62), si*10, y6b);        // green glow
-        let r_item_rail         = pack(&mut atlas_img, &make_item_sprite(14, 4), si*11, y6b);         // brown+gray
-        let r_item_concrete     = pack(&mut atlas_img, &make_item_sprite(3, 2), si*12, y6b);          // dark gray
-        let r_item_solar_panel  = pack(&mut atlas_img, &make_item_sprite(25, 8), si*13, y6b);         // blue+white
-        let r_item_accumulator  = pack(&mut atlas_img, &make_item_sprite(25, 6), si*14, y6b);         // blue+pale
-        let r_item_robot_frame  = pack(&mut atlas_img, &make_item_sprite(4, 29), si*15, y6b);         // gray+purple
-        let r_item_uranium_235  = pack(&mut atlas_img, &make_item_sprite(62, 9), si*16, y6b);         // bright green
-        let r_item_uranium_238  = pack(&mut atlas_img, &make_item_sprite(9, 2), si*17, y6b);          // dull green
-        let r_item_nuclear_fuel = pack(&mut atlas_img, &make_item_sprite(62, 61), si*18, y6b);        // hot green
-        let r_item_low_density  = pack(&mut atlas_img, &make_item_sprite(5, 7), si*19, y6b);          // silver-white
+        let r_item_battery = pack(&mut atlas_img, &make_battery_item_sprite(), 0, y6b);
+        let r_item_ammo = pack(&mut atlas_img, &make_ammo_item_sprite(), si, y6b);
+        let r_item_grenade = pack(&mut atlas_img, &make_grenade_item_sprite(), si * 2, y6b);
+        let r_item_engine = pack(&mut atlas_img, &make_engine_item_sprite(), si * 3, y6b);
+        let r_item_rocket_part = pack(&mut atlas_img, &make_rocket_part_item_sprite(), si * 4, y6b);
+        let r_item_rocket_fuel = pack(&mut atlas_img, &make_item_sprite(17, 19), si * 5, y6b); // orange
+        let r_item_inserter = pack(&mut atlas_img, &make_item_sprite(3, 17), si * 6, y6b); // gray+orange
+        let r_item_iron_stick = pack(&mut atlas_img, &make_item_sprite(3, 5), si * 7, y6b); // thin bar
+        let r_item_speed_module = pack(&mut atlas_img, &make_item_sprite(25, 28), si * 8, y6b); // blue module
+        let r_item_science_yellow =
+            pack(&mut atlas_img, &make_flask_item_sprite(16, 17), si * 9, y6b); // yellow
+        let r_item_uranium_ore = pack(&mut atlas_img, &make_item_sprite(9, 62), si * 10, y6b); // green glow
+        let r_item_rail = pack(&mut atlas_img, &make_item_sprite(14, 4), si * 11, y6b); // brown+gray
+        let r_item_concrete = pack(&mut atlas_img, &make_item_sprite(3, 2), si * 12, y6b); // dark gray
+        let r_item_solar_panel = pack(&mut atlas_img, &make_item_sprite(25, 8), si * 13, y6b); // blue+white
+        let r_item_accumulator = pack(&mut atlas_img, &make_item_sprite(25, 6), si * 14, y6b); // blue+pale
+        let r_item_robot_frame = pack(&mut atlas_img, &make_item_sprite(4, 29), si * 15, y6b); // gray+purple
+        let r_item_uranium_235 = pack(&mut atlas_img, &make_item_sprite(62, 9), si * 16, y6b); // bright green
+        let r_item_uranium_238 = pack(&mut atlas_img, &make_item_sprite(9, 2), si * 17, y6b); // dull green
+        let r_item_nuclear_fuel = pack(&mut atlas_img, &make_item_sprite(62, 61), si * 18, y6b); // hot green
+        let r_item_low_density = pack(&mut atlas_img, &make_item_sprite(5, 7), si * 19, y6b); // silver-white
 
         // Row 7: Enemies (2 walk frames each) + crashed ship
         let y7 = 120u32;
         // Small biter (red-brown)
-        let r_enemy_0           = pack(&mut atlas_img, &make_enemy_sprite(23, 24, 0), 0, y7);
-        let r_enemy_1           = pack(&mut atlas_img, &make_enemy_sprite(23, 24, 1), 14, y7);
+        let r_enemy_0 = pack(&mut atlas_img, &make_enemy_sprite(23, 24, 0), 0, y7);
+        let r_enemy_1 = pack(&mut atlas_img, &make_enemy_sprite(23, 24, 1), 14, y7);
         // Big biter (dark armored)
-        let r_big_biter_0       = pack(&mut atlas_img, &make_big_biter_sprite(1, 2, 0), 28, y7);
-        let r_big_biter_1       = pack(&mut atlas_img, &make_big_biter_sprite(1, 2, 1), 44, y7);
+        let r_big_biter_0 = pack(&mut atlas_img, &make_big_biter_sprite(1, 2, 0), 28, y7);
+        let r_big_biter_1 = pack(&mut atlas_img, &make_big_biter_sprite(1, 2, 1), 44, y7);
         // Spitter (green, ranged)
-        let r_spitter_0         = pack(&mut atlas_img, &make_spitter_sprite(9, 10, 0), 60, y7);
-        let r_spitter_1         = pack(&mut atlas_img, &make_spitter_sprite(9, 10, 1), 76, y7);
-        let r_crashed_ship      = pack(&mut atlas_img, &make_crashed_ship_sprite(), 92, y7);
+        let r_spitter_0 = pack(&mut atlas_img, &make_spitter_sprite(9, 10, 0), 60, y7);
+        let r_spitter_1 = pack(&mut atlas_img, &make_spitter_sprite(9, 10, 1), 76, y7);
+        let r_crashed_ship = pack(&mut atlas_img, &make_crashed_ship_sprite(), 92, y7);
 
         // Row 8-9: Additional buildings (16×16)
         let y8 = 170u32;
         let r_underground_belt = pack(&mut atlas_img, &make_underground_belt_sprite(), 0, y8);
-        let r_splitter         = pack(&mut atlas_img, &make_splitter_sprite(), s, y8);
-        let r_chemical_plant   = pack(&mut atlas_img, &make_chemical_plant_sprite(), s*2, y8);
-        let r_water_pump       = pack(&mut atlas_img, &make_water_pump_sprite(), s*3, y8);
-        let r_oil_refinery     = pack(&mut atlas_img, &make_oil_refinery_sprite(), s*4, y8);
-        let r_nuclear_reactor  = pack(&mut atlas_img, &make_nuclear_reactor_sprite(), s*5, y8);
-        let r_accumulator      = pack(&mut atlas_img, &make_accumulator_sprite(), s*6, y8);
-        let r_radar            = pack(&mut atlas_img, &make_radar_sprite(), s*7, y8);
-        let r_pipe             = pack(&mut atlas_img, &make_pipe_sprite(), s*8, y8);
-        let r_roboport         = pack(&mut atlas_img, &make_roboport_sprite(), s*9, y8);
+        let r_splitter = pack(&mut atlas_img, &make_splitter_sprite(), s, y8);
+        let r_chemical_plant = pack(&mut atlas_img, &make_chemical_plant_sprite(), s * 2, y8);
+        let r_water_pump = pack(&mut atlas_img, &make_water_pump_sprite(), s * 3, y8);
+        let r_oil_refinery = pack(&mut atlas_img, &make_oil_refinery_sprite(), s * 4, y8);
+        let r_nuclear_reactor = pack(&mut atlas_img, &make_nuclear_reactor_sprite(), s * 5, y8);
+        let r_accumulator = pack(&mut atlas_img, &make_accumulator_sprite(), s * 6, y8);
+        let r_radar = pack(&mut atlas_img, &make_radar_sprite(), s * 7, y8);
+        let r_pipe = pack(&mut atlas_img, &make_pipe_sprite(), s * 8, y8);
+        let r_roboport = pack(&mut atlas_img, &make_roboport_sprite(), s * 9, y8);
 
         let y9 = 187u32;
-        let r_rail             = pack(&mut atlas_img, &make_rail_sprite(), 0, y9);
-        let r_train_stop       = pack(&mut atlas_img, &make_train_stop_sprite(), s, y9);
-        let r_rocket_silo      = pack(&mut atlas_img, &make_rocket_silo_sprite(), s*2, y9);
-        let r_beacon           = pack(&mut atlas_img, &make_beacon_sprite(), s*3, y9);
-        let r_electric_furnace = pack(&mut atlas_img, &make_electric_furnace_sprite(), s*4, y9);
-        let r_pump_jack        = pack(&mut atlas_img, &make_pump_jack_sprite(), s*5, y9);
-        let r_laser_turret     = pack(&mut atlas_img, &make_laser_turret_sprite(), s*6, y9);
+        let r_rail = pack(&mut atlas_img, &make_rail_sprite(), 0, y9);
+        let r_train_stop = pack(&mut atlas_img, &make_train_stop_sprite(), s, y9);
+        let r_rocket_silo = pack(&mut atlas_img, &make_rocket_silo_sprite(), s * 2, y9);
+        let r_beacon = pack(&mut atlas_img, &make_beacon_sprite(), s * 3, y9);
+        let r_electric_furnace = pack(&mut atlas_img, &make_electric_furnace_sprite(), s * 4, y9);
+        let r_pump_jack = pack(&mut atlas_img, &make_pump_jack_sprite(), s * 5, y9);
+        let r_laser_turret = pack(&mut atlas_img, &make_laser_turret_sprite(), s * 6, y9);
 
         // Row 10: Machine animation frame 1 (active state variants)
         let y10 = 204u32;
-        let r_miner_1         = pack(&mut atlas_img, &make_miner_sprite(1), 0, y10);
+        let r_miner_1 = pack(&mut atlas_img, &make_miner_sprite(1), 0, y10);
         let r_stone_furnace_1 = pack(&mut atlas_img, &make_stone_furnace_sprite(1), s, y10);
-        let r_steel_furnace_1 = pack(&mut atlas_img, &make_steel_furnace_sprite(1), s*2, y10);
-        let r_assembler_1     = pack(&mut atlas_img, &make_assembler_sprite(1), s*3, y10);
-        let r_lab_1           = pack(&mut atlas_img, &make_lab_sprite(1), s*4, y10);
+        let r_steel_furnace_1 = pack(&mut atlas_img, &make_steel_furnace_sprite(1), s * 2, y10);
+        let r_assembler_1 = pack(&mut atlas_img, &make_assembler_sprite(1), s * 3, y10);
+        let r_lab_1 = pack(&mut atlas_img, &make_lab_sprite(1), s * 4, y10);
 
         // Row 11: FORGE avatar (24×24, 2 expressions) + Robot worker (10×10, 2 frames)
         let y11 = 221u32;
@@ -487,42 +566,109 @@ impl SpriteAtlas {
             tex: atlas_tex,
             tex_size: Vec2::new(512.0, 512.0),
 
-            r_ground_grass, r_ground_grass_alt, r_ground_desert,
-            r_ground_forest, r_ground_water, r_ground_water_alt,
+            r_ground_grass,
+            r_ground_grass_alt,
+            r_ground_desert,
+            r_ground_forest,
+            r_ground_water,
+            r_ground_water_alt,
 
-            r_ore_iron, r_ore_copper, r_ore_coal, r_ore_stone,
-            r_ore_uranium, r_ore_tin, r_ore_gold, r_ore_sulfur,
-            r_ore_crystal, r_ore_oil,
+            r_ore_iron,
+            r_ore_copper,
+            r_ore_coal,
+            r_ore_stone,
+            r_ore_uranium,
+            r_ore_tin,
+            r_ore_gold,
+            r_ore_sulfur,
+            r_ore_crystal,
+            r_ore_oil,
 
-            r_belt_yellow, r_belt_red, r_belt_blue,
-            r_belt_corner_left_yellow, r_belt_corner_left_red, r_belt_corner_left_blue,
-            r_belt_corner_right_yellow, r_belt_corner_right_red, r_belt_corner_right_blue,
+            r_belt_yellow,
+            r_belt_red,
+            r_belt_blue,
+            r_belt_corner_left_yellow,
+            r_belt_corner_left_red,
+            r_belt_corner_left_blue,
+            r_belt_corner_right_yellow,
+            r_belt_corner_right_red,
+            r_belt_corner_right_blue,
 
-            r_miner, r_stone_furnace, r_steel_furnace, r_assembler,
-            r_lab, r_boiler, r_steam_engine, r_solar_panel, r_chest,
-            r_gun_turret, r_laser_turret, r_wall, r_inserter,
-            r_underground_belt, r_splitter, r_chemical_plant, r_water_pump,
-            r_oil_refinery, r_nuclear_reactor, r_accumulator, r_radar,
-            r_pipe, r_roboport, r_rail, r_train_stop, r_rocket_silo,
-            r_beacon, r_electric_furnace, r_pump_jack,
+            r_miner,
+            r_stone_furnace,
+            r_steel_furnace,
+            r_assembler,
+            r_lab,
+            r_boiler,
+            r_steam_engine,
+            r_solar_panel,
+            r_chest,
+            r_gun_turret,
+            r_laser_turret,
+            r_wall,
+            r_inserter,
+            r_underground_belt,
+            r_splitter,
+            r_chemical_plant,
+            r_water_pump,
+            r_oil_refinery,
+            r_nuclear_reactor,
+            r_accumulator,
+            r_radar,
+            r_pipe,
+            r_roboport,
+            r_rail,
+            r_train_stop,
+            r_rocket_silo,
+            r_beacon,
+            r_electric_furnace,
+            r_pump_jack,
 
-            r_item_iron_ore, r_item_copper_ore, r_item_coal, r_item_stone,
-            r_item_iron_plate, r_item_copper_plate, r_item_gear, r_item_wire,
-            r_item_green_circuit, r_item_science_red,
-            r_item_steel_plate, r_item_stone_brick, r_item_pipe,
-            r_item_red_circuit, r_item_blue_circuit,
-            r_item_science_green, r_item_science_blue, r_item_science_purple,
-            r_item_sulfur, r_item_plastic, r_item_battery,
-            r_item_ammo, r_item_grenade, r_item_engine,
-            r_item_rocket_part, r_item_rocket_fuel,
-            r_item_inserter, r_item_iron_stick, r_item_speed_module,
+            r_item_iron_ore,
+            r_item_copper_ore,
+            r_item_coal,
+            r_item_stone,
+            r_item_iron_plate,
+            r_item_copper_plate,
+            r_item_gear,
+            r_item_wire,
+            r_item_green_circuit,
+            r_item_science_red,
+            r_item_steel_plate,
+            r_item_stone_brick,
+            r_item_pipe,
+            r_item_red_circuit,
+            r_item_blue_circuit,
+            r_item_science_green,
+            r_item_science_blue,
+            r_item_science_purple,
+            r_item_sulfur,
+            r_item_plastic,
+            r_item_battery,
+            r_item_ammo,
+            r_item_grenade,
+            r_item_engine,
+            r_item_rocket_part,
+            r_item_rocket_fuel,
+            r_item_inserter,
+            r_item_iron_stick,
+            r_item_speed_module,
             r_item_science_yellow,
-            r_item_uranium_ore, r_item_rail, r_item_concrete,
-            r_item_solar_panel, r_item_accumulator, r_item_robot_frame,
-            r_item_uranium_235, r_item_uranium_238, r_item_nuclear_fuel,
+            r_item_uranium_ore,
+            r_item_rail,
+            r_item_concrete,
+            r_item_solar_panel,
+            r_item_accumulator,
+            r_item_robot_frame,
+            r_item_uranium_235,
+            r_item_uranium_238,
+            r_item_nuclear_fuel,
             r_item_low_density,
 
-            r_enemy_small_biter, r_enemy_big_biter, r_enemy_spitter, r_crashed_ship,
+            r_enemy_small_biter,
+            r_enemy_big_biter,
+            r_enemy_spitter,
+            r_crashed_ship,
             r_robot,
             r_forge_avatar,
         }
@@ -536,7 +682,12 @@ impl SpriteAtlas {
 /// Convert palette index to macroquad Color.
 fn pal_color(idx: usize) -> Color {
     let (r, g, b, a) = PALETTE[idx];
-    Color::new(r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0, a as f32 / 255.0)
+    Color::new(
+        r as f32 / 255.0,
+        g as f32 / 255.0,
+        b as f32 / 255.0,
+        a as f32 / 255.0,
+    )
 }
 
 /// Check if a Color matches a palette index.
@@ -557,7 +708,12 @@ fn make_image_rect(pixels: &[&[u8]], width: u16, height: u16) -> Image {
             image.set_pixel(
                 x as u32,
                 y as u32,
-                Color::new(r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0, a as f32 / 255.0),
+                Color::new(
+                    r as f32 / 255.0,
+                    g as f32 / 255.0,
+                    b as f32 / 255.0,
+                    a as f32 / 255.0,
+                ),
             );
         }
     }
@@ -595,19 +751,15 @@ fn make_image(pixels: &[&[u8]], size: u16) -> Image {
 fn make_ground_image(base: u8, highlight: u8, alt: u8) -> Image {
     let mut rows: Vec<Vec<u8>> = Vec::new();
     // Bayer 4×4 ordered dithering matrix for smooth gradient blending.
-    let bayer: [[u8; 4]; 4] = [
-        [0, 8, 2, 10],
-        [12, 4, 14, 6],
-        [3, 11, 1, 9],
-        [15, 7, 13, 5],
-    ];
+    let bayer: [[u8; 4]; 4] = [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]];
 
     for y in 0..16u8 {
         let mut row = Vec::new();
         for x in 0..16u8 {
             let threshold = bayer[(y % 4) as usize][(x % 4) as usize];
             // Hash for pseudo-random variation.
-            let hash = ((x as u32).wrapping_mul(2654435761) ^ (y as u32).wrapping_mul(340573321)) % 100;
+            let hash =
+                ((x as u32).wrapping_mul(2654435761) ^ (y as u32).wrapping_mul(340573321)) % 100;
 
             let pixel = if hash < 3 {
                 // Rare bright detail (tiny flower or pebble) — 3% chance.
@@ -642,19 +794,19 @@ fn make_forest_image() -> Image {
         for x in 0..16u8 {
             let hash = ((x as u32).wrapping_mul(7919) ^ (y as u32).wrapping_mul(104729)) % 100;
             let pixel = if hash < 5 {
-                12  // Bright green (dappled sunlight through canopy)
+                12 // Bright green (dappled sunlight through canopy)
             } else if hash < 15 {
-                11  // Mid green (leaves)
+                11 // Mid green (leaves)
             } else if hash < 35 {
-                10  // Dark green (canopy shadow)
+                10 // Dark green (canopy shadow)
             } else if hash < 55 {
-                9   // Deepest green (dense shadow)
+                9 // Deepest green (dense shadow)
             } else if hash < 60 {
-                14  // Brown (tree trunk peek-through)
+                14 // Brown (tree trunk peek-through)
             } else if hash < 65 {
-                2   // Dark shadow (depth)
+                2 // Dark shadow (depth)
             } else {
-                1   // Deepest shadow (makes forest look VERY dark and dense)
+                1 // Deepest shadow (makes forest look VERY dark and dense)
             };
             row.push(pixel);
         }
@@ -676,15 +828,15 @@ fn make_water_image(base: u8, highlight: u8) -> Image {
             let hash = ((x as u32).wrapping_mul(48271) ^ (y as u32).wrapping_mul(12345)) % 100;
 
             let pixel = if hash < 3 {
-                8  // Rare white sparkle (sunlight on water)
+                8 // Rare white sparkle (sunlight on water)
             } else if wave_phase > 0.7 {
-                highlight  // Wave crest (lighter)
+                highlight // Wave crest (lighter)
             } else if wave_phase < -0.5 {
-                25  // Deep blue (wave trough)
+                25 // Deep blue (wave trough)
             } else if hash < 20 {
-                26  // Mid blue variation
+                26 // Mid blue variation
             } else {
-                base  // Base water color
+                base // Base water color
             };
             row.push(pixel);
         }
@@ -800,6 +952,9 @@ fn make_belt_sprite(base_color: u8, arrow_color: u8, frame: u8) -> Image {
 /// the same edge pattern (outline→highlight→inner hl→surface→inner sh→shadow→outline)
 /// plus a rounded cutout in the inner corner.
 /// `mirror=false`: left-turn (W→N). `mirror=true`: right-turn (E→N).
+// The per-edge palette selection intentionally spells out each branch for
+// readability; several branches happen to yield the same shade.
+#[allow(clippy::if_same_then_else)]
 fn make_belt_corner_sprite(_base_color: u8, _arrow_color: u8, _frame: u8, mirror: bool) -> Image {
     let mut pixels = [[0u8; 16]; 16];
 
@@ -834,40 +989,64 @@ fn make_belt_corner_sprite(_base_color: u8, _arrow_color: u8, _frame: u8, mirror
             let d_curve = cdist - cut_r;
 
             // The "depth" into the belt from the nearest boundary.
-            let d_min = d_left.min(d_top).min(d_right).min(d_bottom).min(d_curve as u8);
+            let d_min = d_left
+                .min(d_top)
+                .min(d_right)
+                .min(d_bottom)
+                .min(d_curve as u8);
 
             let pixel = match d_min {
-                0 => 1,  // outline
+                0 => 1, // outline
                 1 => {
                     // Highlight or shadow depending on which edge is closest.
                     if d_left <= d_right && d_left <= d_bottom && d_left <= (d_curve as u8) {
-                        if mirror { 53 } else { 55 } // left edge
+                        if mirror {
+                            53
+                        } else {
+                            55
+                        } // left edge
                     } else if d_top <= d_bottom && d_top <= d_right && d_top <= (d_curve as u8) {
                         55 // top edge (always lit)
                     } else if d_curve as u8 <= d_right && (d_curve as u8) <= d_bottom {
                         55 // inner curve highlight
                     } else if d_right <= d_bottom {
-                        if mirror { 55 } else { 53 } // right edge shadow
+                        if mirror {
+                            55
+                        } else {
+                            53
+                        } // right edge shadow
                     } else {
                         53 // bottom edge shadow
                     }
                 }
                 2 => {
                     if d_left <= d_right && d_left <= d_bottom && d_left <= (d_curve as u8) {
-                        if mirror { 54 } else { 56 }
+                        if mirror {
+                            54
+                        } else {
+                            56
+                        }
                     } else if d_top <= d_bottom && d_top <= d_right && d_top <= (d_curve as u8) {
                         56
                     } else if d_curve as u8 <= d_right && (d_curve as u8) <= d_bottom {
                         56
                     } else if d_right <= d_bottom {
-                        if mirror { 56 } else { 54 }
+                        if mirror {
+                            56
+                        } else {
+                            54
+                        }
                     } else {
                         54
                     }
                 }
                 _ => {
                     // Belt surface — same gradient as straight belt.
-                    if sx < 8 { 55 } else { 54 }
+                    if sx < 8 {
+                        55
+                    } else {
+                        54
+                    }
                 }
             };
 
@@ -955,10 +1134,15 @@ fn make_stone_furnace_sprite(frame: u8) -> Image {
         for y in 4..8u32 {
             for x in 4..11u32 {
                 let c = img.get_pixel(x, y);
-                if is_pal(c, 61) { img.set_pixel(x, y, pal_color(39)); }
-                else if is_pal(c, 39) { img.set_pixel(x, y, pal_color(61)); }
-                else if is_pal(c, 23) { img.set_pixel(x, y, pal_color(40)); }
-                else if is_pal(c, 40) { img.set_pixel(x, y, pal_color(23)); }
+                if is_pal(c, 61) {
+                    img.set_pixel(x, y, pal_color(39));
+                } else if is_pal(c, 39) {
+                    img.set_pixel(x, y, pal_color(61));
+                } else if is_pal(c, 23) {
+                    img.set_pixel(x, y, pal_color(40));
+                } else if is_pal(c, 40) {
+                    img.set_pixel(x, y, pal_color(23));
+                }
             }
         }
     }
@@ -992,9 +1176,13 @@ fn make_steel_furnace_sprite(frame: u8) -> Image {
         for y in 4..8u32 {
             for x in 4..11u32 {
                 let c = img.get_pixel(x, y);
-                if is_pal(c, 61) { img.set_pixel(x, y, pal_color(40)); }
-                else if is_pal(c, 40) { img.set_pixel(x, y, pal_color(61)); }
-                else if is_pal(c, 23) { img.set_pixel(x, y, pal_color(39)); }
+                if is_pal(c, 61) {
+                    img.set_pixel(x, y, pal_color(40));
+                } else if is_pal(c, 40) {
+                    img.set_pixel(x, y, pal_color(61));
+                } else if is_pal(c, 23) {
+                    img.set_pixel(x, y, pal_color(39));
+                }
             }
         }
     }
@@ -1029,8 +1217,11 @@ fn make_assembler_sprite(frame: u8) -> Image {
         for y in 6..10u32 {
             for x in 6..10u32 {
                 let c = img.get_pixel(x, y);
-                if is_pal(c, 7) { img.set_pixel(x, y, pal_color(8)); }
-                else if is_pal(c, 8) { img.set_pixel(x, y, pal_color(7)); }
+                if is_pal(c, 7) {
+                    img.set_pixel(x, y, pal_color(8));
+                } else if is_pal(c, 8) {
+                    img.set_pixel(x, y, pal_color(7));
+                }
             }
         }
     }
@@ -1065,8 +1256,11 @@ fn make_lab_sprite(frame: u8) -> Image {
         for y in 4..9u32 {
             for x in 4..9u32 {
                 let c = img.get_pixel(x, y);
-                if is_pal(c, 58) { img.set_pixel(x, y, pal_color(59)); }
-                else if is_pal(c, 59) { img.set_pixel(x, y, pal_color(58)); }
+                if is_pal(c, 58) {
+                    img.set_pixel(x, y, pal_color(59));
+                } else if is_pal(c, 59) {
+                    img.set_pixel(x, y, pal_color(58));
+                }
             }
         }
     }
@@ -1474,22 +1668,40 @@ fn make_flask_item_sprite(dark: u8, light: u8) -> Image {
 /// Professional pixel art anatomy: distinct body segments, sharp silhouette.
 fn make_enemy_sprite(body: u8, shadow: u8, frame: u8) -> Image {
     // Frame 0: legs extended left. Frame 1: legs extended right (walk cycle).
-    let (l0, l1) = if frame == 0 { (shadow, 0u8) } else { (0u8, shadow) };
+    let (l0, l1) = if frame == 0 {
+        (shadow, 0u8)
+    } else {
+        (0u8, shadow)
+    };
     let pixels: Vec<Vec<u8>> = vec![
         //     mandibles    head     mandibles
-        vec![shadow, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,shadow],
-        vec![0,shadow, 0, 0,shadow,shadow,shadow,shadow, 0, 0,shadow, 0],
-        vec![0, 0, 0,shadow,body,63, 8,63,body,shadow, 0, 0],
-        vec![0, 0,shadow,body,body,shadow,shadow,body,body,shadow, 0, 0],
+        vec![shadow, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, shadow],
+        vec![
+            0, shadow, 0, 0, shadow, shadow, shadow, shadow, 0, 0, shadow, 0,
+        ],
+        vec![0, 0, 0, shadow, body, 63, 8, 63, body, shadow, 0, 0],
+        vec![
+            0, 0, shadow, body, body, shadow, shadow, body, body, shadow, 0, 0,
+        ],
         // legs alternate per frame
-        vec![l0, l1,shadow,body,body,body,body,body,body,shadow, l1, l0],
-        vec![l1,shadow,body,body,shadow,body,body,shadow,body,body,shadow, l1],
-        vec![l0, l1,shadow,body,body,body,body,body,body,shadow, l1, l0],
+        vec![
+            l0, l1, shadow, body, body, body, body, body, body, shadow, l1, l0,
+        ],
+        vec![
+            l1, shadow, body, body, shadow, body, body, shadow, body, body, shadow, l1,
+        ],
+        vec![
+            l0, l1, shadow, body, body, body, body, body, body, shadow, l1, l0,
+        ],
         // abdomen
-        vec![l1,shadow, l0,shadow,body,body,body,body,shadow, l0,shadow, l1],
-        vec![l0, l1, 0,shadow,shadow,body,body,shadow,shadow, 0, l1, l0],
-        vec![0, 0, 0, 0,shadow,shadow,shadow,shadow, 0, 0, 0, 0],
-        vec![0, 0, 0, 0, 0,shadow,shadow, 0, 0, 0, 0, 0],
+        vec![
+            l1, shadow, l0, shadow, body, body, body, body, shadow, l0, shadow, l1,
+        ],
+        vec![
+            l0, l1, 0, shadow, shadow, body, body, shadow, shadow, 0, l1, l0,
+        ],
+        vec![0, 0, 0, 0, shadow, shadow, shadow, shadow, 0, 0, 0, 0],
+        vec![0, 0, 0, 0, 0, shadow, shadow, 0, 0, 0, 0, 0],
         vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     ];
     let refs: Vec<&[u8]> = pixels.iter().map(|r| r.as_slice()).collect();
@@ -1527,25 +1739,47 @@ fn make_robot_sprite(frame: u8) -> Image {
 /// Big biter — heavier armored body with thicker legs and a spiked carapace.
 /// Uses dark shadow colors for armored feel.
 fn make_big_biter_sprite(body: u8, shadow: u8, frame: u8) -> Image {
-    let (l0, l1) = if frame == 0 { (shadow, 0u8) } else { (0u8, shadow) };
+    let (l0, l1) = if frame == 0 {
+        (shadow, 0u8)
+    } else {
+        (0u8, shadow)
+    };
     let armor = 3u8; // mid gray for armor plates
     let pixels: Vec<Vec<u8>> = vec![
         // mandibles (wider)
-        vec![shadow, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,shadow],
-        vec![body,shadow, 0,shadow,shadow,shadow,shadow,shadow,shadow, 0,shadow,body],
+        vec![shadow, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, shadow],
+        vec![
+            body, shadow, 0, shadow, shadow, shadow, shadow, shadow, shadow, 0, shadow, body,
+        ],
         // head with armored plates + eyes
-        vec![0,shadow,shadow,body,armor,63, 8,63,armor,body,shadow, 0],
-        vec![0,shadow,body,armor,body,shadow,shadow,body,armor,body,shadow, 0],
+        vec![
+            0, shadow, shadow, body, armor, 63, 8, 63, armor, body, shadow, 0,
+        ],
+        vec![
+            0, shadow, body, armor, body, shadow, shadow, body, armor, body, shadow, 0,
+        ],
         // armored thorax (thicker)
-        vec![l0,shadow,armor,body,armor,body,body,armor,body,armor,shadow, l0],
-        vec![l1,body,armor,armor,shadow,armor,armor,shadow,armor,armor,body, l1],
-        vec![l0,shadow,armor,body,armor,body,body,armor,body,armor,shadow, l0],
+        vec![
+            l0, shadow, armor, body, armor, body, body, armor, body, armor, shadow, l0,
+        ],
+        vec![
+            l1, body, armor, armor, shadow, armor, armor, shadow, armor, armor, body, l1,
+        ],
+        vec![
+            l0, shadow, armor, body, armor, body, body, armor, body, armor, shadow, l0,
+        ],
         // abdomen with spikes
-        vec![l1,shadow,body,shadow,body,body,body,body,shadow,body,shadow, l1],
-        vec![l0,body, 0,shadow,armor,body,body,armor,shadow, 0,body, l0],
-        vec![0,shadow, 0, 0,shadow,shadow,shadow,shadow, 0, 0,shadow, 0],
-        vec![0, 0, 0, 0,shadow,body,body,shadow, 0, 0, 0, 0],
-        vec![0, 0, 0, 0, 0,shadow,shadow, 0, 0, 0, 0, 0],
+        vec![
+            l1, shadow, body, shadow, body, body, body, body, shadow, body, shadow, l1,
+        ],
+        vec![
+            l0, body, 0, shadow, armor, body, body, armor, shadow, 0, body, l0,
+        ],
+        vec![
+            0, shadow, 0, 0, shadow, shadow, shadow, shadow, 0, 0, shadow, 0,
+        ],
+        vec![0, 0, 0, 0, shadow, body, body, shadow, 0, 0, 0, 0],
+        vec![0, 0, 0, 0, 0, shadow, shadow, 0, 0, 0, 0, 0],
     ];
     let refs: Vec<&[u8]> = pixels.iter().map(|r| r.as_slice()).collect();
     make_image(&refs, 12)
@@ -1554,25 +1788,37 @@ fn make_big_biter_sprite(body: u8, shadow: u8, frame: u8) -> Image {
 /// Spitter — slender body with bulbous acid sac and thin legs.
 /// Green-tinted with glowing projectile organ on the abdomen.
 fn make_spitter_sprite(body: u8, shadow: u8, frame: u8) -> Image {
-    let (l0, l1) = if frame == 0 { (shadow, 0u8) } else { (0u8, shadow) };
+    let (l0, l1) = if frame == 0 {
+        (shadow, 0u8)
+    } else {
+        (0u8, shadow)
+    };
     let glow = 62u8; // bright green for acid sac
     let pixels: Vec<Vec<u8>> = vec![
         // thin mandibles
-        vec![0, 0, 0, 0,shadow, 0, 0,shadow, 0, 0, 0, 0],
-        vec![0, 0, 0,shadow,body,shadow,shadow,body,shadow, 0, 0, 0],
+        vec![0, 0, 0, 0, shadow, 0, 0, shadow, 0, 0, 0, 0],
+        vec![0, 0, 0, shadow, body, shadow, shadow, body, shadow, 0, 0, 0],
         // small head with glowing eyes
-        vec![0, 0,shadow,body,glow, 8,glow, 8,body,shadow, 0, 0],
-        vec![0, 0,shadow,body,body,shadow,shadow,body,body,shadow, 0, 0],
+        vec![0, 0, shadow, body, glow, 8, glow, 8, body, shadow, 0, 0],
+        vec![
+            0, 0, shadow, body, body, shadow, shadow, body, body, shadow, 0, 0,
+        ],
         // thin thorax
-        vec![l0, 0,shadow,body,body,body,body,body,body,shadow, 0, l0],
-        vec![0,l1,shadow,body,shadow,body,body,shadow,body,shadow,l1, 0],
+        vec![
+            l0, 0, shadow, body, body, body, body, body, body, shadow, 0, l0,
+        ],
+        vec![
+            0, l1, shadow, body, shadow, body, body, shadow, body, shadow, l1, 0,
+        ],
         // acid sac (glowing bulge)
-        vec![l0, 0,shadow,body,glow,glow,glow,glow,body,shadow, 0, l0],
-        vec![0,l1, 0,shadow,glow, 8, 8,glow,shadow, 0,l1, 0],
-        vec![l0, 0, 0,shadow,glow,glow,glow,glow,shadow, 0, 0, l0],
+        vec![
+            l0, 0, shadow, body, glow, glow, glow, glow, body, shadow, 0, l0,
+        ],
+        vec![0, l1, 0, shadow, glow, 8, 8, glow, shadow, 0, l1, 0],
+        vec![l0, 0, 0, shadow, glow, glow, glow, glow, shadow, 0, 0, l0],
         // tapered tail
-        vec![0, 0, 0, 0,shadow,body,body,shadow, 0, 0, 0, 0],
-        vec![0, 0, 0, 0, 0,shadow,shadow, 0, 0, 0, 0, 0],
+        vec![0, 0, 0, 0, shadow, body, body, shadow, 0, 0, 0, 0],
+        vec![0, 0, 0, 0, 0, shadow, shadow, 0, 0, 0, 0, 0],
         vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     ];
     let refs: Vec<&[u8]> = pixels.iter().map(|r| r.as_slice()).collect();
@@ -1591,9 +1837,20 @@ fn make_crashed_ship_sprite() -> Image {
     // 25=deep blue, 26=mid blue, 27=periwinkle, 28=sky blue
     // 29=deep purple, 30=mid purple, 31=lilac
     // 37=dark gold, 38=gold, 39=yellow
-    let _=0u8; let H=2u8; let D=1u8; let M=3u8; let L=4u8; let S=5u8;
-    let B=14u8; let W=15u8; let G=27u8; let P=30u8; let K=29u8;
-    let F=18u8; let Y=38u8; let R=17u8;
+    let _ = 0u8;
+    let H = 2u8;
+    let D = 1u8;
+    let M = 3u8;
+    let L = 4u8;
+    let S = 5u8;
+    let B = 14u8;
+    let W = 15u8;
+    let G = 27u8;
+    let P = 30u8;
+    let K = 29u8;
+    let F = 18u8;
+    let Y = 38u8;
+    let R = 17u8;
     #[rustfmt::skip]
     let pixels: &[&[u8]] = &[
         // Row 0-3: antenna + top debris
@@ -1677,14 +1934,14 @@ fn make_underground_belt_sprite() -> Image {
         &[0, 1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 1, 0],
         &[1, 3, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 3, 1],
         &[1, 3, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 3, 1],
-        &[1, 3, 1, 1,17,17,17,17,17,17,17,17, 1, 1, 3, 1],
-        &[1, 3, 1, 1,17,16,16,16,16,16,16,17, 1, 1, 3, 1],
-        &[1, 3, 1, 1,17,16, 1, 1, 1, 1,16,17, 1, 1, 3, 1],
-        &[1, 3, 1, 1,17,16, 1, 2, 2, 1,16,17, 1, 1, 3, 1],
-        &[1, 3, 1, 1,17,16, 1, 2, 2, 1,16,17, 1, 1, 3, 1],
-        &[1, 3, 1, 1,17,16, 1, 1, 1, 1,16,17, 1, 1, 3, 1],
-        &[1, 3, 1, 1,17,16,16,16,16,16,16,17, 1, 1, 3, 1],
-        &[1, 3, 1, 1,17,17,17,17,17,17,17,17, 1, 1, 3, 1],
+        &[1, 3, 1, 1, 17, 17, 17, 17, 17, 17, 17, 17, 1, 1, 3, 1],
+        &[1, 3, 1, 1, 17, 16, 16, 16, 16, 16, 16, 17, 1, 1, 3, 1],
+        &[1, 3, 1, 1, 17, 16, 1, 1, 1, 1, 16, 17, 1, 1, 3, 1],
+        &[1, 3, 1, 1, 17, 16, 1, 2, 2, 1, 16, 17, 1, 1, 3, 1],
+        &[1, 3, 1, 1, 17, 16, 1, 2, 2, 1, 16, 17, 1, 1, 3, 1],
+        &[1, 3, 1, 1, 17, 16, 1, 1, 1, 1, 16, 17, 1, 1, 3, 1],
+        &[1, 3, 1, 1, 17, 16, 16, 16, 16, 16, 16, 17, 1, 1, 3, 1],
+        &[1, 3, 1, 1, 17, 17, 17, 17, 17, 17, 17, 17, 1, 1, 3, 1],
         &[1, 3, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 3, 1],
         &[1, 3, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 3, 1],
         &[0, 1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 1, 0],
@@ -1698,18 +1955,18 @@ fn make_splitter_sprite() -> Image {
     let pixels: &[&[u8]] = &[
         &[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
         &[1, 3, 3, 3, 3, 3, 3, 4, 4, 3, 3, 3, 3, 3, 3, 1],
-        &[1, 3,17,17,17,17, 3, 4, 4, 3,17,17,17,17, 3, 1],
-        &[1, 3,17,16,16,17, 3, 5, 5, 3,17,16,16,17, 3, 1],
-        &[1, 3,17,16,16,17, 3, 4, 4, 3,17,16,16,17, 3, 1],
-        &[1, 3,17,16,16,17, 3, 4, 4, 3,17,16,16,17, 3, 1],
-        &[1, 3,17,16,16,17, 3, 5, 5, 3,17,16,16,17, 3, 1],
+        &[1, 3, 17, 17, 17, 17, 3, 4, 4, 3, 17, 17, 17, 17, 3, 1],
+        &[1, 3, 17, 16, 16, 17, 3, 5, 5, 3, 17, 16, 16, 17, 3, 1],
+        &[1, 3, 17, 16, 16, 17, 3, 4, 4, 3, 17, 16, 16, 17, 3, 1],
+        &[1, 3, 17, 16, 16, 17, 3, 4, 4, 3, 17, 16, 16, 17, 3, 1],
+        &[1, 3, 17, 16, 16, 17, 3, 5, 5, 3, 17, 16, 16, 17, 3, 1],
         &[1, 4, 4, 4, 4, 4, 4, 6, 6, 4, 4, 4, 4, 4, 4, 1],
         &[1, 4, 4, 4, 4, 4, 4, 6, 6, 4, 4, 4, 4, 4, 4, 1],
-        &[1, 3,17,16,16,17, 3, 5, 5, 3,17,16,16,17, 3, 1],
-        &[1, 3,17,16,16,17, 3, 4, 4, 3,17,16,16,17, 3, 1],
-        &[1, 3,17,16,16,17, 3, 4, 4, 3,17,16,16,17, 3, 1],
-        &[1, 3,17,16,16,17, 3, 5, 5, 3,17,16,16,17, 3, 1],
-        &[1, 3,17,17,17,17, 3, 4, 4, 3,17,17,17,17, 3, 1],
+        &[1, 3, 17, 16, 16, 17, 3, 5, 5, 3, 17, 16, 16, 17, 3, 1],
+        &[1, 3, 17, 16, 16, 17, 3, 4, 4, 3, 17, 16, 16, 17, 3, 1],
+        &[1, 3, 17, 16, 16, 17, 3, 4, 4, 3, 17, 16, 16, 17, 3, 1],
+        &[1, 3, 17, 16, 16, 17, 3, 5, 5, 3, 17, 16, 16, 17, 3, 1],
+        &[1, 3, 17, 17, 17, 17, 3, 4, 4, 3, 17, 17, 17, 17, 3, 1],
         &[1, 3, 3, 3, 3, 3, 3, 4, 4, 3, 3, 3, 3, 3, 3, 1],
         &[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
     ];
@@ -1720,20 +1977,20 @@ fn make_splitter_sprite() -> Image {
 fn make_chemical_plant_sprite() -> Image {
     let pixels: &[&[u8]] = &[
         &[0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0],
-        &[0, 1, 9, 9, 9, 9,10,10,10,10, 9, 9, 9, 9, 1, 0],
-        &[1, 9,10,10, 3, 3, 3,12,12, 3, 3, 3,10,10, 9, 1],
-        &[1, 9,10, 3, 3, 9, 9,12,12, 9, 9, 3, 3,10, 9, 1],
-        &[1, 9, 3, 3, 9,10,10,11,11,10,10, 9, 3, 3, 9, 1],
-        &[1,10, 3, 9,10,11,11,12,12,11,11,10, 9, 3,10, 1],
-        &[1,10, 3, 9,10,11,12,12,12,12,11,10, 9, 3,10, 1],
-        &[1,10, 3, 9,10,11,12,10,10,12,11,10, 9, 3,10, 1],
-        &[1,10, 3, 9,10,11,12,10,10,12,11,10, 9, 3,10, 1],
-        &[1,10, 3, 9,10,11,12,12,12,12,11,10, 9, 3,10, 1],
-        &[1,10, 3, 9,10,11,11,12,12,11,11,10, 9, 3,10, 1],
-        &[1, 9, 3, 3, 9,10,10,11,11,10,10, 9, 3, 3, 9, 1],
-        &[1, 9,10, 3, 3, 9, 9, 3, 3, 9, 9, 3, 3,10, 9, 1],
-        &[1, 9,10,10, 3, 3, 3, 3, 3, 3, 3, 3,10,10, 9, 1],
-        &[0, 1, 9, 9, 9, 9,10,10,10,10, 9, 9, 9, 9, 1, 0],
+        &[0, 1, 9, 9, 9, 9, 10, 10, 10, 10, 9, 9, 9, 9, 1, 0],
+        &[1, 9, 10, 10, 3, 3, 3, 12, 12, 3, 3, 3, 10, 10, 9, 1],
+        &[1, 9, 10, 3, 3, 9, 9, 12, 12, 9, 9, 3, 3, 10, 9, 1],
+        &[1, 9, 3, 3, 9, 10, 10, 11, 11, 10, 10, 9, 3, 3, 9, 1],
+        &[1, 10, 3, 9, 10, 11, 11, 12, 12, 11, 11, 10, 9, 3, 10, 1],
+        &[1, 10, 3, 9, 10, 11, 12, 12, 12, 12, 11, 10, 9, 3, 10, 1],
+        &[1, 10, 3, 9, 10, 11, 12, 10, 10, 12, 11, 10, 9, 3, 10, 1],
+        &[1, 10, 3, 9, 10, 11, 12, 10, 10, 12, 11, 10, 9, 3, 10, 1],
+        &[1, 10, 3, 9, 10, 11, 12, 12, 12, 12, 11, 10, 9, 3, 10, 1],
+        &[1, 10, 3, 9, 10, 11, 11, 12, 12, 11, 11, 10, 9, 3, 10, 1],
+        &[1, 9, 3, 3, 9, 10, 10, 11, 11, 10, 10, 9, 3, 3, 9, 1],
+        &[1, 9, 10, 3, 3, 9, 9, 3, 3, 9, 9, 3, 3, 10, 9, 1],
+        &[1, 9, 10, 10, 3, 3, 3, 3, 3, 3, 3, 3, 10, 10, 9, 1],
+        &[0, 1, 9, 9, 9, 9, 10, 10, 10, 10, 9, 9, 9, 9, 1, 0],
         &[0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0],
     ];
     make_image(pixels, 16)
@@ -1743,20 +2000,20 @@ fn make_chemical_plant_sprite() -> Image {
 fn make_water_pump_sprite() -> Image {
     let pixels: &[&[u8]] = &[
         &[0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0],
-        &[0, 0, 1,25,25,26,26,26,26,26,26,25,25, 1, 0, 0],
-        &[0, 1,25,26,26,27,27,28,28,27,27,26,26,25, 1, 0],
-        &[1,25,26,27, 3, 3, 4, 4, 4, 4, 3, 3,27,26,25, 1],
-        &[1,25,26, 3, 3,25,25,26,26,25,25, 3, 3,26,25, 1],
-        &[1,25,26, 3,25,27,27,28,28,27,27,25, 3,26,25, 1],
-        &[1,26,27, 4,25,27,28,28,28,28,27,25, 4,27,26, 1],
-        &[1,26,27, 4,26,28,28, 5, 5,28,28,26, 4,27,26, 1],
-        &[1,26,27, 4,26,28,28, 5, 5,28,28,26, 4,27,26, 1],
-        &[1,26,27, 4,25,27,28,28,28,28,27,25, 4,27,26, 1],
-        &[1,25,26, 3,25,27,27,28,28,27,27,25, 3,26,25, 1],
-        &[1,25,26, 3, 3,25,25,26,26,25,25, 3, 3,26,25, 1],
-        &[1,25,26,27, 3, 3, 4, 4, 4, 4, 3, 3,27,26,25, 1],
-        &[0, 1,25,26,26,27,27,28,28,27,27,26,26,25, 1, 0],
-        &[0, 0, 1,25,25,26,26,26,26,26,26,25,25, 1, 0, 0],
+        &[0, 0, 1, 25, 25, 26, 26, 26, 26, 26, 26, 25, 25, 1, 0, 0],
+        &[0, 1, 25, 26, 26, 27, 27, 28, 28, 27, 27, 26, 26, 25, 1, 0],
+        &[1, 25, 26, 27, 3, 3, 4, 4, 4, 4, 3, 3, 27, 26, 25, 1],
+        &[1, 25, 26, 3, 3, 25, 25, 26, 26, 25, 25, 3, 3, 26, 25, 1],
+        &[1, 25, 26, 3, 25, 27, 27, 28, 28, 27, 27, 25, 3, 26, 25, 1],
+        &[1, 26, 27, 4, 25, 27, 28, 28, 28, 28, 27, 25, 4, 27, 26, 1],
+        &[1, 26, 27, 4, 26, 28, 28, 5, 5, 28, 28, 26, 4, 27, 26, 1],
+        &[1, 26, 27, 4, 26, 28, 28, 5, 5, 28, 28, 26, 4, 27, 26, 1],
+        &[1, 26, 27, 4, 25, 27, 28, 28, 28, 28, 27, 25, 4, 27, 26, 1],
+        &[1, 25, 26, 3, 25, 27, 27, 28, 28, 27, 27, 25, 3, 26, 25, 1],
+        &[1, 25, 26, 3, 3, 25, 25, 26, 26, 25, 25, 3, 3, 26, 25, 1],
+        &[1, 25, 26, 27, 3, 3, 4, 4, 4, 4, 3, 3, 27, 26, 25, 1],
+        &[0, 1, 25, 26, 26, 27, 27, 28, 28, 27, 27, 26, 26, 25, 1, 0],
+        &[0, 0, 1, 25, 25, 26, 26, 26, 26, 26, 26, 25, 25, 1, 0, 0],
         &[0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0],
     ];
     make_image(pixels, 16)
@@ -1767,18 +2024,18 @@ fn make_oil_refinery_sprite() -> Image {
     let pixels: &[&[u8]] = &[
         &[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
         &[1, 2, 2, 3, 3, 3, 4, 4, 4, 4, 3, 3, 3, 2, 2, 1],
-        &[1, 2, 3,14,14, 3, 4, 5, 5, 4, 3,14,14, 3, 2, 1],
-        &[1, 3,14,15,15,14, 3, 4, 4, 3,14,15,15,14, 3, 1],
-        &[1, 3,14,15,16,15, 3, 3, 3, 3,14,15,16,15, 3, 1],
-        &[1, 3,14,15,16,15,14, 3, 3,14,14,15,16,15, 3, 1],
-        &[1, 3,14,15,16,15,14, 2, 2,14,14,15,16,15, 3, 1],
-        &[1, 3, 3,14,15,14, 3, 2, 2, 3,14,15,14, 3, 3, 1],
-        &[1, 3, 3,14,15,14, 3, 2, 2, 3,14,15,14, 3, 3, 1],
-        &[1, 3,14,15,16,15,14, 2, 2,14,14,15,16,15, 3, 1],
-        &[1, 3,14,15,16,15,14, 3, 3,14,14,15,16,15, 3, 1],
-        &[1, 3,14,15,16,15, 3, 3, 3, 3,14,15,16,15, 3, 1],
-        &[1, 3,14,15,15,14, 3, 4, 4, 3,14,15,15,14, 3, 1],
-        &[1, 2, 3,14,14, 3, 4, 5, 5, 4, 3,14,14, 3, 2, 1],
+        &[1, 2, 3, 14, 14, 3, 4, 5, 5, 4, 3, 14, 14, 3, 2, 1],
+        &[1, 3, 14, 15, 15, 14, 3, 4, 4, 3, 14, 15, 15, 14, 3, 1],
+        &[1, 3, 14, 15, 16, 15, 3, 3, 3, 3, 14, 15, 16, 15, 3, 1],
+        &[1, 3, 14, 15, 16, 15, 14, 3, 3, 14, 14, 15, 16, 15, 3, 1],
+        &[1, 3, 14, 15, 16, 15, 14, 2, 2, 14, 14, 15, 16, 15, 3, 1],
+        &[1, 3, 3, 14, 15, 14, 3, 2, 2, 3, 14, 15, 14, 3, 3, 1],
+        &[1, 3, 3, 14, 15, 14, 3, 2, 2, 3, 14, 15, 14, 3, 3, 1],
+        &[1, 3, 14, 15, 16, 15, 14, 2, 2, 14, 14, 15, 16, 15, 3, 1],
+        &[1, 3, 14, 15, 16, 15, 14, 3, 3, 14, 14, 15, 16, 15, 3, 1],
+        &[1, 3, 14, 15, 16, 15, 3, 3, 3, 3, 14, 15, 16, 15, 3, 1],
+        &[1, 3, 14, 15, 15, 14, 3, 4, 4, 3, 14, 15, 15, 14, 3, 1],
+        &[1, 2, 3, 14, 14, 3, 4, 5, 5, 4, 3, 14, 14, 3, 2, 1],
         &[1, 2, 2, 3, 3, 3, 4, 4, 4, 4, 3, 3, 3, 2, 2, 1],
         &[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
     ];
@@ -1792,14 +2049,14 @@ fn make_nuclear_reactor_sprite() -> Image {
         &[1, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 3, 3, 3, 3, 1],
         &[1, 3, 4, 4, 4, 4, 3, 3, 3, 3, 4, 4, 4, 4, 3, 1],
         &[1, 3, 4, 3, 3, 3, 9, 9, 9, 9, 3, 3, 3, 4, 3, 1],
-        &[1, 3, 4, 3, 9, 9,10,10,10,10, 9, 9, 3, 4, 3, 1],
-        &[1, 4, 4, 3, 9,10,11,61,61,11,10, 9, 3, 4, 4, 1],
-        &[1, 4, 3, 9,10,11,61,62,62,61,11,10, 9, 3, 4, 1],
-        &[1, 4, 3, 9,10,61,62,62,62,62,61,10, 9, 3, 4, 1],
-        &[1, 4, 3, 9,10,61,62,62,62,62,61,10, 9, 3, 4, 1],
-        &[1, 4, 3, 9,10,11,61,62,62,61,11,10, 9, 3, 4, 1],
-        &[1, 4, 4, 3, 9,10,11,61,61,11,10, 9, 3, 4, 4, 1],
-        &[1, 3, 4, 3, 9, 9,10,10,10,10, 9, 9, 3, 4, 3, 1],
+        &[1, 3, 4, 3, 9, 9, 10, 10, 10, 10, 9, 9, 3, 4, 3, 1],
+        &[1, 4, 4, 3, 9, 10, 11, 61, 61, 11, 10, 9, 3, 4, 4, 1],
+        &[1, 4, 3, 9, 10, 11, 61, 62, 62, 61, 11, 10, 9, 3, 4, 1],
+        &[1, 4, 3, 9, 10, 61, 62, 62, 62, 62, 61, 10, 9, 3, 4, 1],
+        &[1, 4, 3, 9, 10, 61, 62, 62, 62, 62, 61, 10, 9, 3, 4, 1],
+        &[1, 4, 3, 9, 10, 11, 61, 62, 62, 61, 11, 10, 9, 3, 4, 1],
+        &[1, 4, 4, 3, 9, 10, 11, 61, 61, 11, 10, 9, 3, 4, 4, 1],
+        &[1, 3, 4, 3, 9, 9, 10, 10, 10, 10, 9, 9, 3, 4, 3, 1],
         &[1, 3, 4, 3, 3, 3, 9, 9, 9, 9, 3, 3, 3, 4, 3, 1],
         &[1, 3, 4, 4, 4, 4, 3, 3, 3, 3, 4, 4, 4, 4, 3, 1],
         &[1, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 3, 3, 3, 3, 1],
@@ -1813,18 +2070,18 @@ fn make_accumulator_sprite() -> Image {
     let pixels: &[&[u8]] = &[
         &[0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0],
         &[0, 1, 3, 3, 3, 3, 4, 4, 4, 4, 3, 3, 3, 3, 1, 0],
-        &[1, 3, 4, 4,25,25,25,26,26,25,25,25, 4, 4, 3, 1],
-        &[1, 3, 4,25,26,26,26,27,27,26,26,26,25, 4, 3, 1],
-        &[1, 3,25,26,27,27,27,28,28,27,27,27,26,25, 3, 1],
-        &[1, 3,25,26,27,28,28,28,28,28,28,27,26,25, 3, 1],
-        &[1, 4,25,26,27,28, 5, 5, 5, 5,28,27,26,25, 4, 1],
-        &[1, 4,25,27,28,28, 5, 6, 6, 5,28,28,27,25, 4, 1],
-        &[1, 4,25,27,28,28, 5, 6, 6, 5,28,28,27,25, 4, 1],
-        &[1, 4,25,26,27,28, 5, 5, 5, 5,28,27,26,25, 4, 1],
-        &[1, 3,25,26,27,28,28,28,28,28,28,27,26,25, 3, 1],
-        &[1, 3,25,26,27,27,27,28,28,27,27,27,26,25, 3, 1],
-        &[1, 3, 4,25,26,26,26,27,27,26,26,26,25, 4, 3, 1],
-        &[1, 3, 4, 4,25,25,25,26,26,25,25,25, 4, 4, 3, 1],
+        &[1, 3, 4, 4, 25, 25, 25, 26, 26, 25, 25, 25, 4, 4, 3, 1],
+        &[1, 3, 4, 25, 26, 26, 26, 27, 27, 26, 26, 26, 25, 4, 3, 1],
+        &[1, 3, 25, 26, 27, 27, 27, 28, 28, 27, 27, 27, 26, 25, 3, 1],
+        &[1, 3, 25, 26, 27, 28, 28, 28, 28, 28, 28, 27, 26, 25, 3, 1],
+        &[1, 4, 25, 26, 27, 28, 5, 5, 5, 5, 28, 27, 26, 25, 4, 1],
+        &[1, 4, 25, 27, 28, 28, 5, 6, 6, 5, 28, 28, 27, 25, 4, 1],
+        &[1, 4, 25, 27, 28, 28, 5, 6, 6, 5, 28, 28, 27, 25, 4, 1],
+        &[1, 4, 25, 26, 27, 28, 5, 5, 5, 5, 28, 27, 26, 25, 4, 1],
+        &[1, 3, 25, 26, 27, 28, 28, 28, 28, 28, 28, 27, 26, 25, 3, 1],
+        &[1, 3, 25, 26, 27, 27, 27, 28, 28, 27, 27, 27, 26, 25, 3, 1],
+        &[1, 3, 4, 25, 26, 26, 26, 27, 27, 26, 26, 26, 25, 4, 3, 1],
+        &[1, 3, 4, 4, 25, 25, 25, 26, 26, 25, 25, 25, 4, 4, 3, 1],
         &[0, 1, 3, 3, 3, 3, 4, 4, 4, 4, 3, 3, 3, 3, 1, 0],
         &[0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0],
     ];
@@ -1881,19 +2138,19 @@ fn make_pipe_sprite() -> Image {
 fn make_roboport_sprite() -> Image {
     let pixels: &[&[u8]] = &[
         &[0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0],
-        &[0, 0, 0, 0, 0, 0, 1,29,29, 1, 0, 0, 0, 0, 0, 0],
-        &[0, 0, 0, 0, 0, 1,29,30,30,29, 1, 0, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 0, 0, 1, 29, 29, 1, 0, 0, 0, 0, 0, 0],
+        &[0, 0, 0, 0, 0, 1, 29, 30, 30, 29, 1, 0, 0, 0, 0, 0],
         &[0, 0, 0, 0, 0, 0, 1, 3, 3, 1, 0, 0, 0, 0, 0, 0],
         &[0, 1, 1, 1, 1, 1, 1, 3, 3, 1, 1, 1, 1, 1, 1, 0],
         &[1, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 3, 3, 3, 3, 1],
         &[1, 3, 4, 4, 4, 4, 5, 5, 5, 5, 4, 4, 4, 4, 3, 1],
-        &[1, 3, 4, 5, 5,29,29,30,30,29,29, 5, 5, 4, 3, 1],
-        &[1, 3, 4, 5, 5,29,30,30,30,30,29, 5, 5, 4, 3, 1],
+        &[1, 3, 4, 5, 5, 29, 29, 30, 30, 29, 29, 5, 5, 4, 3, 1],
+        &[1, 3, 4, 5, 5, 29, 30, 30, 30, 30, 29, 5, 5, 4, 3, 1],
         &[1, 3, 4, 4, 4, 4, 5, 5, 5, 5, 4, 4, 4, 4, 3, 1],
         &[1, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 3, 3, 3, 3, 1],
         &[0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-        &[0, 0, 1,17,17, 1, 0, 0, 0, 0, 1,17,17, 1, 0, 0],
-        &[0, 0, 1,17,17, 1, 0, 0, 0, 0, 1,17,17, 1, 0, 0],
+        &[0, 0, 1, 17, 17, 1, 0, 0, 0, 0, 1, 17, 17, 1, 0, 0],
+        &[0, 0, 1, 17, 17, 1, 0, 0, 0, 0, 1, 17, 17, 1, 0, 0],
         &[0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0],
         &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     ];
@@ -1905,19 +2162,19 @@ fn make_rail_sprite() -> Image {
     let pixels: &[&[u8]] = &[
         &[0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0],
         &[0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0],
-        &[0, 0, 1,14,14,14,14,14,14,14,14,14,14, 1, 0, 0],
+        &[0, 0, 1, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 1, 0, 0],
         &[0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0],
         &[0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0],
         &[0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0],
-        &[0, 0, 1,14,14,14,14,14,14,14,14,14,14, 1, 0, 0],
+        &[0, 0, 1, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 1, 0, 0],
         &[0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0],
         &[0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0],
         &[0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0],
-        &[0, 0, 1,14,14,14,14,14,14,14,14,14,14, 1, 0, 0],
+        &[0, 0, 1, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 1, 0, 0],
         &[0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0],
         &[0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0],
         &[0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0],
-        &[0, 0, 1,14,14,14,14,14,14,14,14,14,14, 1, 0, 0],
+        &[0, 0, 1, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 1, 0, 0],
         &[0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0],
     ];
     make_image(pixels, 16)
@@ -1927,20 +2184,20 @@ fn make_rail_sprite() -> Image {
 fn make_train_stop_sprite() -> Image {
     let pixels: &[&[u8]] = &[
         &[0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0],
-        &[0, 0, 1,22,22,23,23,23,23,23,23,22,22, 1, 0, 0],
-        &[0, 1,22,23,23,24,24,24,24,24,24,23,23,22, 1, 0],
-        &[1,22,23, 3, 3, 3, 3, 4, 4, 3, 3, 3, 3,23,22, 1],
-        &[1,22,23, 3, 4, 4, 4, 4, 4, 4, 4, 4, 3,23,22, 1],
-        &[1,23,24, 3, 4, 5,61,61,61,61, 5, 4, 3,24,23, 1],
-        &[1,23,24, 3, 4,61,62,62,62,62,61, 4, 3,24,23, 1],
-        &[1,23,24, 4, 4,61,62,62,62,62,61, 4, 4,24,23, 1],
-        &[1,23,24, 4, 4,61,62,62,62,62,61, 4, 4,24,23, 1],
-        &[1,23,24, 3, 4,61,62,62,62,62,61, 4, 3,24,23, 1],
-        &[1,23,24, 3, 4, 5,61,61,61,61, 5, 4, 3,24,23, 1],
-        &[1,22,23, 3, 4, 4, 4, 4, 4, 4, 4, 4, 3,23,22, 1],
-        &[1,22,23, 3, 3, 3, 3, 4, 4, 3, 3, 3, 3,23,22, 1],
-        &[0, 1,22,23,23,24,24,24,24,24,24,23,23,22, 1, 0],
-        &[0, 0, 1,22,22,23,23,23,23,23,23,22,22, 1, 0, 0],
+        &[0, 0, 1, 22, 22, 23, 23, 23, 23, 23, 23, 22, 22, 1, 0, 0],
+        &[0, 1, 22, 23, 23, 24, 24, 24, 24, 24, 24, 23, 23, 22, 1, 0],
+        &[1, 22, 23, 3, 3, 3, 3, 4, 4, 3, 3, 3, 3, 23, 22, 1],
+        &[1, 22, 23, 3, 4, 4, 4, 4, 4, 4, 4, 4, 3, 23, 22, 1],
+        &[1, 23, 24, 3, 4, 5, 61, 61, 61, 61, 5, 4, 3, 24, 23, 1],
+        &[1, 23, 24, 3, 4, 61, 62, 62, 62, 62, 61, 4, 3, 24, 23, 1],
+        &[1, 23, 24, 4, 4, 61, 62, 62, 62, 62, 61, 4, 4, 24, 23, 1],
+        &[1, 23, 24, 4, 4, 61, 62, 62, 62, 62, 61, 4, 4, 24, 23, 1],
+        &[1, 23, 24, 3, 4, 61, 62, 62, 62, 62, 61, 4, 3, 24, 23, 1],
+        &[1, 23, 24, 3, 4, 5, 61, 61, 61, 61, 5, 4, 3, 24, 23, 1],
+        &[1, 22, 23, 3, 4, 4, 4, 4, 4, 4, 4, 4, 3, 23, 22, 1],
+        &[1, 22, 23, 3, 3, 3, 3, 4, 4, 3, 3, 3, 3, 23, 22, 1],
+        &[0, 1, 22, 23, 23, 24, 24, 24, 24, 24, 24, 23, 23, 22, 1, 0],
+        &[0, 0, 1, 22, 22, 23, 23, 23, 23, 23, 23, 22, 22, 1, 0, 0],
         &[0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0],
     ];
     make_image(pixels, 16)
@@ -1955,10 +2212,10 @@ fn make_rocket_silo_sprite() -> Image {
         &[1, 2, 3, 4, 4, 4, 3, 3, 3, 3, 4, 4, 4, 3, 2, 1],
         &[1, 3, 3, 4, 3, 3, 2, 2, 2, 2, 3, 3, 4, 3, 3, 1],
         &[1, 3, 4, 4, 3, 2, 1, 1, 1, 1, 2, 3, 4, 4, 3, 1],
-        &[1, 3, 4, 3, 2, 1,22,22,22,22, 1, 2, 3, 4, 3, 1],
-        &[1, 4, 4, 3, 2, 1,22,23,23,22, 1, 2, 3, 4, 4, 1],
-        &[1, 4, 4, 3, 2, 1,22,23,23,22, 1, 2, 3, 4, 4, 1],
-        &[1, 3, 4, 3, 2, 1,22,22,22,22, 1, 2, 3, 4, 3, 1],
+        &[1, 3, 4, 3, 2, 1, 22, 22, 22, 22, 1, 2, 3, 4, 3, 1],
+        &[1, 4, 4, 3, 2, 1, 22, 23, 23, 22, 1, 2, 3, 4, 4, 1],
+        &[1, 4, 4, 3, 2, 1, 22, 23, 23, 22, 1, 2, 3, 4, 4, 1],
+        &[1, 3, 4, 3, 2, 1, 22, 22, 22, 22, 1, 2, 3, 4, 3, 1],
         &[1, 3, 4, 4, 3, 2, 1, 1, 1, 1, 2, 3, 4, 4, 3, 1],
         &[1, 3, 3, 4, 3, 3, 2, 2, 2, 2, 3, 3, 4, 3, 3, 1],
         &[1, 2, 3, 4, 4, 4, 3, 3, 3, 3, 4, 4, 4, 3, 2, 1],
@@ -1974,18 +2231,18 @@ fn make_beacon_sprite() -> Image {
     let pixels: &[&[u8]] = &[
         &[0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0],
         &[0, 0, 0, 1, 1, 3, 3, 4, 4, 3, 3, 1, 1, 0, 0, 0],
-        &[0, 0, 1, 3, 3, 4,29,29,29,29, 4, 3, 3, 1, 0, 0],
-        &[0, 1, 3, 4,29,29,30,30,30,30,29,29, 4, 3, 1, 0],
-        &[0, 1, 3,29,30,30,31,31,31,31,30,30,29, 3, 1, 0],
-        &[1, 3, 4,29,30,31,32,32,32,32,31,30,29, 4, 3, 1],
-        &[1, 3,29,30,31,32,32, 5, 5,32,32,31,30,29, 3, 1],
-        &[1, 4,29,30,31,32, 5, 6, 6, 5,32,31,30,29, 4, 1],
-        &[1, 4,29,30,31,32, 5, 6, 6, 5,32,31,30,29, 4, 1],
-        &[1, 3,29,30,31,32,32, 5, 5,32,32,31,30,29, 3, 1],
-        &[1, 3, 4,29,30,31,32,32,32,32,31,30,29, 4, 3, 1],
-        &[0, 1, 3,29,30,30,31,31,31,31,30,30,29, 3, 1, 0],
-        &[0, 1, 3, 4,29,29,30,30,30,30,29,29, 4, 3, 1, 0],
-        &[0, 0, 1, 3, 3, 4,29,29,29,29, 4, 3, 3, 1, 0, 0],
+        &[0, 0, 1, 3, 3, 4, 29, 29, 29, 29, 4, 3, 3, 1, 0, 0],
+        &[0, 1, 3, 4, 29, 29, 30, 30, 30, 30, 29, 29, 4, 3, 1, 0],
+        &[0, 1, 3, 29, 30, 30, 31, 31, 31, 31, 30, 30, 29, 3, 1, 0],
+        &[1, 3, 4, 29, 30, 31, 32, 32, 32, 32, 31, 30, 29, 4, 3, 1],
+        &[1, 3, 29, 30, 31, 32, 32, 5, 5, 32, 32, 31, 30, 29, 3, 1],
+        &[1, 4, 29, 30, 31, 32, 5, 6, 6, 5, 32, 31, 30, 29, 4, 1],
+        &[1, 4, 29, 30, 31, 32, 5, 6, 6, 5, 32, 31, 30, 29, 4, 1],
+        &[1, 3, 29, 30, 31, 32, 32, 5, 5, 32, 32, 31, 30, 29, 3, 1],
+        &[1, 3, 4, 29, 30, 31, 32, 32, 32, 32, 31, 30, 29, 4, 3, 1],
+        &[0, 1, 3, 29, 30, 30, 31, 31, 31, 31, 30, 30, 29, 3, 1, 0],
+        &[0, 1, 3, 4, 29, 29, 30, 30, 30, 30, 29, 29, 4, 3, 1, 0],
+        &[0, 0, 1, 3, 3, 4, 29, 29, 29, 29, 4, 3, 3, 1, 0, 0],
         &[0, 0, 0, 1, 1, 3, 3, 4, 4, 3, 3, 1, 1, 0, 0, 0],
         &[0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0],
     ];
@@ -1997,18 +2254,18 @@ fn make_electric_furnace_sprite() -> Image {
     let pixels: &[&[u8]] = &[
         &[0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0],
         &[0, 1, 3, 3, 3, 4, 4, 4, 4, 4, 4, 3, 3, 3, 1, 0],
-        &[1, 3, 4, 4,25,25,26,26,26,26,25,25, 4, 4, 3, 1],
-        &[1, 3, 4,25,26,27,27,27,27,27,27,26,25, 4, 3, 1],
-        &[1, 3,25,26,27, 3, 3, 3, 3, 3, 3,27,26,25, 3, 1],
-        &[1, 4,25,27, 3, 3,22,22,22,22, 3, 3,27,25, 4, 1],
-        &[1, 4,26,27, 3,22,23,24,24,23,22, 3,27,26, 4, 1],
-        &[1, 4,26,27, 3,22,24,24,24,24,22, 3,27,26, 4, 1],
-        &[1, 4,26,27, 3,22,24,24,24,24,22, 3,27,26, 4, 1],
-        &[1, 4,26,27, 3,22,23,24,24,23,22, 3,27,26, 4, 1],
-        &[1, 4,25,27, 3, 3,22,22,22,22, 3, 3,27,25, 4, 1],
-        &[1, 3,25,26,27, 3, 3, 3, 3, 3, 3,27,26,25, 3, 1],
-        &[1, 3, 4,25,26,27,27,27,27,27,27,26,25, 4, 3, 1],
-        &[1, 3, 4, 4,25,25,26,26,26,26,25,25, 4, 4, 3, 1],
+        &[1, 3, 4, 4, 25, 25, 26, 26, 26, 26, 25, 25, 4, 4, 3, 1],
+        &[1, 3, 4, 25, 26, 27, 27, 27, 27, 27, 27, 26, 25, 4, 3, 1],
+        &[1, 3, 25, 26, 27, 3, 3, 3, 3, 3, 3, 27, 26, 25, 3, 1],
+        &[1, 4, 25, 27, 3, 3, 22, 22, 22, 22, 3, 3, 27, 25, 4, 1],
+        &[1, 4, 26, 27, 3, 22, 23, 24, 24, 23, 22, 3, 27, 26, 4, 1],
+        &[1, 4, 26, 27, 3, 22, 24, 24, 24, 24, 22, 3, 27, 26, 4, 1],
+        &[1, 4, 26, 27, 3, 22, 24, 24, 24, 24, 22, 3, 27, 26, 4, 1],
+        &[1, 4, 26, 27, 3, 22, 23, 24, 24, 23, 22, 3, 27, 26, 4, 1],
+        &[1, 4, 25, 27, 3, 3, 22, 22, 22, 22, 3, 3, 27, 25, 4, 1],
+        &[1, 3, 25, 26, 27, 3, 3, 3, 3, 3, 3, 27, 26, 25, 3, 1],
+        &[1, 3, 4, 25, 26, 27, 27, 27, 27, 27, 27, 26, 25, 4, 3, 1],
+        &[1, 3, 4, 4, 25, 25, 26, 26, 26, 26, 25, 25, 4, 4, 3, 1],
         &[0, 1, 3, 3, 3, 4, 4, 4, 4, 4, 4, 3, 3, 3, 1, 0],
         &[0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0],
     ];
@@ -2020,18 +2277,18 @@ fn make_pump_jack_sprite() -> Image {
     let pixels: &[&[u8]] = &[
         &[0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0],
         &[0, 0, 0, 1, 1, 3, 3, 4, 4, 3, 3, 1, 1, 0, 0, 0],
-        &[0, 0, 1, 3, 3, 4,14,14,14,14, 4, 3, 3, 1, 0, 0],
-        &[0, 1, 3, 4,14,15,15,16,16,15,15,14, 4, 3, 1, 0],
-        &[0, 1, 3,14,15,16, 3, 3, 3, 3,16,15,14, 3, 1, 0],
-        &[1, 3, 4,14,15, 3, 3, 4, 4, 3, 3,15,14, 4, 3, 1],
-        &[1, 3, 4,14, 3, 3, 4, 4, 4, 4, 3, 3,14, 4, 3, 1],
+        &[0, 0, 1, 3, 3, 4, 14, 14, 14, 14, 4, 3, 3, 1, 0, 0],
+        &[0, 1, 3, 4, 14, 15, 15, 16, 16, 15, 15, 14, 4, 3, 1, 0],
+        &[0, 1, 3, 14, 15, 16, 3, 3, 3, 3, 16, 15, 14, 3, 1, 0],
+        &[1, 3, 4, 14, 15, 3, 3, 4, 4, 3, 3, 15, 14, 4, 3, 1],
+        &[1, 3, 4, 14, 3, 3, 4, 4, 4, 4, 3, 3, 14, 4, 3, 1],
         &[1, 3, 4, 3, 3, 4, 4, 1, 1, 4, 4, 3, 3, 4, 3, 1],
         &[1, 3, 4, 3, 3, 4, 4, 1, 1, 4, 4, 3, 3, 4, 3, 1],
-        &[1, 3, 4,14, 3, 3, 4, 4, 4, 4, 3, 3,14, 4, 3, 1],
-        &[1, 3, 4,14,15, 3, 3, 4, 4, 3, 3,15,14, 4, 3, 1],
-        &[0, 1, 3,14,15,16, 3, 3, 3, 3,16,15,14, 3, 1, 0],
-        &[0, 1, 3, 4,14,15,15,16,16,15,15,14, 4, 3, 1, 0],
-        &[0, 0, 1, 3, 3, 4,14,14,14,14, 4, 3, 3, 1, 0, 0],
+        &[1, 3, 4, 14, 3, 3, 4, 4, 4, 4, 3, 3, 14, 4, 3, 1],
+        &[1, 3, 4, 14, 15, 3, 3, 4, 4, 3, 3, 15, 14, 4, 3, 1],
+        &[0, 1, 3, 14, 15, 16, 3, 3, 3, 3, 16, 15, 14, 3, 1, 0],
+        &[0, 1, 3, 4, 14, 15, 15, 16, 16, 15, 15, 14, 4, 3, 1, 0],
+        &[0, 0, 1, 3, 3, 4, 14, 14, 14, 14, 4, 3, 3, 1, 0, 0],
         &[0, 0, 0, 1, 1, 3, 3, 4, 4, 3, 3, 1, 1, 0, 0, 0],
         &[0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0],
     ];
@@ -2042,10 +2299,10 @@ fn make_pump_jack_sprite() -> Image {
 fn make_laser_turret_sprite() -> Image {
     let pixels: &[&[u8]] = &[
         &[0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0],
-        &[0, 0, 0, 1, 1,25,25,26,26,25,25, 1, 1, 0, 0, 0],
-        &[0, 0, 1, 3,25,26,27,28,28,27,26,25, 3, 1, 0, 0],
-        &[0, 1, 3, 3, 3,25,26,27,27,26,25, 3, 3, 3, 1, 0],
-        &[0, 1, 3, 3, 3, 3,25,26,26,25, 3, 3, 3, 3, 1, 0],
+        &[0, 0, 0, 1, 1, 25, 25, 26, 26, 25, 25, 1, 1, 0, 0, 0],
+        &[0, 0, 1, 3, 25, 26, 27, 28, 28, 27, 26, 25, 3, 1, 0, 0],
+        &[0, 1, 3, 3, 3, 25, 26, 27, 27, 26, 25, 3, 3, 3, 1, 0],
+        &[0, 1, 3, 3, 3, 3, 25, 26, 26, 25, 3, 3, 3, 3, 1, 0],
         &[1, 3, 3, 3, 3, 3, 3, 4, 4, 3, 3, 3, 3, 3, 3, 1],
         &[1, 3, 4, 4, 3, 3, 4, 4, 4, 4, 3, 3, 4, 4, 3, 1],
         &[1, 3, 4, 4, 4, 4, 4, 5, 5, 4, 4, 4, 4, 4, 3, 1],
@@ -2109,8 +2366,12 @@ fn make_forge_avatar_sprite(frame: u8) -> Image {
     if frame == 1 {
         // Blink frame: replace eye region with closed ^_^ lines.
         for y in 8..11u32 {
-            for x in 7..11u32 { img.set_pixel(x, y, pal_color(32)); }
-            for x in 13..17u32 { img.set_pixel(x, y, pal_color(32)); }
+            for x in 7..11u32 {
+                img.set_pixel(x, y, pal_color(32));
+            }
+            for x in 13..17u32 {
+                img.set_pixel(x, y, pal_color(32));
+            }
         }
         // Draw ^_^ (left eye)
         img.set_pixel(7, 9, pal_color(1));

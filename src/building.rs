@@ -25,6 +25,9 @@ pub struct MachineState {
     pub fuel_ticks: u32,
     /// The recipe this machine is currently crafting. `None` = idle / auto-detect.
     pub selected_recipe: Option<RecipeId>,
+    /// Installed modules (max 2). Speed/Efficiency/Productivity modules modify machine behavior.
+    #[serde(default)]
+    pub modules: Vec<Resource>,
 }
 
 impl MachineState {
@@ -37,8 +40,41 @@ impl MachineState {
             total_ticks: 0,
             fuel_ticks: 0,
             selected_recipe: None,
+            modules: Vec::new(),
         }
     }
+}
+
+/// Maximum number of module slots per machine.
+pub const MAX_MODULE_SLOTS: usize = 2;
+
+/// Returns (speed_multiplier, power_multiplier, productivity_bonus) for a machine's modules.
+///
+/// - Speed Module: +50% speed, +50% power draw
+/// - Efficiency Module: -30% power draw
+/// - Productivity Module: -15% speed, +40% power draw, +10% chance of bonus output
+pub fn module_effects(modules: &[Resource]) -> (f32, f32, f32) {
+    let mut speed = 1.0f32;
+    let mut power = 1.0f32;
+    let mut productivity = 0.0f32;
+    for m in modules {
+        match m {
+            Resource::SpeedModule => {
+                speed += 0.5;
+                power += 0.5;
+            }
+            Resource::EfficiencyModule => {
+                power -= 0.3;
+            }
+            Resource::ProductivityModule => {
+                speed -= 0.15;
+                power += 0.4;
+                productivity += 0.1;
+            }
+            _ => {}
+        }
+    }
+    (speed.max(0.2), power.max(0.2), productivity)
 }
 
 /// A building placed on the grid.
@@ -107,16 +143,14 @@ impl Buildings {
             }
         }
         // Miners must be on a deposit.
-        if building.kind == BuildingKind::Miner {
-            if tile.deposit.is_none() || tile.deposit == Some(OreDeposit::Oil) {
-                return None;
-            }
+        if building.kind == BuildingKind::Miner
+            && (tile.deposit.is_none() || tile.deposit == Some(OreDeposit::Oil))
+        {
+            return None;
         }
         // Pump jacks must be on oil.
-        if building.kind == BuildingKind::PumpJack {
-            if tile.deposit != Some(OreDeposit::Oil) {
-                return None;
-            }
+        if building.kind == BuildingKind::PumpJack && tile.deposit != Some(OreDeposit::Oil) {
+            return None;
         }
 
         // Insert into arena.
@@ -156,9 +190,7 @@ impl Buildings {
     /// Removes a building from the grid and returns it to the free list.
     pub fn remove(&mut self, id: BuildingId, grid: &mut Grid) {
         let i = id.index as usize;
-        if i < self.slots.len()
-            && self.slots[i].alive
-            && self.slots[i].generation == id.generation
+        if i < self.slots.len() && self.slots[i].alive && self.slots[i].generation == id.generation
         {
             let pos = self.slots[i].building.pos;
             self.slots[i].alive = false;
@@ -174,9 +206,7 @@ impl Buildings {
     /// Returns a reference to a building if the handle is valid.
     pub fn get(&self, id: BuildingId) -> Option<&Building> {
         let i = id.index as usize;
-        if i < self.slots.len()
-            && self.slots[i].alive
-            && self.slots[i].generation == id.generation
+        if i < self.slots.len() && self.slots[i].alive && self.slots[i].generation == id.generation
         {
             Some(&self.slots[i].building)
         } else {
@@ -187,9 +217,7 @@ impl Buildings {
     /// Returns a mutable reference to a building if the handle is valid.
     pub fn get_mut(&mut self, id: BuildingId) -> Option<&mut Building> {
         let i = id.index as usize;
-        if i < self.slots.len()
-            && self.slots[i].alive
-            && self.slots[i].generation == id.generation
+        if i < self.slots.len() && self.slots[i].alive && self.slots[i].generation == id.generation
         {
             Some(&mut self.slots[i].building)
         } else {

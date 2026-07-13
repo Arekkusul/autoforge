@@ -8,7 +8,6 @@ use std::collections::HashMap;
 
 use crate::building::Buildings;
 use crate::camera::GameCamera;
-use crate::recipe;
 use crate::constants::*;
 use crate::daynight::DayNightState;
 use crate::enemy::Enemies;
@@ -16,6 +15,7 @@ use crate::grid::Grid;
 use crate::item::ItemPool;
 use crate::mapgen;
 use crate::power::PowerState;
+use crate::recipe;
 use crate::research::ResearchState;
 use crate::story::StoryState;
 use crate::train::Trains;
@@ -35,6 +35,9 @@ pub struct GameStats {
     pub buildings_placed: u64,
     /// Total enemies killed.
     pub enemies_killed: u64,
+    /// Per-resource production log: (resource, tick_produced). Transient, not saved.
+    #[serde(skip)]
+    pub production_log: Vec<(Resource, u64)>,
 }
 
 /// Complete game state for one session.
@@ -82,8 +85,6 @@ pub struct GameState {
     pub undo_history: Vec<GridPos>,
     /// Last belt position placed (for auto-rotate during drag).
     pub last_belt_pos: Option<GridPos>,
-    /// Production tracking: items produced in the last 1200 ticks (60 sec).
-    pub production_log: Vec<(Resource, u64)>, // (resource, tick_produced)
 
     // --- Simulation timing ---
     /// Accumulated time for fixed-timestep simulation.
@@ -100,8 +101,10 @@ pub struct GameState {
     pub game_speed: u32,
     /// Whether the research screen overlay is visible.
     pub show_research: bool,
-    /// Toast notification messages (text, remaining display ticks).
-    pub toasts: Vec<(String, u32)>,
+    /// Toast notification messages (text, remaining display ticks, severity).
+    pub toasts: Vec<(String, u32, AlertSeverity)>,
+    /// Cooldown tracking for alerts: maps AlertKind → last tick fired.
+    pub alert_cooldowns: HashMap<AlertKind, u64>,
     /// Notification history (last 20 messages for review).
     pub notification_log: Vec<String>,
     /// Whether the game has been won (all story complete).
@@ -116,6 +119,12 @@ pub struct GameState {
     pub blueprint: Vec<(i32, i32, BuildingKind, Direction)>,
     /// Whether we're in blueprint paste mode.
     pub pasting_blueprint: bool,
+    /// Saved blueprint library (name, buildings). Max 10.
+    pub blueprint_library: Vec<(String, Vec<(i32, i32, BuildingKind, Direction)>)>,
+    /// Whether the blueprint picker overlay is showing.
+    pub show_blueprint_picker: bool,
+    /// Custom hotbar overrides. None = use defaults. Vec index = slot, value = building kind.
+    pub custom_hotbar: Vec<Option<BuildingKind>>,
     /// Brief placement flash effect (position + remaining ticks).
     pub placement_flash: Option<(GridPos, u32)>,
     /// Build zone radius (tiles from map center). Expands with research.
@@ -177,7 +186,6 @@ impl GameState {
             milestones_completed: vec![false; crate::milestones::MILESTONES.len()],
             undo_history: Vec::new(),
             last_belt_pos: None,
-            production_log: Vec::new(),
             tick_accumulator: 0.0,
             selected_building: None,
             placement_direction: Direction::South,
@@ -185,6 +193,7 @@ impl GameState {
             game_speed: 1,
             show_research: false,
             toasts: Vec::new(),
+            alert_cooldowns: HashMap::new(),
             notification_log: Vec::new(),
             game_won: false,
             show_help: false,
@@ -192,6 +201,9 @@ impl GameState {
             show_stats: false,
             blueprint: Vec::new(),
             pasting_blueprint: false,
+            blueprint_library: Vec::new(),
+            show_blueprint_picker: false,
+            custom_hotbar: vec![None; 16],
             placement_flash: None,
             build_radius: 30.0,
             recipe_picker: None,
@@ -204,15 +216,56 @@ impl GameState {
 
     /// Adds a toast notification that displays for `duration_ticks` simulation ticks.
     pub fn toast(&mut self, message: String, duration_ticks: u32) {
+        self.toast_with_severity(message, duration_ticks, AlertSeverity::Info);
+    }
+
+    /// Adds a toast notification with a specific severity level.
+    pub fn toast_with_severity(
+        &mut self,
+        message: String,
+        duration_ticks: u32,
+        severity: AlertSeverity,
+    ) {
         // Log for history review.
         self.notification_log.push(message.clone());
         if self.notification_log.len() > 30 {
             self.notification_log.remove(0);
         }
-        self.toasts.push((message, duration_ticks));
+        self.toasts.push((message, duration_ticks, severity));
         if self.toasts.len() > 5 {
             self.toasts.remove(0);
         }
+    }
+
+    /// Fires an alert with cooldown-based deduplication.
+    /// If the same `kind` was fired within its cooldown window, this is a no-op.
+    pub fn alert(
+        &mut self,
+        kind: AlertKind,
+        message: String,
+        duration_ticks: u32,
+        severity: AlertSeverity,
+    ) {
+        let tick = self.stats.total_ticks;
+        let cooldown = kind.cooldown_ticks();
+        if let Some(&last) = self.alert_cooldowns.get(&kind) {
+            if tick < last + cooldown {
+                return;
+            }
+        }
+        self.alert_cooldowns.insert(kind, tick);
+        self.toast_with_severity(message, duration_ticks, severity);
+    }
+
+    /// Closes all UI overlay panels.
+    pub fn close_all_overlays(&mut self) {
+        self.show_research = false;
+        self.show_recipes = false;
+        self.show_stats = false;
+        self.show_achievements = false;
+        self.show_help = false;
+        self.show_blueprint_picker = false;
+        self.recipe_picker = None;
     }
 
     /// Decrements toast timers and removes expired ones. Call once per tick.

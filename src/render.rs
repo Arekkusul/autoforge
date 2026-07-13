@@ -87,8 +87,13 @@ pub fn draw_world(
                     // Pollution overlay (simplified).
                     if tile.pollution > 0.1 {
                         let alpha = (tile.pollution * 0.08).min(0.5);
-                        draw_rectangle(world.x, world.y, tile_draw_size, tile_draw_size,
-                            Color::new(0.35, 0.4, 0.1, alpha));
+                        draw_rectangle(
+                            world.x,
+                            world.y,
+                            tile_draw_size,
+                            tile_draw_size,
+                            Color::new(0.35, 0.4, 0.1, alpha),
+                        );
                     }
                     continue;
                 }
@@ -105,7 +110,7 @@ pub fn draw_world(
                     Terrain::Desert => atlas.r_ground_desert,
                     Terrain::Forest => atlas.r_ground_forest,
                     Terrain::Water => {
-                        if (tick / 10 + (x as u64) + (y as u64)) % 2 == 0 {
+                        if (tick / 10 + (x as u64) + (y as u64)).is_multiple_of(2) {
                             atlas.r_ground_water
                         } else {
                             atlas.r_ground_water_alt
@@ -205,9 +210,16 @@ pub fn draw_world(
 
         if lod <= 1 {
             // Machine animation: active machines cycle between frames.
-            let mf = if building.machine_state.as_ref().map(|ms| ms.progress_ticks > 0).unwrap_or(false) {
+            let mf = if building
+                .machine_state
+                .as_ref()
+                .map(|ms| ms.progress_ticks > 0)
+                .unwrap_or(false)
+            {
                 _machine_anim
-            } else { 0 };
+            } else {
+                0
+            };
 
             // Full sprite rendering from unified atlas.
             // For belts at LOD 0: detect corners for corner sprite.
@@ -215,21 +227,24 @@ pub fn draw_world(
             let (src_rect, rotation) = if building.kind.is_belt() && lod == 0 {
                 let dir = building.direction;
                 let behind = bpos.neighbor(dir.opposite());
-                let has_input_behind = grid.get_tile(behind)
+                let has_input_behind = grid
+                    .get_tile(behind)
                     .and_then(|t| t.building)
                     .and_then(|bid2| buildings.get(bid2))
                     .map(|b2| b2.kind.is_belt() && b2.direction == dir)
                     .unwrap_or(false);
 
                 let left_pos = bpos.neighbor(dir.rotated_ccw());
-                let has_input_left = grid.get_tile(left_pos)
+                let has_input_left = grid
+                    .get_tile(left_pos)
                     .and_then(|t| t.building)
                     .and_then(|bid2| buildings.get(bid2))
                     .map(|b2| b2.kind.is_belt() && b2.direction == dir.rotated_cw())
                     .unwrap_or(false);
 
                 let right_pos = bpos.neighbor(dir.rotated_cw());
-                let has_input_right = grid.get_tile(right_pos)
+                let has_input_right = grid
+                    .get_tile(right_pos)
                     .and_then(|t| t.building)
                     .and_then(|bid2| buildings.get(bid2))
                     .map(|b2| b2.kind.is_belt() && b2.direction == dir.rotated_ccw())
@@ -240,14 +255,18 @@ pub fn draw_world(
                 if is_corner {
                     let corner_src = if has_input_left {
                         match building.kind {
-                            BuildingKind::BeltYellow => atlas.r_belt_corner_left_yellow[_anim_frame],
+                            BuildingKind::BeltYellow => {
+                                atlas.r_belt_corner_left_yellow[_anim_frame]
+                            }
                             BuildingKind::BeltRed => atlas.r_belt_corner_left_red[_anim_frame],
                             BuildingKind::BeltBlue => atlas.r_belt_corner_left_blue[_anim_frame],
                             _ => unreachable!(),
                         }
                     } else {
                         match building.kind {
-                            BuildingKind::BeltYellow => atlas.r_belt_corner_right_yellow[_anim_frame],
+                            BuildingKind::BeltYellow => {
+                                atlas.r_belt_corner_right_yellow[_anim_frame]
+                            }
                             BuildingKind::BeltRed => atlas.r_belt_corner_right_red[_anim_frame],
                             BuildingKind::BeltBlue => atlas.r_belt_corner_right_blue[_anim_frame],
                             _ => unreachable!(),
@@ -255,14 +274,24 @@ pub fn draw_world(
                     };
                     (corner_src, direction_to_rotation(dir))
                 } else {
-                    (building_src_rect(building.kind, atlas, _anim_frame, mf), direction_to_rotation(dir))
+                    (
+                        building_src_rect(building.kind, atlas, _anim_frame, mf),
+                        direction_to_rotation(dir),
+                    )
                 }
             } else {
-                (building_src_rect(building.kind, atlas, _anim_frame, mf), direction_to_rotation(building.direction))
+                (
+                    building_src_rect(building.kind, atlas, _anim_frame, mf),
+                    direction_to_rotation(building.direction),
+                )
             };
 
             // Damage tint: red when HP < 50%, flash when < 25%.
-            let hp_ratio = if building.max_hp > 0.0 { building.hp / building.max_hp } else { 1.0 };
+            let hp_ratio = if building.max_hp > 0.0 {
+                building.hp / building.max_hp
+            } else {
+                1.0
+            };
             let tint = if hp_ratio < 0.25 {
                 let flash = (tick as f32 * 0.3).sin() * 0.3 + 0.7;
                 Color::new(1.0, flash * 0.3, flash * 0.3, 1.0)
@@ -295,8 +324,11 @@ pub fn draw_world(
             };
 
             // Brownout tint: dim electric machines when power is low.
-            if power_satisfaction < 0.5 && !building.kind.needs_fuel() && !building.kind.is_belt()
-                && !building.kind.is_inserter() && building.kind != BuildingKind::Miner
+            if power_satisfaction < 0.5
+                && !building.kind.needs_fuel()
+                && !building.kind.is_belt()
+                && !building.kind.is_inserter()
+                && building.kind != BuildingKind::Miner
             {
                 let dim = 0.5 + power_satisfaction;
                 tint.r *= dim;
@@ -331,7 +363,10 @@ pub fn draw_world(
                     source: Some(src_rect),
                     dest_size: Some(Vec2::splat(TILE_SIZE)),
                     rotation: final_rotation,
-                    pivot: Some(Vec2::new(world.x + TILE_SIZE * 0.5, world.y + TILE_SIZE * 0.5)),
+                    pivot: Some(Vec2::new(
+                        world.x + TILE_SIZE * 0.5,
+                        world.y + TILE_SIZE * 0.5,
+                    )),
                     ..Default::default()
                 },
             );
@@ -361,9 +396,10 @@ pub fn draw_world(
                         );
                     }
                     // Smoke puffs for active furnaces/boilers.
-                    if ms.progress_ticks > 0 && (building.kind == BuildingKind::StoneFurnace
-                        || building.kind == BuildingKind::SteelFurnace
-                        || building.kind == BuildingKind::Boiler)
+                    if ms.progress_ticks > 0
+                        && (building.kind == BuildingKind::StoneFurnace
+                            || building.kind == BuildingKind::SteelFurnace
+                            || building.kind == BuildingKind::Boiler)
                     {
                         let smoke_phase = (tick as f32 * 0.1 + world.x * 0.3) % 3.0;
                         for i in 0..3u32 {
@@ -381,8 +417,18 @@ pub fn draw_world(
                         let glow_phase = (tick as f32 * 0.15).sin() * 0.15 + 0.35;
                         let cx = world.x + TILE_SIZE * 0.5;
                         let cy = world.y + TILE_SIZE * 0.5;
-                        draw_circle(cx, cy, TILE_SIZE * 0.45, Color::new(0.3, 0.5, 1.0, glow_phase * 0.3));
-                        draw_circle(cx, cy, TILE_SIZE * 0.3, Color::new(0.4, 0.6, 1.0, glow_phase * 0.2));
+                        draw_circle(
+                            cx,
+                            cy,
+                            TILE_SIZE * 0.45,
+                            Color::new(0.3, 0.5, 1.0, glow_phase * 0.3),
+                        );
+                        draw_circle(
+                            cx,
+                            cy,
+                            TILE_SIZE * 0.3,
+                            Color::new(0.4, 0.6, 1.0, glow_phase * 0.2),
+                        );
                     }
 
                     // Item count badge (top-right corner) showing buffer contents.
@@ -390,7 +436,13 @@ pub fn draw_world(
                     if total_items > 0 {
                         let badge_x = world.x + TILE_SIZE - 14.0;
                         let badge_y = world.y + 2.0;
-                        draw_rectangle(badge_x, badge_y, 12.0, 12.0, Color::new(0.1, 0.1, 0.2, 0.8));
+                        draw_rectangle(
+                            badge_x,
+                            badge_y,
+                            12.0,
+                            12.0,
+                            Color::new(0.1, 0.1, 0.2, 0.8),
+                        );
                         draw_text(
                             &format!("{}", total_items),
                             badge_x + 2.0,
@@ -404,7 +456,7 @@ pub fn draw_world(
                     if building.kind.needs_fuel()
                         && ms.progress_ticks > 0
                         && ms.fuel_ticks == 0
-                        && !ms.input_buffer.iter().any(|&r| r == Resource::Coal)
+                        && !ms.input_buffer.contains(&Resource::Coal)
                     {
                         let warn_x = world.x + 2.0;
                         let warn_y = world.y + 2.0;
@@ -424,7 +476,10 @@ pub fn draw_world(
                         let warn_y = world.y + TILE_SIZE - 16.0;
                         draw_rectangle(warn_x, warn_y, 38.0, 14.0, Color::new(0.7, 0.5, 0.0, 0.9));
                         draw_text("FULL", warn_x + 3.0, warn_y + 11.0, 12.0, WHITE);
-                    } else if ms.progress_ticks == 0 && ms.input_buffer.is_empty() && ms.selected_recipe.is_some() {
+                    } else if ms.progress_ticks == 0
+                        && ms.input_buffer.is_empty()
+                        && ms.selected_recipe.is_some()
+                    {
                         // EMPTY: has a recipe but no inputs — needs items fed in.
                         let warn_x = world.x + 2.0;
                         let warn_y = world.y + TILE_SIZE - 16.0;
@@ -433,15 +488,29 @@ pub fn draw_world(
                     }
 
                     // Low power badge for electric machines experiencing brownout.
-                    if power_satisfaction < 0.5 && !building.kind.needs_fuel()
-                        && !building.kind.is_belt() && !building.kind.is_inserter()
+                    if power_satisfaction < 0.5
+                        && !building.kind.needs_fuel()
+                        && !building.kind.is_belt()
+                        && !building.kind.is_inserter()
                         && building.kind != BuildingKind::Miner
                     {
                         let warn_x = world.x + TILE_SIZE - 38.0;
                         let warn_y = world.y + 2.0;
                         let flash = ((tick as f32 * 0.2).sin() * 0.3 + 0.7).max(0.0);
-                        draw_rectangle(warn_x, warn_y, 36.0, 12.0, Color::new(0.6, 0.2, 0.6, 0.8 * flash));
-                        draw_text("PWR!", warn_x + 2.0, warn_y + 10.0, 10.0, Color::new(1.0, 0.8, 1.0, flash));
+                        draw_rectangle(
+                            warn_x,
+                            warn_y,
+                            36.0,
+                            12.0,
+                            Color::new(0.6, 0.2, 0.6, 0.8 * flash),
+                        );
+                        draw_text(
+                            "PWR!",
+                            warn_x + 2.0,
+                            warn_y + 10.0,
+                            10.0,
+                            Color::new(1.0, 0.8, 1.0, flash),
+                        );
                     }
                 }
 
@@ -464,8 +533,14 @@ pub fn draw_world(
                 if let Some(pair_pos) = building.underground_pair {
                     let pair_world = Grid::grid_to_world_center(pair_pos);
                     let my_center = Vec2::new(world.x + TILE_SIZE * 0.5, world.y + TILE_SIZE * 0.5);
-                    draw_line(my_center.x, my_center.y, pair_world.x, pair_world.y, 1.5,
-                        Color::new(0.4, 0.6, 1.0, 0.3));
+                    draw_line(
+                        my_center.x,
+                        my_center.y,
+                        pair_world.x,
+                        pair_world.y,
+                        1.5,
+                        Color::new(0.4, 0.6, 1.0, 0.3),
+                    );
                 }
             }
 
@@ -503,10 +578,11 @@ pub fn draw_world(
             }
 
             // Recipe label above assemblers (LOD 0 only).
-            if lod == 0 && (building.kind == BuildingKind::AssemblerT1
-                || building.kind == BuildingKind::AssemblerT2
-                || building.kind == BuildingKind::AssemblerT3
-                || building.kind == BuildingKind::ChemicalPlant)
+            if lod == 0
+                && (building.kind == BuildingKind::AssemblerT1
+                    || building.kind == BuildingKind::AssemblerT2
+                    || building.kind == BuildingKind::AssemblerT3
+                    || building.kind == BuildingKind::ChemicalPlant)
             {
                 if let Some(ref ms) = building.machine_state {
                     if let Some(rid) = ms.selected_recipe {
@@ -538,7 +614,13 @@ pub fn draw_world(
                     color.b = (color.b + 0.15).min(1.0);
                 }
             }
-            draw_rectangle(world.x + 1.0, world.y + 1.0, TILE_SIZE - 2.0, TILE_SIZE - 2.0, color);
+            draw_rectangle(
+                world.x + 1.0,
+                world.y + 1.0,
+                TILE_SIZE - 2.0,
+                TILE_SIZE - 2.0,
+                color,
+            );
         }
     }
 
@@ -547,8 +629,10 @@ pub fn draw_world(
         for (_id, item) in items.iter() {
             let item_pos = item.pos;
             // Frustum cull items.
-            if item_pos.x < x_start || item_pos.x > x_end
-                || item_pos.y < y_start || item_pos.y > y_end
+            if item_pos.x < x_start
+                || item_pos.x > x_end
+                || item_pos.y < y_start
+                || item_pos.y > y_end
             {
                 continue;
             }
@@ -614,9 +698,15 @@ pub fn draw_world(
 
         // Size varies by enemy type.
         let size = match enemy.kind {
-            crate::enemy::EnemyKind::BigBiter | crate::enemy::EnemyKind::BehemothBiter => TILE_SIZE * 1.1,
-            crate::enemy::EnemyKind::BigSpitter | crate::enemy::EnemyKind::BehemothSpitter => TILE_SIZE * 1.0,
-            crate::enemy::EnemyKind::MediumBiter | crate::enemy::EnemyKind::MediumSpitter => TILE_SIZE * 0.85,
+            crate::enemy::EnemyKind::BigBiter | crate::enemy::EnemyKind::BehemothBiter => {
+                TILE_SIZE * 1.1
+            }
+            crate::enemy::EnemyKind::BigSpitter | crate::enemy::EnemyKind::BehemothSpitter => {
+                TILE_SIZE * 1.0
+            }
+            crate::enemy::EnemyKind::MediumBiter | crate::enemy::EnemyKind::MediumSpitter => {
+                TILE_SIZE * 0.85
+            }
             _ => TILE_SIZE * 0.7,
         };
         let ex = enemy.x - size * 0.5;
@@ -643,11 +733,13 @@ pub fn draw_world(
         if lod <= 1 {
             // Select sprite based on enemy type.
             let sprite = match enemy.kind {
-                crate::enemy::EnemyKind::BigBiter | crate::enemy::EnemyKind::BehemothBiter =>
-                    atlas.r_enemy_big_biter[_anim_frame],
-                crate::enemy::EnemyKind::SmallSpitter | crate::enemy::EnemyKind::MediumSpitter
-                | crate::enemy::EnemyKind::BigSpitter | crate::enemy::EnemyKind::BehemothSpitter =>
-                    atlas.r_enemy_spitter[_anim_frame],
+                crate::enemy::EnemyKind::BigBiter | crate::enemy::EnemyKind::BehemothBiter => {
+                    atlas.r_enemy_big_biter[_anim_frame]
+                }
+                crate::enemy::EnemyKind::SmallSpitter
+                | crate::enemy::EnemyKind::MediumSpitter
+                | crate::enemy::EnemyKind::BigSpitter
+                | crate::enemy::EnemyKind::BehemothSpitter => atlas.r_enemy_spitter[_anim_frame],
                 _ => atlas.r_enemy_small_biter[_anim_frame],
             };
 
@@ -669,7 +761,12 @@ pub fn draw_world(
             );
         } else {
             // LOD 2: red dot.
-            draw_circle(enemy.x, enemy.y, TILE_SIZE * 0.3, Color::new(0.9, 0.1, 0.1, 0.9));
+            draw_circle(
+                enemy.x,
+                enemy.y,
+                TILE_SIZE * 0.3,
+                Color::new(0.9, 0.1, 0.1, 0.9),
+            );
         }
 
         // Health bar (LOD 0-1, wider bar for visibility).
@@ -681,8 +778,11 @@ pub fn draw_world(
                 let bar_x = ex - size * 0.1;
                 let bar_y = ey - 6.0;
                 let fill = (enemy.hp / max_hp).max(0.0);
-                let fill_color = if fill > 0.5 { Color::new(0.9, 0.5, 0.1, 0.9) }
-                    else { Color::new(0.9, 0.1, 0.1, 0.9) };
+                let fill_color = if fill > 0.5 {
+                    Color::new(0.9, 0.5, 0.1, 0.9)
+                } else {
+                    Color::new(0.9, 0.1, 0.1, 0.9)
+                };
                 draw_rectangle(bar_x, bar_y, bar_w, bar_h, Color::new(0.15, 0.0, 0.0, 0.8));
                 draw_rectangle(bar_x, bar_y, bar_w * fill, bar_h, fill_color);
             }
@@ -725,8 +825,10 @@ pub fn draw_world(
         let ship_x = ship_cx - ship_w * 0.5;
         let ship_y = ship_cy - ship_h * 0.5;
 
-        if ship_x >= min_world.x - ship_w && ship_x <= max_world.x + ship_w
-            && ship_y >= min_world.y - ship_h && ship_y <= max_world.y + ship_h
+        if ship_x >= min_world.x - ship_w
+            && ship_x <= max_world.x + ship_w
+            && ship_y >= min_world.y - ship_h
+            && ship_y <= max_world.y + ship_h
         {
             // Pixel art crashed ship sprite (80x48 scaled to 5x3 tiles).
             draw_texture_ex(
@@ -749,13 +851,28 @@ pub fn draw_world(
                 let np_y = ship_y - np_h - 4.0;
                 draw_rectangle(np_x, np_y, np_w, np_h, Color::new(0.06, 0.06, 0.1, 0.8));
                 draw_rectangle_lines(np_x, np_y, np_w, np_h, 1.0, Color::new(0.3, 0.25, 0.5, 0.6));
-                draw_text("FORGE BASE", np_x + 14.0, np_y + 14.0, 16.0,
-                    Color::new(0.95, 0.82, 0.35, 0.9));
-                draw_text("Horizon's Promise", np_x + 8.0, np_y + 26.0, 11.0,
-                    Color::new(0.5, 0.5, 0.6, 0.6));
+                draw_text(
+                    "FORGE BASE",
+                    np_x + 14.0,
+                    np_y + 14.0,
+                    16.0,
+                    Color::new(0.95, 0.82, 0.35, 0.9),
+                );
+                draw_text(
+                    "Horizon's Promise",
+                    np_x + 8.0,
+                    np_y + 26.0,
+                    11.0,
+                    Color::new(0.5, 0.5, 0.6, 0.6),
+                );
                 // Interaction hint below the ship.
-                draw_text("[ click for lore ]", ship_cx - 48.0, ship_y + ship_h + 18.0, 12.0,
-                    Color::new(0.6, 0.5, 0.8, 0.5));
+                draw_text(
+                    "[ click for lore ]",
+                    ship_cx - 48.0,
+                    ship_y + ship_h + 18.0,
+                    12.0,
+                    Color::new(0.6, 0.5, 0.8, 0.5),
+                );
             }
 
             // Robot docking area — idle robots parked near the ship.
@@ -767,7 +884,10 @@ pub fn draw_world(
                 let rx = dock_x + (i % 2) as f32 * (robot_size + 4.0);
                 let ry = dock_y + (i / 2) as f32 * (robot_size + 4.0);
                 draw_texture_ex(
-                    &atlas.tex, rx, ry, Color::new(1.0, 1.0, 1.0, 0.7),
+                    &atlas.tex,
+                    rx,
+                    ry,
+                    Color::new(1.0, 1.0, 1.0, 0.7),
                     DrawTextureParams {
                         source: Some(atlas.r_robot[robot_frame]),
                         dest_size: Some(Vec2::splat(robot_size)),
@@ -810,8 +930,10 @@ pub fn draw_night_overlay(darkness: f32, buildings: &Buildings, camera: &GameCam
             let wy = bpos.y as f32 * TILE_SIZE + TILE_SIZE * 0.5;
 
             // Frustum cull lights.
-            if wx < min_vis.x - TILE_SIZE * 4.0 || wx > max_vis.x + TILE_SIZE * 4.0
-                || wy < min_vis.y - TILE_SIZE * 4.0 || wy > max_vis.y + TILE_SIZE * 4.0
+            if wx < min_vis.x - TILE_SIZE * 4.0
+                || wx > max_vis.x + TILE_SIZE * 4.0
+                || wy < min_vis.y - TILE_SIZE * 4.0
+                || wy > max_vis.y + TILE_SIZE * 4.0
             {
                 continue;
             }
@@ -820,44 +942,84 @@ pub fn draw_night_overlay(darkness: f32, buildings: &Buildings, camera: &GameCam
             let (color, radius) = match building.kind {
                 // Furnaces: warm orange fire glow.
                 BuildingKind::StoneFurnace | BuildingKind::SteelFurnace => {
-                    let active = building.machine_state.as_ref().map(|ms| ms.progress_ticks > 0).unwrap_or(false);
+                    let active = building
+                        .machine_state
+                        .as_ref()
+                        .map(|ms| ms.progress_ticks > 0)
+                        .unwrap_or(false);
                     if active {
                         (Color::new(1.0, 0.7, 0.3, light_alpha), TILE_SIZE * 3.0)
-                    } else { continue; }
+                    } else {
+                        continue;
+                    }
                 }
                 // Labs: blue-purple glow.
                 BuildingKind::Lab => {
-                    let active = building.machine_state.as_ref().map(|ms| ms.progress_ticks > 0).unwrap_or(false);
+                    let active = building
+                        .machine_state
+                        .as_ref()
+                        .map(|ms| ms.progress_ticks > 0)
+                        .unwrap_or(false);
                     if active {
                         (Color::new(0.5, 0.4, 1.0, light_alpha), TILE_SIZE * 2.5)
-                    } else { continue; }
+                    } else {
+                        continue;
+                    }
                 }
                 // Steam engines, solar: white glow (always on if placed).
-                BuildingKind::SteamEngine => {
-                    (Color::new(0.9, 0.9, 1.0, light_alpha * 0.7), TILE_SIZE * 2.0)
-                }
+                BuildingKind::SteamEngine => (
+                    Color::new(0.9, 0.9, 1.0, light_alpha * 0.7),
+                    TILE_SIZE * 2.0,
+                ),
                 // Laser turrets: blue glow.
-                BuildingKind::LaserTurret => {
-                    (Color::new(0.3, 0.5, 1.0, light_alpha * 0.6), TILE_SIZE * 2.5)
-                }
+                BuildingKind::LaserTurret => (
+                    Color::new(0.3, 0.5, 1.0, light_alpha * 0.6),
+                    TILE_SIZE * 2.5,
+                ),
                 // Nuclear reactor: green glow.
                 BuildingKind::NuclearReactor => {
                     (Color::new(0.3, 1.0, 0.5, light_alpha), TILE_SIZE * 5.0)
                 }
                 // Assemblers when active: dim blue.
-                BuildingKind::AssemblerT1 | BuildingKind::AssemblerT2 | BuildingKind::AssemblerT3 => {
-                    let active = building.machine_state.as_ref().map(|ms| ms.progress_ticks > 0).unwrap_or(false);
+                BuildingKind::AssemblerT1
+                | BuildingKind::AssemblerT2
+                | BuildingKind::AssemblerT3 => {
+                    let active = building
+                        .machine_state
+                        .as_ref()
+                        .map(|ms| ms.progress_ticks > 0)
+                        .unwrap_or(false);
                     if active {
-                        (Color::new(0.6, 0.6, 0.9, light_alpha * 0.4), TILE_SIZE * 1.5)
-                    } else { continue; }
+                        (
+                            Color::new(0.6, 0.6, 0.9, light_alpha * 0.4),
+                            TILE_SIZE * 1.5,
+                        )
+                    } else {
+                        continue;
+                    }
                 }
                 _ => continue,
             };
 
             // Draw concentric circles for soft light falloff.
-            draw_circle(wx, wy, radius, Color::new(color.r, color.g, color.b, color.a * 0.3));
-            draw_circle(wx, wy, radius * 0.6, Color::new(color.r, color.g, color.b, color.a * 0.5));
-            draw_circle(wx, wy, radius * 0.3, Color::new(color.r, color.g, color.b, color.a * 0.7));
+            draw_circle(
+                wx,
+                wy,
+                radius,
+                Color::new(color.r, color.g, color.b, color.a * 0.3),
+            );
+            draw_circle(
+                wx,
+                wy,
+                radius * 0.6,
+                Color::new(color.r, color.g, color.b, color.a * 0.5),
+            );
+            draw_circle(
+                wx,
+                wy,
+                radius * 0.3,
+                Color::new(color.r, color.g, color.b, color.a * 0.7),
+            );
         }
     }
 }
@@ -915,31 +1077,96 @@ pub fn draw_ghost_preview(
         );
 
         // Contextual hint below ghost preview.
-        draw_text("R:rotate  Esc:cancel", world.x - 12.0, world.y + TILE_SIZE + 12.0, 10.0,
-            Color::new(0.7, 0.7, 0.8, 0.5));
+        draw_text(
+            "R:rotate  Esc:cancel",
+            world.x - 12.0,
+            world.y + TILE_SIZE + 12.0,
+            10.0,
+            Color::new(0.7, 0.7, 0.8, 0.5),
+        );
 
         // Inserter direction labels: show pickup ← and delivery → sides.
         if kind.is_inserter() {
             let (dx, dy) = direction.delta();
             let cx = world.x + TILE_SIZE * 0.5;
             let cy = world.y + TILE_SIZE * 0.5;
+            // Highlight delivery tile (front) in green.
+            let delivery_pos = grid_pos.neighbor(direction);
+            let delivery_world = Grid::grid_to_world(delivery_pos);
+            draw_rectangle(
+                delivery_world.x,
+                delivery_world.y,
+                TILE_SIZE,
+                TILE_SIZE,
+                Color::new(0.2, 0.8, 0.2, 0.2),
+            );
+            draw_rectangle_lines(
+                delivery_world.x,
+                delivery_world.y,
+                TILE_SIZE,
+                TILE_SIZE,
+                2.0,
+                Color::new(0.3, 1.0, 0.3, 0.5),
+            );
+            // Highlight pickup tile (behind) in yellow.
+            let pickup_pos = grid_pos.neighbor(direction.opposite());
+            let pickup_world = Grid::grid_to_world(pickup_pos);
+            draw_rectangle(
+                pickup_world.x,
+                pickup_world.y,
+                TILE_SIZE,
+                TILE_SIZE,
+                Color::new(0.8, 0.7, 0.1, 0.15),
+            );
+            draw_rectangle_lines(
+                pickup_world.x,
+                pickup_world.y,
+                TILE_SIZE,
+                TILE_SIZE,
+                2.0,
+                Color::new(1.0, 0.9, 0.3, 0.5),
+            );
             // Delivery side (front): green "OUT" label.
             let fx = cx + dx as f32 * TILE_SIZE * 0.7;
             let fy = cy + dy as f32 * TILE_SIZE * 0.7;
-            draw_text("OUT", fx - 10.0, fy + 4.0, 11.0, Color::new(0.3, 1.0, 0.3, 0.7));
+            draw_text(
+                "OUT",
+                fx - 10.0,
+                fy + 4.0,
+                11.0,
+                Color::new(0.3, 1.0, 0.3, 0.7),
+            );
             // Pickup side (behind): yellow "IN" label.
             let bx = cx - dx as f32 * TILE_SIZE * 0.7;
             let by = cy - dy as f32 * TILE_SIZE * 0.7;
-            draw_text("IN", bx - 6.0, by + 4.0, 11.0, Color::new(1.0, 0.9, 0.3, 0.7));
+            draw_text(
+                "IN",
+                bx - 6.0,
+                by + 4.0,
+                11.0,
+                Color::new(1.0, 0.9, 0.3, 0.7),
+            );
         }
 
         // Range indicators for turrets and roboports.
         let center_x = world.x + TILE_SIZE * 0.5;
         let center_y = world.y + TILE_SIZE * 0.5;
         if kind == BuildingKind::GunTurret || kind == BuildingKind::LaserTurret {
-            draw_circle_lines(center_x, center_y, TILE_SIZE * 6.0, 1.0, Color::new(1.0, 0.3, 0.3, 0.25));
+            draw_circle_lines(
+                center_x,
+                center_y,
+                TILE_SIZE * 6.0,
+                1.0,
+                Color::new(1.0, 0.3, 0.3, 0.25),
+            );
         } else if kind == BuildingKind::Roboport {
-            draw_circle_lines(center_x, center_y, TILE_SIZE * 10.0, 1.0, Color::new(0.3, 0.5, 1.0, 0.2));
+            draw_circle_lines(
+                center_x,
+                center_y,
+                TILE_SIZE * 10.0,
+                1.0,
+                Color::new(0.3, 0.5, 1.0, 0.2),
+            );
         }
     } else {
         // No building selected — just show cursor highlight.
@@ -961,7 +1188,12 @@ fn direction_to_rotation(dir: Direction) -> f32 {
 
 /// Returns the atlas source rect for a building kind.
 /// `anim_frame` cycles belt animation; `machine_frame` cycles machine animation (0=idle, 1=active).
-fn building_src_rect(kind: BuildingKind, atlas: &SpriteAtlas, anim_frame: usize, machine_frame: usize) -> Rect {
+pub fn building_src_rect(
+    kind: BuildingKind,
+    atlas: &SpriteAtlas,
+    anim_frame: usize,
+    machine_frame: usize,
+) -> Rect {
     let mf = machine_frame.min(1);
     match kind {
         BuildingKind::BeltYellow => atlas.r_belt_yellow[anim_frame],
@@ -999,7 +1231,9 @@ fn building_src_rect(kind: BuildingKind, atlas: &SpriteAtlas, anim_frame: usize,
         BuildingKind::Centrifuge => atlas.r_chemical_plant,
         BuildingKind::RocketSilo => atlas.r_rocket_silo,
         BuildingKind::Radar => atlas.r_radar,
-        BuildingKind::PipeSegment | BuildingKind::UndergroundPipe | BuildingKind::StorageTank => atlas.r_pipe,
+        BuildingKind::PipeSegment | BuildingKind::UndergroundPipe | BuildingKind::StorageTank => {
+            atlas.r_pipe
+        }
         BuildingKind::RailStraight | BuildingKind::RailCurved => atlas.r_rail,
         BuildingKind::TrainStop | BuildingKind::RailSignal => atlas.r_train_stop,
         BuildingKind::Roboport => atlas.r_roboport,
@@ -1039,7 +1273,9 @@ fn item_src_rect(resource: Resource, atlas: &SpriteAtlas) -> Rect {
         Resource::RocketPart => atlas.r_item_rocket_part,
         Resource::RocketFuel => atlas.r_item_rocket_fuel,
         Resource::Inserter => atlas.r_item_inserter,
-        Resource::SpeedModule | Resource::EfficiencyModule | Resource::ProductivityModule => atlas.r_item_speed_module,
+        Resource::SpeedModule | Resource::EfficiencyModule | Resource::ProductivityModule => {
+            atlas.r_item_speed_module
+        }
         Resource::UraniumOre => atlas.r_item_uranium_ore,
         Resource::Rail => atlas.r_item_rail,
         Resource::Concrete => atlas.r_item_concrete,
@@ -1085,13 +1321,13 @@ fn building_lod_color(kind: BuildingKind) -> Color {
             Color::new(0.2, 0.3, 0.55, 1.0) // darker blue (distinct from solar)
         }
         BuildingKind::Lab => Color::new(0.45, 0.2, 0.55, 1.0),
-        BuildingKind::GunTurret => Color::new(0.45, 0.45, 0.4, 1.0),  // warm gray
-        BuildingKind::LaserTurret => Color::new(0.3, 0.4, 0.7, 1.0),  // blue-gray (distinct from gun)
+        BuildingKind::GunTurret => Color::new(0.45, 0.45, 0.4, 1.0), // warm gray
+        BuildingKind::LaserTurret => Color::new(0.3, 0.4, 0.7, 1.0), // blue-gray (distinct from gun)
         BuildingKind::Wall | BuildingKind::Gate => Color::new(0.35, 0.35, 0.3, 1.0),
         BuildingKind::Boiler | BuildingKind::SteamEngine => Color::new(0.15, 0.4, 0.35, 1.0),
         BuildingKind::SolarPanel => Color::new(0.1, 0.15, 0.45, 1.0), // deep blue (distinct from assembler)
         BuildingKind::NuclearReactor => Color::new(0.2, 0.5, 0.3, 1.0), // green glow
-        BuildingKind::StorageChest => Color::new(0.5, 0.4, 0.2, 1.0),   // wooden brown
+        BuildingKind::StorageChest => Color::new(0.5, 0.4, 0.2, 1.0), // wooden brown
         _ => Color::new(0.3, 0.3, 0.3, 1.0),
     }
 }

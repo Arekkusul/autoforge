@@ -112,7 +112,11 @@ pub static RECIPES: &[Recipe] = &[
     // ID 10: Inserter (item, used in Green Science recipe)
     Recipe {
         machine: BuildingKind::AssemblerT1,
-        inputs: &[(Resource::GreenCircuit, 1), (Resource::Gear, 1), (Resource::IronPlate, 1)],
+        inputs: &[
+            (Resource::GreenCircuit, 1),
+            (Resource::Gear, 1),
+            (Resource::IronPlate, 1),
+        ],
         outputs: &[(Resource::Inserter, 1)],
         base_ticks: 40,
         name: "Craft Inserter",
@@ -128,7 +132,11 @@ pub static RECIPES: &[Recipe] = &[
     // ID 12: Red Circuit
     Recipe {
         machine: BuildingKind::AssemblerT1,
-        inputs: &[(Resource::GreenCircuit, 2), (Resource::Plastic, 2), (Resource::Wire, 4)],
+        inputs: &[
+            (Resource::GreenCircuit, 2),
+            (Resource::Plastic, 2),
+            (Resource::Wire, 4),
+        ],
         outputs: &[(Resource::RedCircuit, 1)],
         base_ticks: 80,
         name: "Craft Red Circuit",
@@ -136,7 +144,11 @@ pub static RECIPES: &[Recipe] = &[
     // ID 13: Engine Unit
     Recipe {
         machine: BuildingKind::AssemblerT1,
-        inputs: &[(Resource::SteelPlate, 1), (Resource::Gear, 1), (Resource::Pipe, 2)],
+        inputs: &[
+            (Resource::SteelPlate, 1),
+            (Resource::Gear, 1),
+            (Resource::Pipe, 2),
+        ],
         outputs: &[(Resource::EngineUnit, 1)],
         base_ticks: 80,
         name: "Craft Engine Unit",
@@ -152,7 +164,11 @@ pub static RECIPES: &[Recipe] = &[
     // ID 15: Piercing Ammo
     Recipe {
         machine: BuildingKind::AssemblerT1,
-        inputs: &[(Resource::BasicAmmo, 1), (Resource::SteelPlate, 1), (Resource::CopperPlate, 1)],
+        inputs: &[
+            (Resource::BasicAmmo, 1),
+            (Resource::SteelPlate, 1),
+            (Resource::CopperPlate, 1),
+        ],
         outputs: &[(Resource::PiercingAmmo, 1)],
         base_ticks: 40,
         name: "Craft Piercing Ammo",
@@ -168,7 +184,11 @@ pub static RECIPES: &[Recipe] = &[
     // ID 17: Rail
     Recipe {
         machine: BuildingKind::AssemblerT1,
-        inputs: &[(Resource::Stone, 1), (Resource::SteelPlate, 1), (Resource::IronStick, 1)],
+        inputs: &[
+            (Resource::Stone, 1),
+            (Resource::SteelPlate, 1),
+            (Resource::IronStick, 1),
+        ],
         outputs: &[(Resource::Rail, 2)],
         base_ticks: 40,
         name: "Craft Rail",
@@ -193,7 +213,11 @@ pub static RECIPES: &[Recipe] = &[
     // ID 20: Battery (from copper + iron + sulfur)
     Recipe {
         machine: BuildingKind::ChemicalPlant,
-        inputs: &[(Resource::CopperPlate, 1), (Resource::IronPlate, 1), (Resource::Sulfur, 1)],
+        inputs: &[
+            (Resource::CopperPlate, 1),
+            (Resource::IronPlate, 1),
+            (Resource::Sulfur, 1),
+        ],
         outputs: &[(Resource::Battery, 1)],
         base_ticks: 80,
         name: "Craft Battery",
@@ -202,7 +226,11 @@ pub static RECIPES: &[Recipe] = &[
     // ID 21: Blue Circuit
     Recipe {
         machine: BuildingKind::AssemblerT1,
-        inputs: &[(Resource::RedCircuit, 2), (Resource::GreenCircuit, 5), (Resource::Wire, 10)],
+        inputs: &[
+            (Resource::RedCircuit, 2),
+            (Resource::GreenCircuit, 5),
+            (Resource::Wire, 10),
+        ],
         outputs: &[(Resource::BlueCircuit, 1)],
         base_ticks: 120,
         name: "Craft Blue Circuit",
@@ -234,7 +262,11 @@ pub static RECIPES: &[Recipe] = &[
     // ID 25: Low Density Structure
     Recipe {
         machine: BuildingKind::AssemblerT1,
-        inputs: &[(Resource::SteelPlate, 2), (Resource::CopperPlate, 5), (Resource::Plastic, 5)],
+        inputs: &[
+            (Resource::SteelPlate, 2),
+            (Resource::CopperPlate, 5),
+            (Resource::Plastic, 5),
+        ],
         outputs: &[(Resource::LowDensityStructure, 1)],
         base_ticks: 100,
         name: "Craft Low Density Structure",
@@ -250,7 +282,12 @@ pub static RECIPES: &[Recipe] = &[
     // ID 27: Rocket Part (endgame)
     Recipe {
         machine: BuildingKind::AssemblerT1,
-        inputs: &[(Resource::BlueCircuit, 5), (Resource::SpeedModule, 1), (Resource::RocketFuel, 5), (Resource::LowDensityStructure, 5)],
+        inputs: &[
+            (Resource::BlueCircuit, 5),
+            (Resource::SpeedModule, 1),
+            (Resource::RocketFuel, 5),
+            (Resource::LowDensityStructure, 5),
+        ],
         outputs: &[(Resource::RocketPart, 1)],
         base_ticks: 200,
         name: "Craft Rocket Part",
@@ -258,7 +295,11 @@ pub static RECIPES: &[Recipe] = &[
     // ID 28: Science Pack Blue/Military
     Recipe {
         machine: BuildingKind::AssemblerT1,
-        inputs: &[(Resource::PiercingAmmo, 1), (Resource::Grenade, 1), (Resource::StoneBrick, 2)],
+        inputs: &[
+            (Resource::PiercingAmmo, 1),
+            (Resource::Grenade, 1),
+            (Resource::StoneBrick, 2),
+        ],
         outputs: &[(Resource::ScienceBlue, 1)],
         base_ticks: 140,
         name: "Craft Blue Science",
@@ -266,7 +307,11 @@ pub static RECIPES: &[Recipe] = &[
     // ID 29: Science Pack Purple
     Recipe {
         machine: BuildingKind::AssemblerT1,
-        inputs: &[(Resource::Rail, 5), (Resource::EngineUnit, 1), (Resource::BlueCircuit, 1)],
+        inputs: &[
+            (Resource::Rail, 5),
+            (Resource::EngineUnit, 1),
+            (Resource::BlueCircuit, 1),
+        ],
         outputs: &[(Resource::SciencePurple, 1)],
         base_ticks: 160,
         name: "Craft Purple Science",
@@ -274,7 +319,11 @@ pub static RECIPES: &[Recipe] = &[
     // ID 30: Science Pack Yellow
     Recipe {
         machine: BuildingKind::AssemblerT1,
-        inputs: &[(Resource::BlueCircuit, 2), (Resource::SpeedModule, 1), (Resource::Battery, 2)],
+        inputs: &[
+            (Resource::BlueCircuit, 2),
+            (Resource::SpeedModule, 1),
+            (Resource::Battery, 2),
+        ],
         outputs: &[(Resource::ScienceYellow, 1)],
         base_ticks: 180,
         name: "Craft Yellow Science",
@@ -299,7 +348,12 @@ pub static RECIPES: &[Recipe] = &[
     // ID 33: Flying Robot Frame (for logistics bots later)
     Recipe {
         machine: BuildingKind::AssemblerT1,
-        inputs: &[(Resource::ElectricEngine, 1), (Resource::Battery, 2), (Resource::SteelPlate, 1), (Resource::GreenCircuit, 3)],
+        inputs: &[
+            (Resource::ElectricEngine, 1),
+            (Resource::Battery, 2),
+            (Resource::SteelPlate, 1),
+            (Resource::GreenCircuit, 3),
+        ],
         outputs: &[(Resource::FlyingRobotFrame, 1)],
         base_ticks: 120,
         name: "Craft Robot Frame",
@@ -315,7 +369,11 @@ pub static RECIPES: &[Recipe] = &[
     // ID 35: Solar Panel (as item for building from inventory)
     Recipe {
         machine: BuildingKind::AssemblerT1,
-        inputs: &[(Resource::SteelPlate, 5), (Resource::CopperPlate, 10), (Resource::GreenCircuit, 10)],
+        inputs: &[
+            (Resource::SteelPlate, 5),
+            (Resource::CopperPlate, 10),
+            (Resource::GreenCircuit, 10),
+        ],
         outputs: &[(Resource::SolarPanelItem, 1)],
         base_ticks: 120,
         name: "Craft Solar Panel",
@@ -343,7 +401,11 @@ pub static RECIPES: &[Recipe] = &[
     // ID 38: Advanced Ammo (stronger turret ammo)
     Recipe {
         machine: BuildingKind::AssemblerT1,
-        inputs: &[(Resource::PiercingAmmo, 2), (Resource::SteelPlate, 1), (Resource::RedCircuit, 1)],
+        inputs: &[
+            (Resource::PiercingAmmo, 2),
+            (Resource::SteelPlate, 1),
+            (Resource::RedCircuit, 1),
+        ],
         outputs: &[(Resource::PiercingAmmo, 5)],
         base_ticks: 60,
         name: "Craft Advanced Ammo",
@@ -351,7 +413,11 @@ pub static RECIPES: &[Recipe] = &[
     // ID 39: Uranium Fuel Cell (for nuclear reactor)
     Recipe {
         machine: BuildingKind::AssemblerT1,
-        inputs: &[(Resource::Uranium235, 1), (Resource::Uranium238, 19), (Resource::IronPlate, 10)],
+        inputs: &[
+            (Resource::Uranium235, 1),
+            (Resource::Uranium238, 19),
+            (Resource::IronPlate, 10),
+        ],
         outputs: &[(Resource::NuclearFuelCell, 1)],
         base_ticks: 150,
         name: "Craft Uranium Fuel Cell",
@@ -404,7 +470,9 @@ pub fn recipes_for_machine(machine_kind: BuildingKind) -> Vec<RecipeId> {
     RECIPES
         .iter()
         .enumerate()
-        .filter(|(_, recipe)| recipe_matches_machine(recipe, machine_kind) && !recipe.inputs.is_empty())
+        .filter(|(_, recipe)| {
+            recipe_matches_machine(recipe, machine_kind) && !recipe.inputs.is_empty()
+        })
         .map(|(idx, _)| RecipeId(idx))
         .collect()
 }

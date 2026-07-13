@@ -50,9 +50,10 @@ pub fn tick_combat(
 
         // Gun turrets need ammo.
         if building.kind == BuildingKind::GunTurret {
-            let has_ammo = ms.input_buffer.iter().any(|&r| {
-                r == Resource::BasicAmmo || r == Resource::PiercingAmmo
-            });
+            let has_ammo = ms
+                .input_buffer
+                .iter()
+                .any(|&r| r == Resource::BasicAmmo || r == Resource::PiercingAmmo);
             if !has_ammo {
                 continue;
             }
@@ -87,10 +88,18 @@ pub fn tick_combat(
 
             if building.kind == BuildingKind::GunTurret {
                 // Consume ammo — prefer piercing.
-                if let Some(pos) = ms.input_buffer.iter().position(|&r| r == Resource::PiercingAmmo) {
+                if let Some(pos) = ms
+                    .input_buffer
+                    .iter()
+                    .position(|&r| r == Resource::PiercingAmmo)
+                {
                     ms.input_buffer.remove(pos);
                     damage = GUN_TURRET_DAMAGE * 2.0;
-                } else if let Some(pos) = ms.input_buffer.iter().position(|&r| r == Resource::BasicAmmo) {
+                } else if let Some(pos) = ms
+                    .input_buffer
+                    .iter()
+                    .position(|&r| r == Resource::BasicAmmo)
+                {
                     ms.input_buffer.remove(pos);
                 }
             }

@@ -79,7 +79,8 @@ impl GameCamera {
         if wheel_y != 0.0 {
             let mouse_world_before = self.screen_to_world(current_mouse);
 
-            self.zoom = (self.zoom * (1.0 + wheel_y.signum() * ZOOM_SPEED)).clamp(ZOOM_MIN, ZOOM_MAX);
+            self.zoom =
+                (self.zoom * (1.0 + wheel_y.signum() * ZOOM_SPEED)).clamp(ZOOM_MIN, ZOOM_MAX);
 
             // Adjust target so the point under the cursor stays fixed.
             let mouse_world_after = self.screen_to_world(current_mouse);

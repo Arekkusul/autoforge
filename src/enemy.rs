@@ -148,9 +148,17 @@ impl Enemies {
 
             // Pick enemy kind based on evolution — harder enemies appear as evolution increases.
             let kind = if evolution >= 0.9 && i % 8 == 0 {
-                if i % 2 == 0 { EnemyKind::BehemothBiter } else { EnemyKind::BehemothSpitter }
+                if i % 2 == 0 {
+                    EnemyKind::BehemothBiter
+                } else {
+                    EnemyKind::BehemothSpitter
+                }
             } else if evolution >= 0.6 && i % 5 == 0 {
-                if i % 2 == 0 { EnemyKind::BigSpitter } else { EnemyKind::BigBiter }
+                if i % 2 == 0 {
+                    EnemyKind::BigSpitter
+                } else {
+                    EnemyKind::BigBiter
+                }
             } else if evolution >= 0.4 && i % 4 == 0 {
                 EnemyKind::MediumSpitter
             } else if evolution >= 0.25 && i % 4 == 0 {
@@ -199,7 +207,7 @@ pub fn tick_enemies(
     }
 
     let should_spawn = (total_pollution > pollution_threshold || total_ticks > time_threshold)
-        && total_ticks % 200 == 0
+        && total_ticks.is_multiple_of(200)
         && !nests.is_empty();
     if should_spawn {
         enemies.spawn_wave(nests, *evolution);
@@ -241,7 +249,11 @@ pub fn tick_enemies(
         let grid_pos = Grid::world_to_grid(macroquad::prelude::Vec2::new(enemy.x, enemy.y));
 
         // Find nearest building to attack (range depends on type).
-        let attack_range = if enemy.kind.is_ranged() { TILE_SIZE * 4.0 } else { TILE_SIZE * 1.5 };
+        let attack_range = if enemy.kind.is_ranged() {
+            TILE_SIZE * 4.0
+        } else {
+            TILE_SIZE * 1.5
+        };
         let search_radius = (attack_range / TILE_SIZE) as i32 + 1;
 
         let mut target_bid = None;

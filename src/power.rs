@@ -8,7 +8,7 @@
 //! This avoids expensive graph/network calculations while still creating meaningful
 //! power management gameplay.
 
-use crate::building::Buildings;
+use crate::building::{self, Buildings};
 use crate::constants::*;
 use crate::daynight::DayNightState;
 use crate::types::*;
@@ -65,7 +65,7 @@ pub fn update_power(buildings: &mut Buildings, power: &mut PowerState, daynight:
 
             // --- Power consumers ---
             _ if building.kind.needs_power() => {
-                let draw = match building.kind {
+                let base_draw = match building.kind {
                     BuildingKind::Miner => MINER_POWER_DRAW,
                     BuildingKind::PumpJack | BuildingKind::WaterPump => MINER_POWER_DRAW,
                     BuildingKind::ElectricFurnace => ELECTRIC_SMELTER_POWER_DRAW,
@@ -87,7 +87,14 @@ pub fn update_power(buildings: &mut Buildings, power: &mut PowerState, daynight:
                     | BuildingKind::InserterStack => 10.0, // inserters use minimal power
                     _ => 50.0,
                 };
-                demand += draw;
+                // Apply module power multiplier if machine has modules installed.
+                let power_mult = if let Some(ms) = &building.machine_state {
+                    let (_, pm, _) = building::module_effects(&ms.modules);
+                    pm
+                } else {
+                    1.0
+                };
+                demand += base_draw * power_mult;
             }
             _ => {}
         }
@@ -95,9 +102,7 @@ pub fn update_power(buildings: &mut Buildings, power: &mut PowerState, daynight:
 
     power.supply = supply;
     power.demand = demand;
-    power.satisfaction = if demand <= 0.0 {
-        1.0
-    } else if supply >= demand {
+    power.satisfaction = if demand <= 0.0 || supply >= demand {
         1.0
     } else {
         (supply / demand).clamp(0.0, 1.0)
@@ -185,7 +190,11 @@ pub fn update_power(buildings: &mut Buildings, power: &mut PowerState, daynight:
         } else if !ms.input_buffer.is_empty() {
             let building = buildings.get_mut(*bid).unwrap();
             let ms = building.machine_state.as_mut().unwrap();
-            if let Some(pos) = ms.input_buffer.iter().position(|&r| r == Resource::NuclearFuelCell) {
+            if let Some(pos) = ms
+                .input_buffer
+                .iter()
+                .position(|&r| r == Resource::NuclearFuelCell)
+            {
                 ms.input_buffer.remove(pos);
                 ms.fuel_ticks = NUCLEAR_FUEL_CELL_TICKS;
             }
