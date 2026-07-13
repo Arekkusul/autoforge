@@ -1745,6 +1745,18 @@ pub fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
         );
         sy += 20.0;
         draw_text(
+            &format!(
+                "Inventory: {} items ({} stacks)",
+                fmt_num(state.total_inventory_items()),
+                state.inventory_stacks()
+            ),
+            sx,
+            sy,
+            14.0,
+            text_bright,
+        );
+        sy += 20.0;
+        draw_text(
             &format!("Rockets launched: {}", state.stats.rockets_launched),
             sx,
             sy,

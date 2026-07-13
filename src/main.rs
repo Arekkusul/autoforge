@@ -628,13 +628,16 @@ fn simulation_tick(state: &mut GameState, sfx: &sound::SoundEffects) {
             if kind != Some(types::BuildingKind::StorageChest) {
                 continue;
             }
-            if let Some(building) = state.buildings.get_mut(bid) {
-                if let Some(ms) = &mut building.machine_state {
-                    // Move all items from chest buffer into player inventory.
-                    for resource in ms.input_buffer.drain(..) {
-                        *state.inventory.entry(resource).or_insert(0) += 1;
-                    }
-                }
+            // Drain the chest buffer, then fold into inventory via the shared API.
+            let drained: Vec<types::Resource> = match state.buildings.get_mut(bid) {
+                Some(building) => match &mut building.machine_state {
+                    Some(ms) => ms.input_buffer.drain(..).collect(),
+                    None => Vec::new(),
+                },
+                None => Vec::new(),
+            };
+            for resource in drained {
+                state.add_to_inventory(resource, 1);
             }
         }
 
@@ -847,13 +850,12 @@ fn simulation_tick(state: &mut GameState, sfx: &sound::SoundEffects) {
                                 let recipe_inputs = recipe::RECIPES[rid.0].inputs;
                                 // Deliver one unit of each needed input from inventory.
                                 for &(res, _count) in recipe_inputs {
-                                    let have = state.inventory.get(&res).copied().unwrap_or(0);
-                                    if have > 0 {
+                                    if state.inventory_count(res) > 0 {
                                         let m = state.buildings.get_mut(mid).unwrap();
                                         let ms = m.machine_state.as_mut().unwrap();
                                         if ms.input_buffer.len() < 8 {
                                             ms.input_buffer.push(res);
-                                            *state.inventory.entry(res).or_insert(0) -= 1;
+                                            state.remove_from_inventory(res, 1);
                                         }
                                         break; // one item per tick per machine
                                     }
