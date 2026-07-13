@@ -356,6 +356,32 @@ impl ResearchState {
             self.progress = 0;
         }
     }
+
+    /// Returns the indices of every technology that can be researched right now:
+    /// not yet completed and with all prerequisites met.
+    pub fn available_techs(&self) -> Vec<usize> {
+        (0..TECHNOLOGIES.len())
+            .filter(|&idx| self.can_research(idx))
+            .collect()
+    }
+
+    /// Fraction (0.0–1.0) of all technologies completed.
+    pub fn percent_complete(&self) -> f32 {
+        if TECHNOLOGIES.is_empty() {
+            return 0.0;
+        }
+        let done = self.completed.iter().filter(|&&c| c).count();
+        done as f32 / TECHNOLOGIES.len() as f32
+    }
+
+    /// Total number of science packs a technology requires to complete: the
+    /// number of pack types in one unit multiplied by the units needed.
+    pub fn total_science_cost(&self, tech_idx: usize) -> u32 {
+        match TECHNOLOGIES.get(tech_idx) {
+            Some(tech) => tech.science_cost.len() as u32 * tech.units_needed,
+            None => 0,
+        }
+    }
 }
 
 /// Ticks all labs: consume science packs, advance research.
@@ -459,5 +485,49 @@ mod tests {
         // Advanced Electronics requires Electronics first.
         assert!(!research.can_research(tech_index("Advanced Electronics")));
         assert!(research.can_research(tech_index("Automation")));
+    }
+
+    #[test]
+    fn available_techs_only_lists_root_techs_initially() {
+        let research = ResearchState::new();
+        let available = research.available_techs();
+        // Every available tech must have all prerequisites satisfied (none, here).
+        for &idx in &available {
+            assert!(TECHNOLOGIES[idx].prerequisites.is_empty());
+        }
+        assert!(available.contains(&tech_index("Automation")));
+        assert!(!available.contains(&tech_index("Advanced Electronics")));
+    }
+
+    #[test]
+    fn percent_complete_reflects_completed_count() {
+        let mut research = ResearchState::new();
+        assert_eq!(research.percent_complete(), 0.0);
+        for slot in research.completed.iter_mut() {
+            *slot = true;
+        }
+        assert!((research.percent_complete() - 1.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn total_science_cost_multiplies_pack_types_by_units() {
+        let research = ResearchState::new();
+        let idx = tech_index("Advanced Electronics"); // 2 pack types, 20 units
+        let tech = &TECHNOLOGIES[idx];
+        assert_eq!(
+            research.total_science_cost(idx),
+            tech.science_cost.len() as u32 * tech.units_needed
+        );
+        // Out-of-range index yields zero.
+        assert_eq!(research.total_science_cost(usize::MAX), 0);
+    }
+
+    #[test]
+    fn completing_a_prereq_unlocks_the_dependent() {
+        let mut research = ResearchState::new();
+        let electronics = tech_index("Electronics");
+        let advanced = tech_index("Advanced Electronics");
+        research.completed[electronics] = true;
+        assert!(research.available_techs().contains(&advanced));
     }
 }
