@@ -96,6 +96,9 @@ pub const STEAM_ENGINE_POWER: f32 = 900.0;
 pub const SOLAR_PANEL_POWER: f32 = 60.0;
 /// Energy stored in one accumulator (kJ equivalent).
 pub const ACCUMULATOR_CAPACITY: f32 = 5000.0;
+/// Fraction of total accumulator capacity that can charge/discharge per tick.
+/// Bounds burst power so a full bank cannot instantly erase any deficit.
+pub const ACCUMULATOR_RATE_FRACTION: f32 = 0.1;
 /// Power produced by one nuclear reactor (kW).
 pub const NUCLEAR_REACTOR_POWER: f32 = 40_000.0;
 /// Ticks of fuel from one coal in a boiler.
