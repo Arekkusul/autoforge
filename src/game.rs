@@ -40,6 +40,36 @@ pub struct GameStats {
     pub production_log: Vec<(Resource, u64)>,
 }
 
+impl GameStats {
+    /// Computes per-resource production throughput (items per minute) over the
+    /// last `window_ticks` simulation ticks, using the transient production log.
+    ///
+    /// At [`crate::constants::TICKS_PER_SECOND`] ticks/second, one game minute is
+    /// `TICKS_PER_SECOND * 60` ticks. Results are sorted by rate, descending, so
+    /// callers can show the busiest lines first. An empty log yields no entries.
+    pub fn production_rates(&self, window_ticks: u64) -> Vec<(Resource, f32)> {
+        let now = self.total_ticks;
+        let cutoff = now.saturating_sub(window_ticks);
+        // Only the ticks actually elapsed within the window count toward the rate.
+        let elapsed = (now - cutoff).max(1) as f32;
+        let minutes = elapsed / (crate::constants::TICKS_PER_SECOND as f32 * 60.0);
+
+        let mut counts: HashMap<Resource, u32> = HashMap::new();
+        for &(resource, tick) in &self.production_log {
+            if tick >= cutoff {
+                *counts.entry(resource).or_insert(0) += 1;
+            }
+        }
+
+        let mut rates: Vec<(Resource, f32)> = counts
+            .into_iter()
+            .map(|(resource, count)| (resource, count as f32 / minutes))
+            .collect();
+        rates.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+        rates
+    }
+}
+
 /// Complete game state for one session.
 pub struct GameState {
     /// The world grid (terrain, deposits, buildings, pollution).
@@ -400,5 +430,58 @@ mod tests {
         // STACK_SIZE is 50: 51 iron = 2 stacks, 50 coal = 1 stack.
         let v = InvView(inv(&[(Resource::IronPlate, 51), (Resource::Coal, 50)]));
         assert_eq!(v.stacks(), 3);
+    }
+
+    #[test]
+    fn production_rates_empty_log_is_empty() {
+        let stats = GameStats::default();
+        assert!(stats.production_rates(1200).is_empty());
+    }
+
+    #[test]
+    fn production_rates_scale_to_items_per_minute() {
+        // One game minute is TICKS_PER_SECOND*60 = 1200 ticks. Log 60 gears
+        // within a 1200-tick window -> 60/min.
+        let mut stats = GameStats {
+            total_ticks: 1200,
+            ..Default::default()
+        };
+        for t in 0..60 {
+            stats.production_log.push((Resource::Gear, t));
+        }
+        let rates = stats.production_rates(1200);
+        assert_eq!(rates.len(), 1);
+        let (res, rate) = rates[0];
+        assert_eq!(res, Resource::Gear);
+        assert!((rate - 60.0).abs() < 1e-3, "expected 60/min, got {rate}");
+    }
+
+    #[test]
+    fn production_rates_ignore_entries_outside_window() {
+        let mut stats = GameStats {
+            total_ticks: 3000,
+            ..Default::default()
+        };
+        // Old entry before the 1200-tick window (cutoff = 1800) is excluded.
+        stats.production_log.push((Resource::Coal, 100));
+        stats.production_log.push((Resource::Gear, 2500));
+        let rates = stats.production_rates(1200);
+        assert_eq!(rates.len(), 1);
+        assert_eq!(rates[0].0, Resource::Gear);
+    }
+
+    #[test]
+    fn production_rates_sorted_descending() {
+        let mut stats = GameStats {
+            total_ticks: 1200,
+            ..Default::default()
+        };
+        stats.production_log.push((Resource::Coal, 0));
+        for t in 0..5 {
+            stats.production_log.push((Resource::Gear, t));
+        }
+        let rates = stats.production_rates(1200);
+        assert_eq!(rates[0].0, Resource::Gear);
+        assert!(rates[0].1 >= rates[1].1);
     }
 }

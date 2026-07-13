@@ -1812,18 +1812,9 @@ pub fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
             Color::new(0.95, 0.82, 0.35, 0.9),
         );
         sy += 18.0;
-        // Per-resource production rates (items/min from last 60 seconds).
-        let tick = state.stats.total_ticks;
-        let window = 1200u64; // 60 seconds
-        let cutoff = tick.saturating_sub(window);
-        let mut res_counts: std::collections::HashMap<types::Resource, u32> =
-            std::collections::HashMap::new();
-        for &(res, t) in &state.stats.production_log {
-            if t >= cutoff {
-                *res_counts.entry(res).or_insert(0) += 1;
-            }
-        }
-        if !res_counts.is_empty() {
+        // Per-resource production rates (items/min from the last 60 seconds).
+        let rates = state.stats.production_rates(1200);
+        if !rates.is_empty() {
             draw_text(
                 "Production (per min):",
                 sx,
@@ -1832,15 +1823,7 @@ pub fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
                 Color::new(0.95, 0.82, 0.35, 0.9),
             );
             sy += 18.0;
-            let mut sorted_res: Vec<(types::Resource, u32)> = res_counts.into_iter().collect();
-            sorted_res.sort_by_key(|&(_, count)| std::cmp::Reverse(count));
-            let elapsed_mins = if tick > cutoff {
-                (tick - cutoff) as f32 / 1200.0
-            } else {
-                1.0
-            };
-            for (res, count) in sorted_res.iter().take(10) {
-                let rate = *count as f32 / elapsed_mins;
+            for (res, rate) in rates.iter().take(10) {
                 draw_text(
                     &format!("{}: {:.1}/min", res.display_name(), rate),
                     sx,
