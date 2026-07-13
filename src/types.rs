@@ -439,6 +439,29 @@ impl BuildingKind {
         )
     }
 
+    /// Ticks a belt of this tier takes to advance one item across a tile.
+    ///
+    /// Returns `None` for non-belt buildings. Lower values mean faster belts.
+    pub const fn belt_move_ticks(self) -> Option<u32> {
+        match self {
+            BuildingKind::BeltYellow => Some(crate::constants::BELT_YELLOW_TICKS),
+            BuildingKind::BeltRed => Some(crate::constants::BELT_RED_TICKS),
+            BuildingKind::BeltBlue => Some(crate::constants::BELT_BLUE_TICKS),
+            _ => None,
+        }
+    }
+
+    /// Maximum item throughput of a belt tier in items per second.
+    ///
+    /// Derived from the tier's move time and the fixed simulation rate. Returns
+    /// `0.0` for non-belt buildings.
+    pub fn belt_items_per_second(self) -> f32 {
+        match self.belt_move_ticks() {
+            Some(ticks) if ticks > 0 => crate::constants::TICKS_PER_SECOND as f32 / ticks as f32,
+            _ => 0.0,
+        }
+    }
+
     /// Whether this building is an underground belt (any tier).
     pub const fn is_underground_belt(self) -> bool {
         matches!(
@@ -588,4 +611,39 @@ pub struct ItemId {
     pub index: u32,
     /// Generation counter.
     pub generation: u32,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn belt_move_ticks_only_for_belts() {
+        assert!(BuildingKind::BeltYellow.belt_move_ticks().is_some());
+        assert!(BuildingKind::BeltBlue.belt_move_ticks().is_some());
+        assert!(BuildingKind::Miner.belt_move_ticks().is_none());
+    }
+
+    #[test]
+    fn faster_belt_tiers_have_higher_throughput() {
+        let yellow = BuildingKind::BeltYellow.belt_items_per_second();
+        let red = BuildingKind::BeltRed.belt_items_per_second();
+        let blue = BuildingKind::BeltBlue.belt_items_per_second();
+        assert!(yellow > 0.0);
+        assert!(red > yellow, "red belt should out-throughput yellow");
+        assert!(blue > red, "blue belt should out-throughput red");
+    }
+
+    #[test]
+    fn non_belt_throughput_is_zero() {
+        assert_eq!(BuildingKind::Wall.belt_items_per_second(), 0.0);
+    }
+
+    #[test]
+    fn throughput_matches_tick_rate_formula() {
+        // Yellow belt: 4 ticks/tile at 20 TPS -> 5 items/second.
+        let expected =
+            crate::constants::TICKS_PER_SECOND as f32 / crate::constants::BELT_YELLOW_TICKS as f32;
+        assert!((BuildingKind::BeltYellow.belt_items_per_second() - expected).abs() < 1e-6);
+    }
 }

@@ -8,10 +8,8 @@
 //! Items are rendered with interpolated positions between ticks for smooth motion.
 
 use crate::building::Buildings;
-use crate::constants::*;
 use crate::grid::Grid;
 use crate::item::ItemPool;
-use crate::types::*;
 
 /// Advances all items on belts by one tick.
 ///
@@ -43,11 +41,9 @@ pub fn tick_belts(grid: &mut Grid, buildings: &Buildings, items: &mut ItemPool) 
         };
 
         // Determine speed based on belt tier.
-        let move_ticks = match building.kind {
-            BuildingKind::BeltYellow => BELT_YELLOW_TICKS,
-            BuildingKind::BeltRed => BELT_RED_TICKS,
-            BuildingKind::BeltBlue => BELT_BLUE_TICKS,
-            _ => continue, // not a belt
+        let move_ticks = match building.kind.belt_move_ticks() {
+            Some(ticks) => ticks,
+            None => continue, // not a belt
         };
 
         let speed = 1.0 / move_ticks as f32;
