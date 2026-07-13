@@ -31,13 +31,27 @@ pub fn refuel_from_buffer(ms: &mut crate::building::MachineState) -> bool {
     }
 }
 
+/// Deterministically decides whether a mined ore yields a bonus unit, given the
+/// research productivity `bonus` chance and a rolling `seed` (building index +
+/// crafted count). Kept pure and hash-based so it needs no RNG and is testable.
+pub fn mining_bonus_hits(bonus: f32, seed: u64) -> bool {
+    if bonus <= 0.0 {
+        return false;
+    }
+    let roll = seed.wrapping_mul(2654435761) % 1000;
+    (roll as f32) < bonus.min(1.0) * 1000.0
+}
+
 /// Ticks all production machines: miners, smelters, assemblers, etc.
+///
+/// `mining_bonus` is the researched extra-ore probability applied per mined unit.
 pub fn tick_machines(
     grid: &mut Grid,
     buildings: &mut Buildings,
     items: &mut ItemPool,
     stats: &mut GameStats,
     power_satisfaction: f32,
+    mining_bonus: f32,
 ) {
     let ids = buildings.alive_ids();
 
@@ -61,7 +75,16 @@ pub fn tick_machines(
 
         // --- Handle miners specially ---
         if kind == BuildingKind::Miner {
-            tick_miner(grid, buildings, items, bid, pos, direction, stats);
+            tick_miner(
+                grid,
+                buildings,
+                items,
+                bid,
+                pos,
+                direction,
+                stats,
+                mining_bonus,
+            );
             continue;
         }
 
@@ -181,6 +204,7 @@ pub fn tick_machines(
 ///
 /// IMPORTANT: Ejection runs FIRST every tick so the buffer can drain even while
 /// mining or when full. Without this, the buffer fills to 8 and never empties.
+#[allow(clippy::too_many_arguments)]
 fn tick_miner(
     grid: &mut Grid,
     buildings: &mut Buildings,
@@ -189,6 +213,7 @@ fn tick_miner(
     pos: GridPos,
     direction: Direction,
     stats: &mut GameStats,
+    mining_bonus: f32,
 ) {
     // --- STEP 1: Always try to eject output onto adjacent belt FIRST. ---
     // This ensures the buffer can drain regardless of mining state.
@@ -236,6 +261,15 @@ fn tick_miner(
                 if let Some(deposit) = tile.deposit {
                     if let Some(resource) = deposit.mined_resource() {
                         if ms.output_buffer.len() < MACHINE_BUFFER_CAP {
+                            ms.output_buffer.push(resource);
+                            stats.items_crafted += 1;
+                            stats.production_log.push((resource, stats.total_ticks));
+                        }
+                        // Mining-productivity research: chance of a bonus ore.
+                        let seed = (bid.index as u64).wrapping_add(stats.items_crafted);
+                        if mining_bonus_hits(mining_bonus, seed)
+                            && ms.output_buffer.len() < MACHINE_BUFFER_CAP
+                        {
                             ms.output_buffer.push(resource);
                             stats.items_crafted += 1;
                             stats.production_log.push((resource, stats.total_ticks));
@@ -406,5 +440,32 @@ mod tests {
         assert_eq!(Resource::IronPlate.fuel_value_ticks(), 0);
         assert!(!Resource::IronPlate.is_solid_fuel());
         assert!(Resource::Coal.is_solid_fuel());
+    }
+
+    #[test]
+    fn zero_bonus_never_hits() {
+        for seed in 0..1000 {
+            assert!(!mining_bonus_hits(0.0, seed));
+        }
+    }
+
+    #[test]
+    fn full_bonus_always_hits() {
+        for seed in 0..1000 {
+            assert!(mining_bonus_hits(1.0, seed));
+        }
+    }
+
+    #[test]
+    fn bonus_frequency_tracks_probability() {
+        let hits = (0..10_000)
+            .filter(|&seed| mining_bonus_hits(0.25, seed))
+            .count();
+        let ratio = hits as f32 / 10_000.0;
+        // The hash-based roll should land near the requested 25% chance.
+        assert!(
+            (ratio - 0.25).abs() < 0.05,
+            "expected ~0.25 hit ratio, got {ratio}"
+        );
     }
 }
