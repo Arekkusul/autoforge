@@ -323,6 +323,32 @@ impl ResearchState {
             .all(|&prereq| self.completed[prereq])
     }
 
+    /// Whether a technology with the given name has been completed.
+    ///
+    /// Uses the static name so callers don't need to hardcode tech indices.
+    pub fn is_completed_named(&self, name: &str) -> bool {
+        TECHNOLOGIES
+            .iter()
+            .position(|t| t.name == name)
+            .and_then(|idx| self.completed.get(idx).copied())
+            .unwrap_or(false)
+    }
+
+    /// Extra-output probability (0.0–1.0) granted to miners by researched
+    /// mining-productivity technologies. Bonuses stack additively.
+    ///
+    /// Each mined ore rolls once against this chance for a bonus unit.
+    pub fn mining_bonus(&self) -> f32 {
+        let mut bonus = 0.0;
+        if self.is_completed_named("Mining Productivity 1") {
+            bonus += 0.10;
+        }
+        if self.is_completed_named("Mining Productivity 2") {
+            bonus += 0.25;
+        }
+        bonus
+    }
+
     /// Sets the next technology to research.
     pub fn start_research(&mut self, tech_idx: usize) {
         if self.can_research(tech_idx) {
@@ -395,5 +421,43 @@ pub fn tick_labs(buildings: &mut Buildings, research: &mut ResearchState) {
             research.current_tech = None;
             research.progress = 0;
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn tech_index(name: &str) -> usize {
+        TECHNOLOGIES.iter().position(|t| t.name == name).unwrap()
+    }
+
+    #[test]
+    fn mining_bonus_zero_without_research() {
+        let research = ResearchState::new();
+        assert_eq!(research.mining_bonus(), 0.0);
+    }
+
+    #[test]
+    fn mining_bonus_stacks_additively() {
+        let mut research = ResearchState::new();
+        research.completed[tech_index("Mining Productivity 1")] = true;
+        assert!((research.mining_bonus() - 0.10).abs() < 1e-6);
+        research.completed[tech_index("Mining Productivity 2")] = true;
+        assert!((research.mining_bonus() - 0.35).abs() < 1e-6);
+    }
+
+    #[test]
+    fn is_completed_named_handles_unknown_names() {
+        let research = ResearchState::new();
+        assert!(!research.is_completed_named("Nonexistent Tech"));
+    }
+
+    #[test]
+    fn can_research_requires_prerequisites() {
+        let research = ResearchState::new();
+        // Advanced Electronics requires Electronics first.
+        assert!(!research.can_research(tech_index("Advanced Electronics")));
+        assert!(research.can_research(tech_index("Automation")));
     }
 }

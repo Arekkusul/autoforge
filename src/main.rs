@@ -534,12 +534,14 @@ fn simulation_tick(state: &mut GameState, sfx: &sound::SoundEffects) {
 
     // 1. Machines process: count down timers, complete recipes, start new ones.
     let crafted_before = state.stats.items_crafted;
+    let mining_bonus = state.research.mining_bonus();
     machine::tick_machines(
         &mut state.grid,
         &mut state.buildings,
         &mut state.items,
         &mut state.stats,
         state.power.satisfaction,
+        mining_bonus,
     );
     // First item celebration + periodic ding.
     if crafted_before == 0 && state.stats.items_crafted > 0 {
