@@ -129,18 +129,14 @@ pub fn update_power(buildings: &mut Buildings, power: &mut PowerState, daynight:
             let ms = building.machine_state.as_mut().unwrap();
             ms.fuel_ticks -= 1;
         } else if !ms.input_buffer.is_empty() {
-            // Load new fuel.
+            // Load new fuel (coal, rocket fuel, or any solid fuel).
             let building = buildings.get_mut(*bid).unwrap();
             let ms = building.machine_state.as_mut().unwrap();
-            // Consume first coal-like item from input buffer.
-            if let Some(pos) = ms.input_buffer.iter().position(|&r| r == Resource::Coal) {
-                ms.input_buffer.remove(pos);
-                ms.fuel_ticks = COAL_FUEL_TICKS;
-            }
+            crate::machine::refuel_from_buffer(ms);
         }
     }
 
-    // Boilers also consume coal.
+    // Boilers also consume solid fuel.
     for bid in &ids {
         let building = match buildings.get(*bid) {
             Some(b) => b,
@@ -162,10 +158,7 @@ pub fn update_power(buildings: &mut Buildings, power: &mut PowerState, daynight:
         } else if !ms.input_buffer.is_empty() {
             let building = buildings.get_mut(*bid).unwrap();
             let ms = building.machine_state.as_mut().unwrap();
-            if let Some(pos) = ms.input_buffer.iter().position(|&r| r == Resource::Coal) {
-                ms.input_buffer.remove(pos);
-                ms.fuel_ticks = COAL_FUEL_TICKS;
-            }
+            crate::machine::refuel_from_buffer(ms);
         }
     }
 

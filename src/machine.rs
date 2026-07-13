@@ -15,6 +15,22 @@ use crate::item::ItemPool;
 use crate::recipe::{self, RECIPES};
 use crate::types::*;
 
+/// Consumes the first solid-fuel item in a machine's input buffer and loads its
+/// energy into `fuel_ticks`. Returns `true` if fuel was loaded, `false` if the
+/// buffer contains no burnable fuel.
+///
+/// Higher-energy fuels (e.g. rocket fuel) burn far longer than coal, so a
+/// furnace fed rocket fuel needs refueling much less often.
+pub fn refuel_from_buffer(ms: &mut crate::building::MachineState) -> bool {
+    if let Some(idx) = ms.input_buffer.iter().position(|r| r.is_solid_fuel()) {
+        let fuel = ms.input_buffer.remove(idx);
+        ms.fuel_ticks = fuel.fuel_value_ticks();
+        true
+    } else {
+        false
+    }
+}
+
 /// Ticks all production machines: miners, smelters, assemblers, etc.
 pub fn tick_machines(
     grid: &mut Grid,
@@ -68,15 +84,8 @@ pub fn tick_machines(
             // Fuel-based machines: consume fuel each tick. If out, try to refuel.
             // If no coal available, PAUSE (don't lose progress) — resume when coal arrives.
             if kind.needs_fuel() {
-                if ms.fuel_ticks == 0 {
-                    if let Some(coal_idx) =
-                        ms.input_buffer.iter().position(|&r| r == Resource::Coal)
-                    {
-                        ms.input_buffer.remove(coal_idx);
-                        ms.fuel_ticks = COAL_FUEL_TICKS;
-                    } else {
-                        continue; // Paused — waiting for coal. Progress preserved.
-                    }
+                if ms.fuel_ticks == 0 && !refuel_from_buffer(ms) {
+                    continue; // Paused — waiting for fuel. Progress preserved.
                 }
                 ms.fuel_ticks -= 1;
             }
@@ -129,13 +138,8 @@ pub fn tick_machines(
 
         // Fuel-based machines: pre-load fuel BEFORE starting a recipe.
         // This prevents the stall where a recipe starts without enough fuel to complete.
-        if kind.needs_fuel() && ms.fuel_ticks == 0 {
-            if let Some(coal_idx) = ms.input_buffer.iter().position(|&r| r == Resource::Coal) {
-                ms.input_buffer.remove(coal_idx);
-                ms.fuel_ticks = COAL_FUEL_TICKS;
-            } else {
-                continue; // No fuel available — wait for coal to arrive (don't start recipe)
-            }
+        if kind.needs_fuel() && ms.fuel_ticks == 0 && !refuel_from_buffer(ms) {
+            continue; // No fuel available — wait for fuel to arrive (don't start recipe)
         }
 
         if let Some(rid) = recipe::find_matching_recipe(kind, &ms.input_buffer, ms.selected_recipe)
@@ -353,5 +357,54 @@ pub fn tick_machine_output(grid: &mut Grid, buildings: &mut Buildings, items: &m
                 break; // no space to eject
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::building::MachineState;
+
+    #[test]
+    fn coal_loads_baseline_fuel_ticks() {
+        let mut ms = MachineState::new();
+        ms.input_buffer.push(Resource::Coal);
+        assert!(refuel_from_buffer(&mut ms));
+        assert_eq!(ms.fuel_ticks, Resource::Coal.fuel_value_ticks());
+        assert!(ms.input_buffer.is_empty());
+    }
+
+    #[test]
+    fn rocket_fuel_burns_longer_than_coal() {
+        assert!(
+            Resource::RocketFuel.fuel_value_ticks() > Resource::Coal.fuel_value_ticks(),
+            "rocket fuel must be a superior fuel"
+        );
+    }
+
+    #[test]
+    fn refuel_prefers_any_solid_fuel_and_skips_non_fuel() {
+        let mut ms = MachineState::new();
+        ms.input_buffer.push(Resource::IronPlate);
+        ms.input_buffer.push(Resource::RocketFuel);
+        assert!(refuel_from_buffer(&mut ms));
+        assert_eq!(ms.fuel_ticks, Resource::RocketFuel.fuel_value_ticks());
+        // The non-fuel item is untouched.
+        assert_eq!(ms.input_buffer, vec![Resource::IronPlate]);
+    }
+
+    #[test]
+    fn refuel_fails_with_no_fuel() {
+        let mut ms = MachineState::new();
+        ms.input_buffer.push(Resource::IronOre);
+        assert!(!refuel_from_buffer(&mut ms));
+        assert_eq!(ms.fuel_ticks, 0);
+    }
+
+    #[test]
+    fn non_fuel_resources_report_zero() {
+        assert_eq!(Resource::IronPlate.fuel_value_ticks(), 0);
+        assert!(!Resource::IronPlate.is_solid_fuel());
+        assert!(Resource::Coal.is_solid_fuel());
     }
 }
