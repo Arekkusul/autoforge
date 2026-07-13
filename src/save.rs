@@ -99,6 +99,18 @@ pub struct SaveItem {
     pub progress: f32,
 }
 
+impl SaveData {
+    /// Serializes this save to a binary (bincode) byte buffer.
+    pub fn to_bytes(&self) -> Result<Vec<u8>, bincode::Error> {
+        bincode::serialize(self)
+    }
+
+    /// Deserializes a save from a binary (bincode) byte buffer.
+    pub fn from_bytes(bytes: &[u8]) -> Result<SaveData, bincode::Error> {
+        bincode::deserialize(bytes)
+    }
+}
+
 /// Returns the save file path (next to the executable).
 fn save_path() -> PathBuf {
     let mut path = std::env::current_dir().unwrap_or_default();
@@ -199,7 +211,7 @@ pub fn save_game(state: &GameState) -> bool {
     }
 
     // Save as binary (bincode) — atomic write via temp file + rename.
-    if let Ok(bytes) = bincode::serialize(&save) {
+    if let Ok(bytes) = save.to_bytes() {
         let temp = save_path().with_extension("tmp");
         if fs::write(&temp, &bytes).is_ok() {
             if fs::rename(&temp, save_path()).is_ok() {
@@ -222,7 +234,7 @@ pub fn save_game(state: &GameState) -> bool {
 pub fn load_game(state: &mut GameState) -> bool {
     // Try binary (bincode) first, fall back to JSON for old saves.
     let save: SaveData = if let Ok(bytes) = fs::read(save_path()) {
-        match bincode::deserialize(&bytes) {
+        match SaveData::from_bytes(&bytes) {
             Ok(s) => s,
             Err(_) => return false,
         }
@@ -382,4 +394,127 @@ pub fn load_game(state: &mut GameState) -> bool {
     state.blueprint_library = save.blueprint_library;
 
     true
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn sample_save() -> SaveData {
+        SaveData {
+            version: 2,
+            seed: 0xDEAD_BEEF,
+            grid_width: 64,
+            grid_height: 64,
+            stats: GameStats {
+                total_ticks: 12_345,
+                items_crafted: 999,
+                buildings_placed: 42,
+                ..Default::default()
+            },
+            evolution: 0.25,
+            nests: vec![(10, 20), (30, 40)],
+            tiles: vec![SaveTile {
+                x: 5,
+                y: 6,
+                terrain: Terrain::Grass,
+                deposit: Some(OreDeposit::Iron),
+                ore_amount: 500,
+                ore_origin: true,
+                pollution: 1.5,
+            }],
+            buildings: vec![SaveBuilding {
+                kind: BuildingKind::Miner,
+                x: 5,
+                y: 6,
+                direction: Direction::South,
+                hp: 100.0,
+                max_hp: 100.0,
+                input_buffer: vec![Resource::Coal],
+                output_buffer: vec![Resource::IronOre, Resource::IronOre],
+                progress_ticks: 10,
+                total_ticks: 40,
+                fuel_ticks: 100,
+                selected_recipe: Some(0),
+                modules: vec![Resource::SpeedModule],
+            }],
+            items: vec![SaveItem {
+                resource: Resource::IronPlate,
+                x: 7,
+                y: 8,
+                progress: 0.5,
+            }],
+            inventory: vec![(Resource::IronPlate, 50), (Resource::Coal, 30)],
+            research_completed: vec![true, false, true],
+            research_current: Some(3),
+            research_progress: 7,
+            story_triggered: vec![true, true, false],
+            story_first_miner: true,
+            story_first_wave: false,
+            daynight_time: 123.4,
+            game_speed: 2,
+            build_radius: 45.0,
+            game_won: false,
+            milestones_completed: vec![true, false],
+            tutorial_step: 4,
+            blueprint_library: vec![(
+                "line".to_string(),
+                vec![(0, 0, BuildingKind::BeltYellow, Direction::East)],
+            )],
+        }
+    }
+
+    #[test]
+    fn round_trip_preserves_core_fields() {
+        let save = sample_save();
+        let bytes = save.to_bytes().expect("serialize");
+        let back = SaveData::from_bytes(&bytes).expect("deserialize");
+
+        assert_eq!(back.version, save.version);
+        assert_eq!(back.seed, save.seed);
+        assert_eq!(back.grid_width, save.grid_width);
+        assert_eq!(back.stats.items_crafted, save.stats.items_crafted);
+        assert_eq!(back.stats.total_ticks, save.stats.total_ticks);
+        assert_eq!(back.evolution, save.evolution);
+        assert_eq!(back.nests, save.nests);
+        assert_eq!(back.inventory, save.inventory);
+        assert_eq!(back.research_completed, save.research_completed);
+        assert_eq!(back.research_current, save.research_current);
+    }
+
+    #[test]
+    fn round_trip_preserves_buildings_and_items() {
+        let save = sample_save();
+        let back = SaveData::from_bytes(&save.to_bytes().unwrap()).unwrap();
+
+        assert_eq!(back.buildings.len(), 1);
+        let b = &back.buildings[0];
+        assert_eq!(b.kind, BuildingKind::Miner);
+        assert_eq!(b.output_buffer, vec![Resource::IronOre, Resource::IronOre]);
+        assert_eq!(b.selected_recipe, Some(0));
+        assert_eq!(b.modules, vec![Resource::SpeedModule]);
+
+        assert_eq!(back.items.len(), 1);
+        assert_eq!(back.items[0].resource, Resource::IronPlate);
+        assert_eq!(back.items[0].progress, 0.5);
+    }
+
+    #[test]
+    fn serialization_is_deterministic() {
+        let save = sample_save();
+        assert_eq!(save.to_bytes().unwrap(), save.to_bytes().unwrap());
+    }
+
+    #[test]
+    fn truncated_bytes_fail_gracefully() {
+        // A valid save prefix cut short must not panic — it returns an error.
+        let bytes = sample_save().to_bytes().unwrap();
+        let truncated = &bytes[..bytes.len() / 2];
+        assert!(SaveData::from_bytes(truncated).is_err());
+    }
+
+    #[test]
+    fn empty_bytes_fail_gracefully() {
+        assert!(SaveData::from_bytes(&[]).is_err());
+    }
 }
