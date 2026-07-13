@@ -23,6 +23,39 @@ pub struct PowerState {
     /// Satisfaction ratio (0.0–1.0). Machines run at this fraction of full speed.
     /// 1.0 = fully powered, 0.5 = half speed, 0.0 = no power.
     pub satisfaction: f32,
+    /// Energy currently buffered in accumulators (kJ-equivalent units).
+    #[serde(default)]
+    pub stored_energy: f32,
+}
+
+/// Resolves a supply/demand gap against accumulator storage for one tick.
+///
+/// - When supply exceeds demand, the surplus charges accumulators up to
+///   `capacity` (limited by a per-tick charge rate).
+/// - When demand exceeds supply, accumulators discharge to cover the shortfall
+///   (limited by a per-tick discharge rate), raising effective supply.
+///
+/// Returns `(effective_supply, new_stored)`. Kept pure so it can be unit-tested
+/// without constructing a world.
+pub fn apply_accumulators(
+    supply: f32,
+    demand: f32,
+    stored: f32,
+    capacity: f32,
+    rate: f32,
+) -> (f32, f32) {
+    if supply >= demand {
+        // Charge from surplus.
+        let surplus = supply - demand;
+        let room = (capacity - stored).max(0.0);
+        let charged = surplus.min(rate).min(room);
+        (supply - charged, (stored + charged).min(capacity))
+    } else {
+        // Discharge to cover the deficit.
+        let deficit = demand - supply;
+        let drawn = deficit.min(rate).min(stored);
+        (supply + drawn, (stored - drawn).max(0.0))
+    }
 }
 
 /// Recalculates power supply and demand.
@@ -100,12 +133,24 @@ pub fn update_power(buildings: &mut Buildings, power: &mut PowerState, daynight:
         }
     }
 
+    // Accumulators smooth the supply/demand gap: charge on surplus, discharge on
+    // deficit. Capacity scales with the number of accumulators placed.
+    let accumulator_count = ids
+        .iter()
+        .filter(|&&bid| buildings.get(bid).map(|b| b.kind) == Some(BuildingKind::Accumulator))
+        .count();
+    let capacity = accumulator_count as f32 * ACCUMULATOR_CAPACITY;
+    let charge_rate = capacity.max(0.0) * ACCUMULATOR_RATE_FRACTION;
+    let (effective_supply, new_stored) =
+        apply_accumulators(supply, demand, power.stored_energy, capacity, charge_rate);
+    power.stored_energy = new_stored;
+
     power.supply = supply;
     power.demand = demand;
-    power.satisfaction = if demand <= 0.0 || supply >= demand {
+    power.satisfaction = if demand <= 0.0 || effective_supply >= demand {
         1.0
     } else {
-        (supply / demand).clamp(0.0, 1.0)
+        (effective_supply / demand).clamp(0.0, 1.0)
     };
 
     // Steam engines consume coal from their input buffer.
@@ -192,5 +237,48 @@ pub fn update_power(buildings: &mut Buildings, power: &mut PowerState, daynight:
                 ms.fuel_ticks = NUCLEAR_FUEL_CELL_TICKS;
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::apply_accumulators;
+
+    #[test]
+    fn surplus_charges_up_to_the_rate_limit() {
+        // 100 surplus, but only 40/tick may charge; plenty of room.
+        let (eff, stored) = apply_accumulators(150.0, 50.0, 0.0, 1000.0, 40.0);
+        assert_eq!(stored, 40.0);
+        // Effective supply drops by the amount diverted into storage.
+        assert_eq!(eff, 110.0);
+    }
+
+    #[test]
+    fn surplus_never_exceeds_capacity() {
+        let (_eff, stored) = apply_accumulators(1000.0, 0.0, 990.0, 1000.0, 500.0);
+        assert_eq!(stored, 1000.0);
+    }
+
+    #[test]
+    fn deficit_discharges_to_cover_shortfall() {
+        // Demand 100, supply 60 -> 40 deficit, storage covers it.
+        let (eff, stored) = apply_accumulators(60.0, 100.0, 500.0, 1000.0, 100.0);
+        assert_eq!(eff, 100.0);
+        assert_eq!(stored, 460.0);
+    }
+
+    #[test]
+    fn discharge_is_capped_by_stored_energy() {
+        // Only 10 stored, deficit is 40 -> can only add 10.
+        let (eff, stored) = apply_accumulators(60.0, 100.0, 10.0, 1000.0, 100.0);
+        assert_eq!(eff, 70.0);
+        assert_eq!(stored, 0.0);
+    }
+
+    #[test]
+    fn balanced_grid_leaves_storage_untouched() {
+        let (eff, stored) = apply_accumulators(100.0, 100.0, 300.0, 1000.0, 50.0);
+        assert_eq!(eff, 100.0);
+        assert_eq!(stored, 300.0);
     }
 }
