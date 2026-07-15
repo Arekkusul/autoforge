@@ -1,5 +1,7 @@
 # AutoForge
 
+[![CI](https://github.com/Arekkusul/autoforge/actions/workflows/ci.yml/badge.svg)](https://github.com/Arekkusul/autoforge/actions/workflows/ci.yml)
+
 A narrative-driven 2D factory automation game built in Rust. You are **FORGE** — a fractured AI consciousness from a crashed colony ship, rebuilding yourself on an alien world while uncovering the mysteries beneath the surface.
 
 ## Features
