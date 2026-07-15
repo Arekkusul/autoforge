@@ -1,0 +1,7 @@
+name: CI
+on: [push, pull_request]
+jobs:
+  ci:
+    uses: Arekkusul/polyci/.github/workflows/reusable.yml@main
+    with:
+      rust: true
