@@ -1,5 +1,4 @@
 /target
-.agentcli/
 autoforge_save.json
 autoforge_save.bin
 *.swp
