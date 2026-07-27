@@ -259,3 +259,183 @@ fn deliver_to_target(
 
     false
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::building::{Building, MachineState};
+
+    fn belt_building(pos: GridPos, dir: Direction) -> Building {
+        Building {
+            kind: BuildingKind::BeltYellow,
+            pos,
+            direction: dir,
+            machine_state: None,
+            hp: 1.0,
+            max_hp: 1.0,
+            underground_pair: None,
+        }
+    }
+
+    fn machine_building(pos: GridPos, dir: Direction, kind: BuildingKind) -> Building {
+        Building {
+            kind,
+            pos,
+            direction: dir,
+            machine_state: Some(MachineState::new()),
+            hp: 1.0,
+            max_hp: 1.0,
+            underground_pair: None,
+        }
+    }
+
+    /// Spawns a belt item at a given progress and registers it on the tile.
+    fn place_item_with_progress(
+        grid: &mut Grid,
+        items: &mut ItemPool,
+        pos: GridPos,
+        res: Resource,
+        progress: f32,
+    ) -> ItemId {
+        let id = items.spawn(res, pos);
+        items.get_mut(id).unwrap().progress = progress;
+        grid.add_item_to_tile(pos, id);
+        id
+    }
+
+    fn world() -> (Grid, Buildings, ItemPool) {
+        (Grid::new(16, 16), Buildings::new(), ItemPool::new(64))
+    }
+
+    /// Standard layout: belt source (0), inserter facing east (1), chest target (2).
+    fn belt_inserter_chest(
+        grid: &mut Grid,
+        buildings: &mut Buildings,
+    ) -> (GridPos, GridPos, BuildingId) {
+        let source = GridPos::new(1, 1);
+        let inserter_pos = GridPos::new(2, 1);
+        let target = GridPos::new(3, 1);
+        buildings
+            .place(belt_building(source, Direction::East), grid)
+            .unwrap();
+        let ins = buildings
+            .place(
+                machine_building(inserter_pos, Direction::East, BuildingKind::InserterRegular),
+                grid,
+            )
+            .unwrap();
+        buildings
+            .place(machine_building(target, Direction::East, BuildingKind::StorageChest), grid)
+            .unwrap();
+        (source, target, ins)
+    }
+
+    #[test]
+    fn inserter_picks_from_belt_into_hand_then_delivers_to_chest() {
+        let (mut grid, mut buildings, mut items) = world();
+        let (source, target, ins) = belt_inserter_chest(&mut grid, &mut buildings);
+        let target_bid = grid.get_tile(target).unwrap().building.unwrap();
+        place_item_with_progress(&mut grid, &mut items, source, Resource::IronPlate, 0.9);
+
+        // First tick: pick the belt item into the inserter's hand.
+        tick_inserters(&mut grid, &mut buildings, &mut items);
+        assert!(grid.items_at(source).is_empty(), "belt item was consumed");
+        assert_eq!(items.alive_ids().len(), 0, "picked item leaves the world pool");
+        let held = &buildings.get(ins).unwrap().machine_state.as_ref().unwrap().output_buffer;
+        assert_eq!(held, &[Resource::IronPlate], "inserter now holds the item");
+
+        // Run enough ticks for the swing cooldown to elapse and the item to be placed.
+        for _ in 0..INSERTER_REGULAR_TICKS + 2 {
+            tick_inserters(&mut grid, &mut buildings, &mut items);
+        }
+        let chest = buildings.get(target_bid).unwrap().machine_state.as_ref().unwrap();
+        assert_eq!(chest.input_buffer, vec![Resource::IronPlate], "delivered to chest");
+        assert!(
+            buildings.get(ins).unwrap().machine_state.as_ref().unwrap().output_buffer.is_empty(),
+            "hand is empty after delivery"
+        );
+    }
+
+    #[test]
+    fn inserter_ignores_belt_item_below_half_progress() {
+        let (mut grid, mut buildings, mut items) = world();
+        let (source, _target, ins) = belt_inserter_chest(&mut grid, &mut buildings);
+        // Item has only just entered the belt tile (progress < 0.5): not yet reachable.
+        let id = place_item_with_progress(&mut grid, &mut items, source, Resource::Coal, 0.4);
+
+        tick_inserters(&mut grid, &mut buildings, &mut items);
+        assert_eq!(grid.items_at(source), &[id], "item still on the belt");
+        assert!(
+            buildings.get(ins).unwrap().machine_state.as_ref().unwrap().output_buffer.is_empty(),
+            "inserter picked nothing"
+        );
+    }
+
+    #[test]
+    fn inserter_moves_only_one_item_per_swing() {
+        let (mut grid, mut buildings, mut items) = world();
+        let (source, _target, ins) = belt_inserter_chest(&mut grid, &mut buildings);
+        // Two reachable items sharing the source tile.
+        place_item_with_progress(&mut grid, &mut items, source, Resource::IronPlate, 0.9);
+        place_item_with_progress(&mut grid, &mut items, source, Resource::CopperPlate, 0.9);
+
+        // Pick (tick 1), then a tick still inside the cooldown window must not grab again.
+        tick_inserters(&mut grid, &mut buildings, &mut items);
+        tick_inserters(&mut grid, &mut buildings, &mut items);
+
+        assert_eq!(grid.items_at(source).len(), 1, "exactly one item remains on the belt");
+        assert_eq!(
+            buildings.get(ins).unwrap().machine_state.as_ref().unwrap().output_buffer.len(),
+            1,
+            "inserter holds exactly one item — the cooldown gates the second pick"
+        );
+    }
+
+    #[test]
+    fn inserter_pulls_from_machine_output_buffer_onto_belt() {
+        let (mut grid, mut buildings, mut items) = world();
+        let source = GridPos::new(1, 1);
+        let inserter_pos = GridPos::new(2, 1);
+        let target = GridPos::new(3, 1);
+        // Source is a furnace with a finished plate in its output buffer.
+        let furnace = buildings
+            .place(machine_building(source, Direction::East, BuildingKind::StoneFurnace), &mut grid)
+            .unwrap();
+        buildings
+            .get_mut(furnace)
+            .unwrap()
+            .machine_state
+            .as_mut()
+            .unwrap()
+            .output_buffer
+            .push(Resource::IronPlate);
+        let ins = buildings
+            .place(
+                machine_building(inserter_pos, Direction::East, BuildingKind::InserterRegular),
+                &mut grid,
+            )
+            .unwrap();
+        buildings
+            .place(belt_building(target, Direction::East), &mut grid)
+            .unwrap();
+
+        // Pick from furnace output.
+        tick_inserters(&mut grid, &mut buildings, &mut items);
+        assert!(
+            buildings.get(furnace).unwrap().machine_state.as_ref().unwrap().output_buffer.is_empty(),
+            "furnace output buffer drained"
+        );
+        assert_eq!(
+            buildings.get(ins).unwrap().machine_state.as_ref().unwrap().output_buffer,
+            vec![Resource::IronPlate]
+        );
+
+        // Deliver onto the belt after the swing cooldown.
+        for _ in 0..INSERTER_REGULAR_TICKS + 2 {
+            tick_inserters(&mut grid, &mut buildings, &mut items);
+        }
+        let on_belt = grid.items_at(target);
+        assert_eq!(on_belt.len(), 1, "one fresh item spawned on the target belt");
+        assert_eq!(items.get(on_belt[0]).unwrap().resource, Resource::IronPlate);
+    }
+}
