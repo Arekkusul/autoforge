@@ -366,9 +366,9 @@ pub fn load_game(state: &mut GameState) -> bool {
         state.story.first_miner_placed = save.story_first_miner;
         state.story.first_wave_arrived = save.story_first_wave;
     }
-    if save.daynight_time > 0.0 {
-        state.daynight.time = save.daynight_time;
-    }
+    // Normalize the loaded time into range: a corrupt or tampered value outside
+    // [0, FULL_CYCLE_SECS) would otherwise peg sunlight at its night floor forever.
+    state.daynight = crate::daynight::DayNightState::from_time(save.daynight_time);
     if save.game_speed > 0 {
         state.game_speed = save.game_speed;
     }
