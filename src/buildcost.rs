@@ -203,8 +203,71 @@ pub fn pay_cost(inventory: &mut HashMap<Resource, u32>, kind: BuildingKind) {
 }
 
 /// Refunds building cost to inventory (when removing a building).
+///
+/// Uses a saturating add so a near-full stockpile clamps at [`u32::MAX`] rather
+/// than overflowing — which would panic in debug builds and silently wrap a
+/// resource count back toward zero in release, wiping the player's stock. This
+/// mirrors the saturating deduction in [`pay_cost`].
 pub fn refund_cost(inventory: &mut HashMap<Resource, u32>, kind: BuildingKind) {
     for &(resource, count) in building_cost(kind) {
-        *inventory.entry(resource).or_insert(0) += count;
+        let entry = inventory.entry(resource).or_insert(0);
+        *entry = entry.saturating_add(count);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn refund_saturates_instead_of_overflowing() {
+        // A near-max stockpile must not overflow when a building is refunded.
+        // Yellow belt refunds 1 iron plate; without a saturating add this panics
+        // in debug builds and silently wraps to ~0 in release, wiping the stock.
+        let mut inv = HashMap::new();
+        inv.insert(Resource::IronPlate, u32::MAX);
+        refund_cost(&mut inv, BuildingKind::BeltYellow);
+        assert_eq!(inv.get(&Resource::IronPlate).copied().unwrap(), u32::MAX);
+    }
+
+    #[test]
+    fn can_afford_reflects_inventory_levels() {
+        // StorageChest costs 4 iron plate + 2 stone.
+        let mut inv = HashMap::new();
+        inv.insert(Resource::IronPlate, 4);
+        inv.insert(Resource::Stone, 2);
+        assert!(can_afford(&inv, BuildingKind::StorageChest));
+
+        // One short on stone -> cannot afford.
+        inv.insert(Resource::Stone, 1);
+        assert!(!can_afford(&inv, BuildingKind::StorageChest));
+
+        // A missing resource counts as zero on hand.
+        let empty = HashMap::new();
+        assert!(!can_afford(&empty, BuildingKind::StorageChest));
+    }
+
+    #[test]
+    fn pay_then_refund_round_trips_to_original() {
+        let mut inv = HashMap::new();
+        inv.insert(Resource::IronPlate, 10);
+        inv.insert(Resource::Stone, 5);
+
+        pay_cost(&mut inv, BuildingKind::StorageChest); // -4 iron, -2 stone
+        assert_eq!(inv[&Resource::IronPlate], 6);
+        assert_eq!(inv[&Resource::Stone], 3);
+
+        refund_cost(&mut inv, BuildingKind::StorageChest); // +4 iron, +2 stone
+        assert_eq!(inv[&Resource::IronPlate], 10);
+        assert_eq!(inv[&Resource::Stone], 5);
+    }
+
+    #[test]
+    fn pay_cost_saturates_and_never_underflows() {
+        // Paying with insufficient funds clamps at zero rather than wrapping.
+        let mut inv = HashMap::new();
+        inv.insert(Resource::IronPlate, 1); // less than the 4 a chest needs
+        pay_cost(&mut inv, BuildingKind::StorageChest);
+        assert_eq!(inv[&Resource::IronPlate], 0);
     }
 }
