@@ -62,6 +62,7 @@ A narrative-driven 2D factory automation game built in Rust. You are **FORGE** �
 - **Full save/load** — preserves research, story, inventory, power, day/night, build radius
 - **Bincode save format** (10x smaller than JSON, loads old JSON saves too)
 - **Zero compiler warnings** — clean build
+- **Overflow-safe resource accounting** — building costs are paid and refunded with saturating arithmetic, so inventory counts never wrap or panic
 - **Exportable spritesheet** — `assets/spritesheet.png` can be replaced with custom art
 
 ## How to Run
