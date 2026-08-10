@@ -143,6 +143,7 @@ fn fmt_num(n: u64) -> String {
     result
 }
 
+/// Draws the user interface, including status panels, overlays, and tooltips.
 pub fn draw_ui(state: &mut GameState, atlas: &SpriteAtlas) {
     // Modern UI colors — clean, high contrast, readable.
     let panel_bg = Color::new(0.08, 0.08, 0.12, 0.92);
