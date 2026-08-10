@@ -34,6 +34,7 @@ pub enum Phase {
 }
 
 impl Phase {
+    /// Returns a human-readable label for the phase.
     pub fn label(self) -> &'static str {
         match self {
             Phase::Early => "EARLY GAME",
