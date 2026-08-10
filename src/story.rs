@@ -201,6 +201,7 @@ pub struct StoryState {
 }
 
 impl StoryState {
+    /// Creates a new `StoryState` with no story beats triggered and no events occurred.
     pub fn new() -> Self {
         Self {
             triggered: vec![false; STORY_BEATS.len()],
