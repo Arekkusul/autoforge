@@ -43,6 +43,7 @@ impl Phase {
             Phase::Endgame => "ENDGAME",
         }
     }
+    /// Returns the RGB color associated with the phase.
     pub fn color(self) -> (f32, f32, f32) {
         match self {
             Phase::Early => (0.4, 0.8, 0.4),
