@@ -51,6 +51,7 @@ pub struct Trains {
 }
 
 impl Trains {
+    /// Creates a new, empty container for all trains.
     pub fn new() -> Self {
         Self::default()
     }
