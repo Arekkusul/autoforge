@@ -114,6 +114,25 @@ async fn main() {
         return;
     }
 
+    // `--export-state-json [PATH]` writes a fresh game state snapshot to a JSON
+    // file (defaulting to `autoforge_state_export.json` in the working directory)
+    // and exits, without entering the render loop. Unlike `--export-state` (which
+    // prints to stdout), this leaves a structured file on disk for tooling/tests
+    // to inspect.
+    let args: Vec<String> = std::env::args().collect();
+    if let Some(idx) = args.iter().position(|arg| arg == "--export-state-json") {
+        let path = args
+            .get(idx + 1)
+            .map(std::path::PathBuf::from)
+            .unwrap_or_else(|| std::path::PathBuf::from("autoforge_state_export.json"));
+        let state = GameState::new(0);
+        match save::export_state_to_file(&state, &path) {
+            Ok(()) => println!("Exported game state to {}", path.display()),
+            Err(e) => eprintln!("Failed to export game state to {}: {e}", path.display()),
+        }
+        return;
+    }
+
     // --- Startup ---
     // Request VSync to cap frame rate and reduce power usage on low-end devices.
     // macroquad respects the display refresh rate by default (60Hz typically).

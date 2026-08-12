@@ -245,6 +245,17 @@ pub fn export_state_json(state: &GameState) -> Result<String, serde_json::Error>
     serde_json::to_string_pretty(&build_save_data(state))
 }
 
+/// Serializes the current game state to pretty-printed JSON and writes it to `path`.
+///
+/// Used by the `--export-state-json` CLI flag to produce a structured,
+/// human-readable snapshot of game state on disk (rather than stdout) for
+/// debugging and test reproducibility.
+pub fn export_state_to_file(state: &GameState, path: &std::path::Path) -> std::io::Result<()> {
+    let json = export_state_json(state)
+        .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
+    fs::write(path, json)
+}
+
 /// Loads a saved game from disk, replacing the current state.
 ///
 /// Returns `true` on success.
@@ -545,5 +556,27 @@ mod tests {
         assert_eq!(value["seed"], 42);
         assert_eq!(value["stats"]["total_ticks"], 0);
         assert!(value["inventory"].is_array());
+    }
+
+    #[test]
+    fn export_state_to_file_writes_json_with_expected_fields() {
+        let state = GameState::new(7);
+        let mut path = std::env::temp_dir();
+        path.push(format!(
+            "autoforge_export_state_test_{}.json",
+            std::process::id()
+        ));
+
+        export_state_to_file(&state, &path).expect("write JSON export to file");
+
+        let contents = fs::read_to_string(&path).expect("read exported file");
+        let value: serde_json::Value =
+            serde_json::from_str(&contents).expect("exported file must be valid JSON");
+        assert_eq!(value["seed"], 7);
+        assert_eq!(value["stats"]["total_ticks"], 0);
+        assert!(value["inventory"].is_array());
+        assert!(value["tiles"].is_array());
+
+        fs::remove_file(&path).ok();
     }
 }
