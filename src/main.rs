@@ -101,6 +101,19 @@ fn window_conf() -> Conf {
 
 #[macroquad::main(window_conf)]
 async fn main() {
+    // --- CLI flags ---
+    // `--export-state` dumps a fresh game state as JSON to stdout and exits,
+    // without entering the render loop. Useful for debugging deterministic
+    // logic (grid/inventory/research shape) without a full play session.
+    if std::env::args().any(|arg| arg == "--export-state") {
+        let state = GameState::new(0);
+        match save::export_state_json(&state) {
+            Ok(json) => println!("{json}"),
+            Err(e) => eprintln!("Failed to export game state: {e}"),
+        }
+        return;
+    }
+
     // --- Startup ---
     // Request VSync to cap frame rate and reduce power usage on low-end devices.
     // macroquad respects the display refresh rate by default (60Hz typically).

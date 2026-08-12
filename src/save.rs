@@ -124,10 +124,9 @@ fn save_path_json() -> PathBuf {
     path
 }
 
-/// Saves the current game state to disk.
-///
-/// Returns `true` on success.
-pub fn save_game(state: &GameState) -> bool {
+/// Builds a [`SaveData`] snapshot of `state`, flattening the grid/buildings/items
+/// into the serializable shapes shared by save-to-disk and JSON export.
+fn build_save_data(state: &GameState) -> SaveData {
     let mut save = SaveData {
         version: 2,
         seed: state.seed,
@@ -210,6 +209,15 @@ pub fn save_game(state: &GameState) -> bool {
         });
     }
 
+    save
+}
+
+/// Saves the current game state to disk.
+///
+/// Returns `true` on success.
+pub fn save_game(state: &GameState) -> bool {
+    let save = build_save_data(state);
+
     // Save as binary (bincode) — atomic write via temp file + rename.
     if let Ok(bytes) = save.to_bytes() {
         let temp = save_path().with_extension("tmp");
@@ -226,6 +234,15 @@ pub fn save_game(state: &GameState) -> bool {
         }
     }
     false
+}
+
+/// Serializes the current game state to a pretty-printed JSON string.
+///
+/// Used by the `--export-state` CLI flag so developers/testers can inspect a
+/// structured dump of the game's internal state (grid, buildings, items,
+/// research, inventory, etc.) without needing to load a save file.
+pub fn export_state_json(state: &GameState) -> Result<String, serde_json::Error> {
+    serde_json::to_string_pretty(&build_save_data(state))
 }
 
 /// Loads a saved game from disk, replacing the current state.
@@ -516,5 +533,17 @@ mod tests {
     #[test]
     fn empty_bytes_fail_gracefully() {
         assert!(SaveData::from_bytes(&[]).is_err());
+    }
+
+    #[test]
+    fn export_state_json_produces_valid_json_with_core_fields() {
+        let state = GameState::new(42);
+        let json = export_state_json(&state).expect("serialize to JSON");
+
+        let value: serde_json::Value =
+            serde_json::from_str(&json).expect("output must be valid JSON");
+        assert_eq!(value["seed"], 42);
+        assert_eq!(value["stats"]["total_ticks"], 0);
+        assert!(value["inventory"].is_array());
     }
 }
