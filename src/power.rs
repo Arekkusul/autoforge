@@ -11,6 +11,7 @@
 use crate::building::{self, Buildings};
 use crate::constants::*;
 use crate::daynight::DayNightState;
+use crate::grid::Grid;
 use crate::types::*;
 
 /// Power state for the entire factory.
@@ -58,10 +59,37 @@ pub fn apply_accumulators(
     }
 }
 
+/// Computes how much of a solar panel's sunlight reaches it past adjacent
+/// obstructions (1.0 = fully unobstructed, 0.0 = fully shadowed).
+///
+/// Only the four cardinal neighbors are checked; each building there whose
+/// [`BuildingKind::casts_shadow`] is `true` blocks
+/// [`SOLAR_SHADOW_PER_OBSTRUCTION`] of the panel's output. Kept pure (no
+/// [`DayNightState`] dependency) so obstruction and daylight can be tested
+/// independently.
+pub fn solar_shadow_factor(grid: &Grid, buildings: &Buildings, pos: GridPos) -> f32 {
+    let obstructions = Direction::all()
+        .iter()
+        .filter(|&&dir| {
+            grid.get_tile(pos.neighbor(dir))
+                .and_then(|tile| tile.building)
+                .and_then(|bid| buildings.get(bid))
+                .is_some_and(|b| b.kind.casts_shadow())
+        })
+        .count();
+
+    (1.0 - obstructions as f32 * SOLAR_SHADOW_PER_OBSTRUCTION).clamp(0.0, 1.0)
+}
+
 /// Recalculates power supply and demand.
 ///
 /// Call once per tick (or every few ticks — power changes slowly).
-pub fn update_power(buildings: &mut Buildings, power: &mut PowerState, daynight: &DayNightState) {
+pub fn update_power(
+    buildings: &mut Buildings,
+    power: &mut PowerState,
+    daynight: &DayNightState,
+    grid: &Grid,
+) {
     let mut supply = 0.0f32;
     let mut demand = 0.0f32;
 
@@ -84,8 +112,10 @@ pub fn update_power(buildings: &mut Buildings, power: &mut PowerState, daynight:
                 }
             }
             BuildingKind::SolarPanel => {
-                // Solar output depends on daylight.
-                supply += SOLAR_PANEL_POWER * daynight.solar_multiplier();
+                // Solar output depends on daylight and on shadows cast by
+                // adjacent structures.
+                let shadow = solar_shadow_factor(grid, buildings, building.pos);
+                supply += SOLAR_PANEL_POWER * daynight.solar_multiplier() * shadow;
             }
             BuildingKind::NuclearReactor => {
                 // Nuclear reactor produces massive power when fueled.
@@ -248,6 +278,31 @@ mod tests {
         (Grid::new(16, 16), Buildings::new())
     }
 
+    fn solar_building(pos: GridPos) -> Building {
+        Building {
+            kind: BuildingKind::SolarPanel,
+            pos,
+            direction: Direction::East,
+            machine_state: None,
+            hp: 1.0,
+            max_hp: 1.0,
+            underground_pair: None,
+        }
+    }
+
+    /// A tall structure used to test shadow-casting onto adjacent solar panels.
+    fn obstruction_building(pos: GridPos) -> Building {
+        Building {
+            kind: BuildingKind::NuclearReactor,
+            pos,
+            direction: Direction::East,
+            machine_state: None,
+            hp: 1.0,
+            max_hp: 1.0,
+            underground_pair: None,
+        }
+    }
+
     // --- Stale-id hardening: a building removed (undo/demolition) between
     // ticks must never be able to panic `update_power`. ---
 
@@ -268,7 +323,7 @@ mod tests {
         let daynight = DayNightState::default();
 
         // One tick while alive: burns fuel, contributes supply.
-        update_power(&mut buildings, &mut power, &daynight);
+        update_power(&mut buildings, &mut power, &daynight, &grid);
         assert_eq!(power.supply, STEAM_ENGINE_POWER);
 
         // Undo/demolition removes the engine; a stale local variable (`engine`)
@@ -276,7 +331,7 @@ mod tests {
         buildings.remove(engine, &mut grid);
 
         // Must not panic, and supply must correctly drop to zero.
-        update_power(&mut buildings, &mut power, &daynight);
+        update_power(&mut buildings, &mut power, &daynight, &grid);
         assert_eq!(
             power.supply, 0.0,
             "demolished engine no longer contributes power"
@@ -314,7 +369,7 @@ mod tests {
         let mut power = PowerState::default();
         let daynight = DayNightState::default();
         // Must not panic when the id captured above no longer resolves.
-        update_power(&mut buildings, &mut power, &daynight);
+        update_power(&mut buildings, &mut power, &daynight, &grid);
         assert_eq!(power.supply, 0.0);
     }
 
@@ -354,5 +409,126 @@ mod tests {
         let (eff, stored) = apply_accumulators(100.0, 100.0, 300.0, 1000.0, 50.0);
         assert_eq!(eff, 100.0);
         assert_eq!(stored, 300.0);
+    }
+
+    // --- Solar panel power: light level and shadow obstruction. ---
+
+    #[test]
+    fn solar_panel_output_scales_with_time_of_day() {
+        let (mut grid, mut buildings) = world();
+        buildings
+            .place(solar_building(GridPos::new(5, 5)), &mut grid)
+            .unwrap();
+        let mut power = PowerState::default();
+
+        let midnight = DayNightState {
+            time: DAY_DURATION_SECS + NIGHT_DURATION_SECS * 0.5,
+        };
+        update_power(&mut buildings, &mut power, &midnight, &grid);
+        assert_eq!(power.supply, 0.0, "no sunlight at night means no supply");
+
+        let midday = DayNightState {
+            time: DAY_DURATION_SECS * 0.5,
+        };
+        update_power(&mut buildings, &mut power, &midday, &grid);
+        assert_eq!(
+            power.supply, SOLAR_PANEL_POWER,
+            "unobstructed panel hits full rated output at midday"
+        );
+    }
+
+    #[test]
+    fn solar_shadow_factor_is_full_with_no_neighboring_structures() {
+        let (grid, buildings) = world();
+        assert_eq!(
+            solar_shadow_factor(&grid, &buildings, GridPos::new(5, 5)),
+            1.0
+        );
+    }
+
+    #[test]
+    fn solar_shadow_factor_reduces_per_adjacent_tall_structure() {
+        let (mut grid, mut buildings) = world();
+        let pos = GridPos::new(5, 5);
+        buildings
+            .place(
+                obstruction_building(pos.neighbor(Direction::North)),
+                &mut grid,
+            )
+            .unwrap();
+
+        let factor = solar_shadow_factor(&grid, &buildings, pos);
+        assert!((factor - 0.8).abs() < 1e-6);
+    }
+
+    #[test]
+    fn solar_shadow_factor_floors_out_when_boxed_in_on_all_sides() {
+        let (mut grid, mut buildings) = world();
+        let pos = GridPos::new(5, 5);
+        for dir in Direction::all() {
+            buildings
+                .place(obstruction_building(pos.neighbor(dir)), &mut grid)
+                .unwrap();
+        }
+
+        let factor = solar_shadow_factor(&grid, &buildings, pos);
+        assert!((factor - 0.2).abs() < 1e-6);
+    }
+
+    #[test]
+    fn solar_shadow_factor_ignores_flat_infrastructure() {
+        let (mut grid, mut buildings) = world();
+        let pos = GridPos::new(5, 5);
+        buildings
+            .place(
+                Building {
+                    kind: BuildingKind::BeltYellow,
+                    pos: pos.neighbor(Direction::North),
+                    direction: Direction::East,
+                    machine_state: None,
+                    hp: 1.0,
+                    max_hp: 1.0,
+                    underground_pair: None,
+                },
+                &mut grid,
+            )
+            .unwrap();
+
+        assert_eq!(solar_shadow_factor(&grid, &buildings, pos), 1.0);
+    }
+
+    #[test]
+    fn shadowed_solar_panel_produces_less_power_than_an_unshadowed_one() {
+        let (mut grid, mut buildings) = world();
+        let open_pos = GridPos::new(2, 2);
+        let shaded_pos = GridPos::new(8, 8);
+        buildings
+            .place(solar_building(open_pos), &mut grid)
+            .unwrap();
+        buildings
+            .place(solar_building(shaded_pos), &mut grid)
+            .unwrap();
+        buildings
+            .place(
+                obstruction_building(shaded_pos.neighbor(Direction::North)),
+                &mut grid,
+            )
+            .unwrap();
+        buildings
+            .place(
+                obstruction_building(shaded_pos.neighbor(Direction::South)),
+                &mut grid,
+            )
+            .unwrap();
+
+        let mut power = PowerState::default();
+        let midday = DayNightState {
+            time: DAY_DURATION_SECS * 0.5,
+        };
+        update_power(&mut buildings, &mut power, &midday, &grid);
+
+        // One unobstructed panel (100%) + one boxed on 2 of 4 sides (60%).
+        let expected = SOLAR_PANEL_POWER + SOLAR_PANEL_POWER * 0.6;
+        assert!((power.supply - expected).abs() < 1e-4);
     }
 }

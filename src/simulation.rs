@@ -409,7 +409,12 @@ pub(super) fn simulation_tick(state: &mut GameState, sfx: &sound::SoundEffects) 
 
     if tick.is_multiple_of(5) {
         // 6. Power: calculate supply/demand, consume fuel in boilers/engines.
-        power::update_power(&mut state.buildings, &mut state.power, &state.daynight);
+        power::update_power(
+            &mut state.buildings,
+            &mut state.power,
+            &state.daynight,
+            &state.grid,
+        );
 
         // 6b. Check for alert conditions (power, turret ammo, etc.).
         input::check_alerts(state, sfx);

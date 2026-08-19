@@ -94,6 +94,11 @@ pub const TANK_CAPACITY: f32 = 25_000.0;
 pub const STEAM_ENGINE_POWER: f32 = 900.0;
 /// Power produced by one solar panel at peak (daytime).
 pub const SOLAR_PANEL_POWER: f32 = 60.0;
+/// Fraction of a solar panel's sunlight blocked by each adjacent shadow-casting
+/// structure (see [`crate::types::BuildingKind::casts_shadow`]). A panel boxed
+/// in on all four cardinal sides is left at `1.0 - 4 * 0.2 = 0.2` (20%) output,
+/// modeling diffuse/ambient light rather than a full blackout.
+pub const SOLAR_SHADOW_PER_OBSTRUCTION: f32 = 0.2;
 /// Energy stored in one accumulator (kJ equivalent).
 pub const ACCUMULATOR_CAPACITY: f32 = 5000.0;
 /// Fraction of total accumulator capacity that can charge/discharge per tick.

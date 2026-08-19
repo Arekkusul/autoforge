@@ -517,6 +517,40 @@ impl BuildingKind {
             BuildingKind::StoneFurnace | BuildingKind::SteelFurnace | BuildingKind::Boiler
         )
     }
+
+    /// Whether this building is tall/bulky enough to cast a shadow onto an
+    /// adjacent solar panel, blocking part of its sunlight.
+    ///
+    /// Flat or thin infrastructure (belts, inserters, pipes, rails, walls,
+    /// storage, and solar/accumulator themselves) lets light through;
+    /// substantial production, power, and military buildings do not.
+    pub const fn casts_shadow(self) -> bool {
+        !matches!(
+            self,
+            BuildingKind::BeltYellow
+                | BuildingKind::BeltRed
+                | BuildingKind::BeltBlue
+                | BuildingKind::UndergroundBeltYellow
+                | BuildingKind::UndergroundBeltRed
+                | BuildingKind::UndergroundBeltBlue
+                | BuildingKind::Splitter
+                | BuildingKind::InserterRegular
+                | BuildingKind::InserterLong
+                | BuildingKind::InserterFast
+                | BuildingKind::InserterStack
+                | BuildingKind::StorageChest
+                | BuildingKind::SolarPanel
+                | BuildingKind::Accumulator
+                | BuildingKind::Wall
+                | BuildingKind::Gate
+                | BuildingKind::PipeSegment
+                | BuildingKind::UndergroundPipe
+                | BuildingKind::RailStraight
+                | BuildingKind::RailCurved
+                | BuildingKind::TrainStop
+                | BuildingKind::RailSignal
+        )
+    }
 }
 
 /// Grid position in tile coordinates. Origin at top-left corner of the map.
