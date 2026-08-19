@@ -123,9 +123,20 @@ pub fn tick_inserters(grid: &mut Grid, buildings: &mut Buildings, items: &mut It
                 transfer.inserter_id,
             );
             if delivered {
-                let ins = buildings.get_mut(transfer.inserter_id).unwrap();
-                let ms = ins.machine_state.as_mut().unwrap();
-                ms.output_buffer.remove(0);
+                // `transfer.inserter_id` was confirmed alive at the top of this
+                // loop and `deliver_to_target` only mutates the *target*
+                // building, never the inserter itself — this should always
+                // resolve. Handled defensively (skip rather than panic) in
+                // case a future change breaks that invariant.
+                let Some(ins) = buildings.get_mut(transfer.inserter_id) else {
+                    continue;
+                };
+                let Some(ms) = ins.machine_state.as_mut() else {
+                    continue;
+                };
+                if !ms.output_buffer.is_empty() {
+                    ms.output_buffer.remove(0);
+                }
                 ms.progress_ticks = swing_ticks;
             }
         } else {
@@ -139,8 +150,14 @@ pub fn tick_inserters(grid: &mut Grid, buildings: &mut Buildings, items: &mut It
                 transfer.inserter_id,
             );
             if let Some(resource) = picked {
-                let ins = buildings.get_mut(transfer.inserter_id).unwrap();
-                let ms = ins.machine_state.as_mut().unwrap();
+                // Same invariant as above: defensively skip rather than
+                // panic if the inserter somehow vanished mid-transfer.
+                let Some(ins) = buildings.get_mut(transfer.inserter_id) else {
+                    continue;
+                };
+                let Some(ms) = ins.machine_state.as_mut() else {
+                    continue;
+                };
                 ms.output_buffer.push(resource);
                 ms.progress_ticks = swing_ticks;
             }
@@ -171,10 +188,14 @@ fn pick_from_source(
         return None;
     }
     let bid = src_bid?;
-    let src = buildings.get(bid)?;
+    // A single fallible lookup: `bid` may be stale (the building was removed
+    // by undo, blueprint-paste, or demolition since this transfer intent was
+    // computed) — degrade to "nothing to pick" instead of panicking.
+    let src = buildings.get_mut(bid)?;
+    let kind = src.kind;
 
     // Pick from belt.
-    if src.kind.is_belt() {
+    if kind.is_belt() {
         let item_ids: Vec<ItemId> = grid.items_at(pos).to_vec();
         for item_id in item_ids {
             if let Some(item) = items.get(item_id) {
@@ -190,23 +211,14 @@ fn pick_from_source(
     }
 
     // Pick from machine output buffer (or storage chest input buffer).
-    if let Some(ms) = &src.machine_state {
-        // Storage chests: pick from input_buffer (it serves as general storage).
-        if src.kind == BuildingKind::StorageChest {
-            if !ms.input_buffer.is_empty() {
-                let resource = ms.input_buffer[0];
-                let src = buildings.get_mut(bid).unwrap();
-                let ms = src.machine_state.as_mut().unwrap();
-                ms.input_buffer.remove(0);
-                return Some(resource);
-            }
-        } else if !ms.output_buffer.is_empty() {
-            let resource = ms.output_buffer[0];
-            let src = buildings.get_mut(bid).unwrap();
-            let ms = src.machine_state.as_mut().unwrap();
-            ms.output_buffer.remove(0);
-            return Some(resource);
+    let ms = src.machine_state.as_mut()?;
+    // Storage chests: pick from input_buffer (it serves as general storage).
+    if kind == BuildingKind::StorageChest {
+        if !ms.input_buffer.is_empty() {
+            return Some(ms.input_buffer.remove(0));
         }
+    } else if !ms.output_buffer.is_empty() {
+        return Some(ms.output_buffer.remove(0));
     }
 
     None
@@ -226,13 +238,16 @@ fn deliver_to_target(
         Some(b) => b,
         None => return false,
     };
-    let tgt = match buildings.get(bid) {
-        Some(b) => b,
-        None => return false,
+    // A single fallible lookup: `bid` may be stale (removed by undo,
+    // blueprint-paste, or demolition since this transfer intent was
+    // computed) — degrade to "cannot deliver" instead of panicking.
+    let Some(tgt) = buildings.get_mut(bid) else {
+        return false;
     };
+    let kind = tgt.kind;
 
     // Place onto belt.
-    if tgt.kind.is_belt() {
+    if kind.is_belt() {
         if grid.items_at(pos).is_empty() {
             let item_id = items.spawn(resource, pos);
             grid.add_item_to_tile(pos, item_id);
@@ -242,19 +257,17 @@ fn deliver_to_target(
     }
 
     // Place into machine input buffer.
-    if let Some(ms) = &tgt.machine_state {
-        // Storage chests have much larger capacity.
-        let cap = if tgt.kind == BuildingKind::StorageChest {
-            STORAGE_CHEST_STACKS * STACK_SIZE as usize
-        } else {
-            MACHINE_BUFFER_CAP
-        };
-        if ms.input_buffer.len() < cap {
-            let tgt = buildings.get_mut(bid).unwrap();
-            let ms = tgt.machine_state.as_mut().unwrap();
-            ms.input_buffer.push(resource);
-            return true;
-        }
+    let cap = if kind == BuildingKind::StorageChest {
+        STORAGE_CHEST_STACKS * STACK_SIZE as usize
+    } else {
+        MACHINE_BUFFER_CAP
+    };
+    let Some(ms) = tgt.machine_state.as_mut() else {
+        return false;
+    };
+    if ms.input_buffer.len() < cap {
+        ms.input_buffer.push(resource);
+        return true;
     }
 
     false
@@ -437,5 +450,109 @@ mod tests {
         let on_belt = grid.items_at(target);
         assert_eq!(on_belt.len(), 1, "one fresh item spawned on the target belt");
         assert_eq!(items.get(on_belt[0]).unwrap().resource, Resource::IronPlate);
+    }
+
+    // --- Stale-id hardening: an id captured before an entity is removed
+    // (undo, blueprint-paste, demolition) must never panic when a system
+    // still holds it. ---
+
+    #[test]
+    fn deliver_to_target_with_a_stale_building_id_does_not_panic() {
+        let (mut grid, mut buildings, mut items) = world();
+        let target = GridPos::new(3, 1);
+        let chest = buildings
+            .place(machine_building(target, Direction::East, BuildingKind::StorageChest), &mut grid)
+            .unwrap();
+        // Simulate undo/demolition: the id is removed from the arena, but a
+        // system elsewhere (e.g. a cached Transfer) still holds `chest`.
+        buildings.remove(chest, &mut grid);
+
+        let delivered = deliver_to_target(
+            &mut grid,
+            &mut buildings,
+            &mut items,
+            target,
+            Some(chest),
+            Resource::IronPlate,
+            chest, // arbitrary — inserter id is unused by the function itself
+        );
+        assert!(!delivered, "delivery to a removed building must fail gracefully, not panic");
+    }
+
+    #[test]
+    fn pick_from_source_with_a_stale_building_id_does_not_panic() {
+        let (mut grid, mut buildings, mut items) = world();
+        let source = GridPos::new(1, 1);
+        let furnace = buildings
+            .place(machine_building(source, Direction::East, BuildingKind::StoneFurnace), &mut grid)
+            .unwrap();
+        buildings
+            .get_mut(furnace)
+            .unwrap()
+            .machine_state
+            .as_mut()
+            .unwrap()
+            .output_buffer
+            .push(Resource::IronPlate);
+        buildings.remove(furnace, &mut grid);
+
+        let picked = pick_from_source(&mut grid, &mut buildings, &mut items, source, Some(furnace), furnace);
+        assert_eq!(picked, None, "picking from a removed building must fail gracefully, not panic");
+    }
+
+    #[test]
+    fn tick_inserters_survives_target_demolished_while_inserter_is_mid_swing() {
+        let (mut grid, mut buildings, mut items) = world();
+        let (source, target, ins) = belt_inserter_chest(&mut grid, &mut buildings);
+        let target_bid = grid.get_tile(target).unwrap().building.unwrap();
+        place_item_with_progress(&mut grid, &mut items, source, Resource::IronPlate, 0.9);
+
+        // Pick the item into the inserter's hand (starts the swing cooldown).
+        tick_inserters(&mut grid, &mut buildings, &mut items);
+        assert!(
+            !buildings.get(ins).unwrap().machine_state.as_ref().unwrap().output_buffer.is_empty(),
+            "inserter is holding an item mid-swing"
+        );
+
+        // Undo/demolition removes the delivery target while the inserter still
+        // references its position from this tick's transfer intent.
+        buildings.remove(target_bid, &mut grid);
+
+        // Run ticks past the swing cooldown: must not panic, and since the
+        // target is gone the inserter simply keeps holding its item.
+        for _ in 0..INSERTER_REGULAR_TICKS + 2 {
+            tick_inserters(&mut grid, &mut buildings, &mut items);
+        }
+        assert!(
+            !buildings.get(ins).unwrap().machine_state.as_ref().unwrap().output_buffer.is_empty(),
+            "inserter keeps the item in hand rather than delivering into a demolished target"
+        );
+    }
+
+    #[test]
+    fn tick_inserters_survives_source_demolished_between_pick_attempts() {
+        let (mut grid, mut buildings, mut items) = world();
+        let source = GridPos::new(1, 1);
+        let inserter_pos = GridPos::new(2, 1);
+        let target = GridPos::new(3, 1);
+        let furnace = buildings
+            .place(machine_building(source, Direction::East, BuildingKind::StoneFurnace), &mut grid)
+            .unwrap();
+        buildings
+            .place(machine_building(inserter_pos, Direction::East, BuildingKind::InserterRegular), &mut grid)
+            .unwrap();
+        buildings
+            .place(belt_building(target, Direction::East), &mut grid)
+            .unwrap();
+
+        // Undo/demolition removes the source furnace before the inserter ever ticks.
+        buildings.remove(furnace, &mut grid);
+
+        // Must not panic even though the grid tile still pointed at a live id
+        // an instant ago; ticking repeatedly must stay a no-op.
+        for _ in 0..5 {
+            tick_inserters(&mut grid, &mut buildings, &mut items);
+        }
+        assert_eq!(items.alive_ids().len(), 0, "no items spawned or picked from a removed source");
     }
 }

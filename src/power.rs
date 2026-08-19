@@ -154,80 +154,66 @@ pub fn update_power(buildings: &mut Buildings, power: &mut PowerState, daynight:
     };
 
     // Steam engines consume coal from their input buffer.
+    //
+    // Each `bid` in `ids` is a snapshot taken at the top of this function; a
+    // building can only vanish between the snapshot and here if this
+    // function itself removed it (it never does), but the lookup is kept
+    // fallible rather than `.unwrap()`ed so a future change can't turn a
+    // missing entity into a panic.
     for bid in &ids {
-        let building = match buildings.get(*bid) {
-            Some(b) => b,
-            None => continue,
+        let Some(building) = buildings.get_mut(*bid) else {
+            continue;
         };
         if building.kind != BuildingKind::SteamEngine {
             continue;
         }
-
-        let ms = match &building.machine_state {
-            Some(ms) => ms,
-            None => continue,
+        let Some(ms) = building.machine_state.as_mut() else {
+            continue;
         };
 
         if ms.fuel_ticks > 0 {
             // Burn fuel.
-            let building = buildings.get_mut(*bid).unwrap();
-            let ms = building.machine_state.as_mut().unwrap();
             ms.fuel_ticks -= 1;
         } else if !ms.input_buffer.is_empty() {
             // Load new fuel (coal, rocket fuel, or any solid fuel).
-            let building = buildings.get_mut(*bid).unwrap();
-            let ms = building.machine_state.as_mut().unwrap();
             crate::machine::refuel_from_buffer(ms);
         }
     }
 
     // Boilers also consume solid fuel.
     for bid in &ids {
-        let building = match buildings.get(*bid) {
-            Some(b) => b,
-            None => continue,
+        let Some(building) = buildings.get_mut(*bid) else {
+            continue;
         };
         if building.kind != BuildingKind::Boiler {
             continue;
         }
-
-        let ms = match &building.machine_state {
-            Some(ms) => ms,
-            None => continue,
+        let Some(ms) = building.machine_state.as_mut() else {
+            continue;
         };
 
         if ms.fuel_ticks > 0 {
-            let building = buildings.get_mut(*bid).unwrap();
-            let ms = building.machine_state.as_mut().unwrap();
             ms.fuel_ticks -= 1;
         } else if !ms.input_buffer.is_empty() {
-            let building = buildings.get_mut(*bid).unwrap();
-            let ms = building.machine_state.as_mut().unwrap();
             crate::machine::refuel_from_buffer(ms);
         }
     }
 
     // Nuclear reactors consume fuel cells (much longer burn time).
     for bid in &ids {
-        let building = match buildings.get(*bid) {
-            Some(b) => b,
-            None => continue,
+        let Some(building) = buildings.get_mut(*bid) else {
+            continue;
         };
         if building.kind != BuildingKind::NuclearReactor {
             continue;
         }
-        let ms = match &building.machine_state {
-            Some(ms) => ms,
-            None => continue,
+        let Some(ms) = building.machine_state.as_mut() else {
+            continue;
         };
 
         if ms.fuel_ticks > 0 {
-            let building = buildings.get_mut(*bid).unwrap();
-            let ms = building.machine_state.as_mut().unwrap();
             ms.fuel_ticks -= 1;
         } else if !ms.input_buffer.is_empty() {
-            let building = buildings.get_mut(*bid).unwrap();
-            let ms = building.machine_state.as_mut().unwrap();
             if let Some(pos) = ms
                 .input_buffer
                 .iter()
@@ -242,7 +228,86 @@ pub fn update_power(buildings: &mut Buildings, power: &mut PowerState, daynight:
 
 #[cfg(test)]
 mod tests {
-    use super::apply_accumulators;
+    use super::*;
+    use crate::building::{Building, MachineState};
+    use crate::grid::Grid;
+
+    fn engine_building(pos: GridPos) -> Building {
+        Building {
+            kind: BuildingKind::SteamEngine,
+            pos,
+            direction: Direction::East,
+            machine_state: Some(MachineState::new()),
+            hp: 1.0,
+            max_hp: 1.0,
+            underground_pair: None,
+        }
+    }
+
+    fn world() -> (Grid, Buildings) {
+        (Grid::new(16, 16), Buildings::new())
+    }
+
+    // --- Stale-id hardening: a building removed (undo/demolition) between
+    // ticks must never be able to panic `update_power`. ---
+
+    #[test]
+    fn update_power_survives_engine_demolished_mid_burn() {
+        let (mut grid, mut buildings) = world();
+        let pos = GridPos::new(1, 1);
+        let engine = buildings.place(engine_building(pos), &mut grid).unwrap();
+        buildings.get_mut(engine).unwrap().machine_state.as_mut().unwrap().fuel_ticks = 10;
+
+        let mut power = PowerState::default();
+        let daynight = DayNightState::default();
+
+        // One tick while alive: burns fuel, contributes supply.
+        update_power(&mut buildings, &mut power, &daynight);
+        assert_eq!(power.supply, STEAM_ENGINE_POWER);
+
+        // Undo/demolition removes the engine; a stale local variable (`engine`)
+        // is all that is left pointing at it.
+        buildings.remove(engine, &mut grid);
+
+        // Must not panic, and supply must correctly drop to zero.
+        update_power(&mut buildings, &mut power, &daynight);
+        assert_eq!(power.supply, 0.0, "demolished engine no longer contributes power");
+    }
+
+    #[test]
+    fn update_power_survives_boiler_demolished_with_fuel_in_buffer() {
+        let (mut grid, mut buildings) = world();
+        let pos = GridPos::new(1, 1);
+        let boiler = buildings
+            .place(
+                Building {
+                    kind: BuildingKind::Boiler,
+                    pos,
+                    direction: Direction::East,
+                    machine_state: Some(MachineState::new()),
+                    hp: 1.0,
+                    max_hp: 1.0,
+                    underground_pair: None,
+                },
+                &mut grid,
+            )
+            .unwrap();
+        buildings
+            .get_mut(boiler)
+            .unwrap()
+            .machine_state
+            .as_mut()
+            .unwrap()
+            .input_buffer
+            .push(Resource::Coal);
+        buildings.remove(boiler, &mut grid);
+
+        let mut power = PowerState::default();
+        let daynight = DayNightState::default();
+        // Must not panic when the id captured above no longer resolves.
+        update_power(&mut buildings, &mut power, &daynight);
+        assert_eq!(power.supply, 0.0);
+    }
 
     #[test]
     fn surplus_charges_up_to_the_rate_limit() {
