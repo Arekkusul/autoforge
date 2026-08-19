@@ -19,9 +19,13 @@ pub fn tick_belts(grid: &mut Grid, buildings: &Buildings, items: &mut ItemPool) 
     let ids = items.alive_ids();
 
     for id in ids {
-        let item = match items.get(id) {
-            Some(i) => i,
-            None => continue,
+        // A single fallible lookup held for the whole iteration: `id` may be
+        // stale if the item was despawned since `ids` was snapshotted above
+        // (nothing in this function does that today, but the lookup stays
+        // fallible rather than `.unwrap()`ed so it degrades instead of
+        // panicking if that ever changes).
+        let Some(item) = items.get_mut(id) else {
+            continue;
         };
 
         let item_pos = item.pos;
@@ -49,7 +53,6 @@ pub fn tick_belts(grid: &mut Grid, buildings: &Buildings, items: &mut ItemPool) 
         let speed = 1.0 / move_ticks as f32;
 
         // Advance progress.
-        let item = items.get_mut(id).unwrap();
         item.progress += speed;
 
         if item.progress >= 1.0 {
@@ -88,7 +91,6 @@ pub fn tick_belts(grid: &mut Grid, buildings: &Buildings, items: &mut ItemPool) 
                 false // out of bounds
             };
 
-            let item = items.get_mut(id).unwrap();
             if can_move {
                 grid.remove_item_from_tile(item_pos, id);
                 item.pos = dest_pos;
@@ -286,5 +288,55 @@ mod tests {
             tick_belts(&mut grid, &buildings, &mut items);
         }
         assert_eq!(items.alive_ids().len(), 2, "belt movement never creates or destroys items");
+    }
+
+    // --- Stale-id hardening: a downstream belt demolished (undo/demolition)
+    // while an item is about to hand off to it must never panic. ---
+
+    #[test]
+    fn tick_belts_survives_downstream_belt_demolished_mid_transit() {
+        let (mut grid, mut buildings, mut items) = world();
+        let a = GridPos::new(1, 1);
+        let b = GridPos::new(2, 1);
+        place_belt(&mut grid, &mut buildings, a, Direction::East, BuildingKind::BeltYellow);
+        let b_id = place_belt(&mut grid, &mut buildings, b, Direction::East, BuildingKind::BeltYellow);
+        let id = place_item(&mut grid, &mut items, a, Resource::Coal);
+
+        // Advance almost to a full tile (yellow belt: 4 ticks/tile).
+        for _ in 0..3 {
+            tick_belts(&mut grid, &buildings, &mut items);
+        }
+
+        // Undo/demolition removes the downstream belt right before the item
+        // would hand off to it.
+        buildings.remove(b_id, &mut grid);
+
+        // Must not panic; the item simply has nowhere to go and clamps.
+        for _ in 0..5 {
+            tick_belts(&mut grid, &buildings, &mut items);
+        }
+        let item = items.get(id).expect("item must survive a demolished downstream belt");
+        assert_eq!(item.pos, a, "item stays on its own tile once the target belt is gone");
+        assert!((item.progress - 0.99).abs() < 1e-4, "progress clamps instead of teleporting: {}", item.progress);
+    }
+
+    #[test]
+    fn tick_belts_survives_own_belt_demolished_between_ticks() {
+        let (mut grid, mut buildings, mut items) = world();
+        let a = GridPos::new(1, 1);
+        let a_id = place_belt(&mut grid, &mut buildings, a, Direction::East, BuildingKind::BeltYellow);
+        let id = place_item(&mut grid, &mut items, a, Resource::Stone);
+
+        // Undo/demolition removes the belt the item is sitting on. The grid
+        // tile no longer resolves to a building, but the item is still alive.
+        buildings.remove(a_id, &mut grid);
+
+        // Must not panic; with no belt building, the tick is simply a no-op
+        // for this item.
+        for _ in 0..5 {
+            tick_belts(&mut grid, &buildings, &mut items);
+        }
+        let item = items.get(id).expect("orphaned item must survive, never dropped");
+        assert_eq!(item.pos, a);
     }
 }
