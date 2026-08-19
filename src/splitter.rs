@@ -135,16 +135,30 @@ mod tests {
     }
 
     /// Splitter facing east at (2,2): straight output at (3,2), right output at (2,3).
-    fn setup() -> (Grid, Buildings, ItemPool, BuildingId, GridPos, GridPos, GridPos) {
+    fn setup() -> (
+        Grid,
+        Buildings,
+        ItemPool,
+        BuildingId,
+        GridPos,
+        GridPos,
+        GridPos,
+    ) {
         let mut grid = Grid::new(16, 16);
         let mut buildings = Buildings::new();
         let items = ItemPool::new(64);
         let sp = GridPos::new(2, 2);
         let straight = GridPos::new(3, 2); // east
         let right = GridPos::new(2, 3); // south (east rotated cw)
-        let sid = buildings.place(splitter_building(sp, Direction::East), &mut grid).unwrap();
-        buildings.place(belt_building(straight, Direction::East), &mut grid).unwrap();
-        buildings.place(belt_building(right, Direction::South), &mut grid).unwrap();
+        let sid = buildings
+            .place(splitter_building(sp, Direction::East), &mut grid)
+            .unwrap();
+        buildings
+            .place(belt_building(straight, Direction::East), &mut grid)
+            .unwrap();
+        buildings
+            .place(belt_building(right, Direction::South), &mut grid)
+            .unwrap();
         (grid, buildings, items, sid, sp, straight, right)
     }
 
@@ -177,7 +191,11 @@ mod tests {
         // 3rd item -> straight again (counter even).
         ready_item(&mut grid, &mut items, sp, Resource::Coal);
         tick_splitters(&mut grid, &mut buildings, &mut items);
-        assert_eq!(grid.items_at(straight).len(), 1, "third item routed straight again");
+        assert_eq!(
+            grid.items_at(straight).len(),
+            1,
+            "third item routed straight again"
+        );
         assert!(grid.items_at(right).is_empty());
     }
 
@@ -196,7 +214,11 @@ mod tests {
             Resource::SteelPlate,
             "resource type is preserved through the split"
         );
-        assert_eq!(items.alive_ids().len(), 1, "no duplication or loss (one despawn, one spawn)");
+        assert_eq!(
+            items.alive_ids().len(),
+            1,
+            "no duplication or loss (one despawn, one spawn)"
+        );
     }
 
     #[test]
@@ -209,7 +231,11 @@ mod tests {
 
         tick_splitters(&mut grid, &mut buildings, &mut items);
 
-        assert_eq!(grid.items_at(sp), &[id], "unfinished item stays on the splitter");
+        assert_eq!(
+            grid.items_at(sp),
+            &[id],
+            "unfinished item stays on the splitter"
+        );
         assert!(grid.items_at(straight).is_empty());
         assert!(grid.items_at(right).is_empty());
     }
@@ -225,7 +251,11 @@ mod tests {
         tick_splitters(&mut grid, &mut buildings, &mut items);
 
         // Item is held on the splitter and the alternation counter does not advance.
-        assert_eq!(grid.items_at(sp), &[id], "item waits on the splitter while straight is blocked");
+        assert_eq!(
+            grid.items_at(sp),
+            &[id],
+            "item waits on the splitter while straight is blocked"
+        );
         let counter = buildings
             .get(sid)
             .unwrap()

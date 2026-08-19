@@ -256,7 +256,13 @@ mod tests {
         let (mut grid, mut buildings) = world();
         let pos = GridPos::new(1, 1);
         let engine = buildings.place(engine_building(pos), &mut grid).unwrap();
-        buildings.get_mut(engine).unwrap().machine_state.as_mut().unwrap().fuel_ticks = 10;
+        buildings
+            .get_mut(engine)
+            .unwrap()
+            .machine_state
+            .as_mut()
+            .unwrap()
+            .fuel_ticks = 10;
 
         let mut power = PowerState::default();
         let daynight = DayNightState::default();
@@ -271,7 +277,10 @@ mod tests {
 
         // Must not panic, and supply must correctly drop to zero.
         update_power(&mut buildings, &mut power, &daynight);
-        assert_eq!(power.supply, 0.0, "demolished engine no longer contributes power");
+        assert_eq!(
+            power.supply, 0.0,
+            "demolished engine no longer contributes power"
+        );
     }
 
     #[test]

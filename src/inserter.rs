@@ -338,7 +338,10 @@ mod tests {
             )
             .unwrap();
         buildings
-            .place(machine_building(target, Direction::East, BuildingKind::StorageChest), grid)
+            .place(
+                machine_building(target, Direction::East, BuildingKind::StorageChest),
+                grid,
+            )
             .unwrap();
         (source, target, ins)
     }
@@ -353,18 +356,44 @@ mod tests {
         // First tick: pick the belt item into the inserter's hand.
         tick_inserters(&mut grid, &mut buildings, &mut items);
         assert!(grid.items_at(source).is_empty(), "belt item was consumed");
-        assert_eq!(items.alive_ids().len(), 0, "picked item leaves the world pool");
-        let held = &buildings.get(ins).unwrap().machine_state.as_ref().unwrap().output_buffer;
+        assert_eq!(
+            items.alive_ids().len(),
+            0,
+            "picked item leaves the world pool"
+        );
+        let held = &buildings
+            .get(ins)
+            .unwrap()
+            .machine_state
+            .as_ref()
+            .unwrap()
+            .output_buffer;
         assert_eq!(held, &[Resource::IronPlate], "inserter now holds the item");
 
         // Run enough ticks for the swing cooldown to elapse and the item to be placed.
         for _ in 0..INSERTER_REGULAR_TICKS + 2 {
             tick_inserters(&mut grid, &mut buildings, &mut items);
         }
-        let chest = buildings.get(target_bid).unwrap().machine_state.as_ref().unwrap();
-        assert_eq!(chest.input_buffer, vec![Resource::IronPlate], "delivered to chest");
+        let chest = buildings
+            .get(target_bid)
+            .unwrap()
+            .machine_state
+            .as_ref()
+            .unwrap();
+        assert_eq!(
+            chest.input_buffer,
+            vec![Resource::IronPlate],
+            "delivered to chest"
+        );
         assert!(
-            buildings.get(ins).unwrap().machine_state.as_ref().unwrap().output_buffer.is_empty(),
+            buildings
+                .get(ins)
+                .unwrap()
+                .machine_state
+                .as_ref()
+                .unwrap()
+                .output_buffer
+                .is_empty(),
             "hand is empty after delivery"
         );
     }
@@ -379,7 +408,14 @@ mod tests {
         tick_inserters(&mut grid, &mut buildings, &mut items);
         assert_eq!(grid.items_at(source), &[id], "item still on the belt");
         assert!(
-            buildings.get(ins).unwrap().machine_state.as_ref().unwrap().output_buffer.is_empty(),
+            buildings
+                .get(ins)
+                .unwrap()
+                .machine_state
+                .as_ref()
+                .unwrap()
+                .output_buffer
+                .is_empty(),
             "inserter picked nothing"
         );
     }
@@ -396,9 +432,20 @@ mod tests {
         tick_inserters(&mut grid, &mut buildings, &mut items);
         tick_inserters(&mut grid, &mut buildings, &mut items);
 
-        assert_eq!(grid.items_at(source).len(), 1, "exactly one item remains on the belt");
         assert_eq!(
-            buildings.get(ins).unwrap().machine_state.as_ref().unwrap().output_buffer.len(),
+            grid.items_at(source).len(),
+            1,
+            "exactly one item remains on the belt"
+        );
+        assert_eq!(
+            buildings
+                .get(ins)
+                .unwrap()
+                .machine_state
+                .as_ref()
+                .unwrap()
+                .output_buffer
+                .len(),
             1,
             "inserter holds exactly one item — the cooldown gates the second pick"
         );
@@ -412,7 +459,10 @@ mod tests {
         let target = GridPos::new(3, 1);
         // Source is a furnace with a finished plate in its output buffer.
         let furnace = buildings
-            .place(machine_building(source, Direction::East, BuildingKind::StoneFurnace), &mut grid)
+            .place(
+                machine_building(source, Direction::East, BuildingKind::StoneFurnace),
+                &mut grid,
+            )
             .unwrap();
         buildings
             .get_mut(furnace)
@@ -435,11 +485,24 @@ mod tests {
         // Pick from furnace output.
         tick_inserters(&mut grid, &mut buildings, &mut items);
         assert!(
-            buildings.get(furnace).unwrap().machine_state.as_ref().unwrap().output_buffer.is_empty(),
+            buildings
+                .get(furnace)
+                .unwrap()
+                .machine_state
+                .as_ref()
+                .unwrap()
+                .output_buffer
+                .is_empty(),
             "furnace output buffer drained"
         );
         assert_eq!(
-            buildings.get(ins).unwrap().machine_state.as_ref().unwrap().output_buffer,
+            buildings
+                .get(ins)
+                .unwrap()
+                .machine_state
+                .as_ref()
+                .unwrap()
+                .output_buffer,
             vec![Resource::IronPlate]
         );
 
@@ -448,7 +511,11 @@ mod tests {
             tick_inserters(&mut grid, &mut buildings, &mut items);
         }
         let on_belt = grid.items_at(target);
-        assert_eq!(on_belt.len(), 1, "one fresh item spawned on the target belt");
+        assert_eq!(
+            on_belt.len(),
+            1,
+            "one fresh item spawned on the target belt"
+        );
         assert_eq!(items.get(on_belt[0]).unwrap().resource, Resource::IronPlate);
     }
 
@@ -461,7 +528,10 @@ mod tests {
         let (mut grid, mut buildings, mut items) = world();
         let target = GridPos::new(3, 1);
         let chest = buildings
-            .place(machine_building(target, Direction::East, BuildingKind::StorageChest), &mut grid)
+            .place(
+                machine_building(target, Direction::East, BuildingKind::StorageChest),
+                &mut grid,
+            )
             .unwrap();
         // Simulate undo/demolition: the id is removed from the arena, but a
         // system elsewhere (e.g. a cached Transfer) still holds `chest`.
@@ -476,7 +546,10 @@ mod tests {
             Resource::IronPlate,
             chest, // arbitrary — inserter id is unused by the function itself
         );
-        assert!(!delivered, "delivery to a removed building must fail gracefully, not panic");
+        assert!(
+            !delivered,
+            "delivery to a removed building must fail gracefully, not panic"
+        );
     }
 
     #[test]
@@ -484,7 +557,10 @@ mod tests {
         let (mut grid, mut buildings, mut items) = world();
         let source = GridPos::new(1, 1);
         let furnace = buildings
-            .place(machine_building(source, Direction::East, BuildingKind::StoneFurnace), &mut grid)
+            .place(
+                machine_building(source, Direction::East, BuildingKind::StoneFurnace),
+                &mut grid,
+            )
             .unwrap();
         buildings
             .get_mut(furnace)
@@ -496,8 +572,18 @@ mod tests {
             .push(Resource::IronPlate);
         buildings.remove(furnace, &mut grid);
 
-        let picked = pick_from_source(&mut grid, &mut buildings, &mut items, source, Some(furnace), furnace);
-        assert_eq!(picked, None, "picking from a removed building must fail gracefully, not panic");
+        let picked = pick_from_source(
+            &mut grid,
+            &mut buildings,
+            &mut items,
+            source,
+            Some(furnace),
+            furnace,
+        );
+        assert_eq!(
+            picked, None,
+            "picking from a removed building must fail gracefully, not panic"
+        );
     }
 
     #[test]
@@ -510,7 +596,14 @@ mod tests {
         // Pick the item into the inserter's hand (starts the swing cooldown).
         tick_inserters(&mut grid, &mut buildings, &mut items);
         assert!(
-            !buildings.get(ins).unwrap().machine_state.as_ref().unwrap().output_buffer.is_empty(),
+            !buildings
+                .get(ins)
+                .unwrap()
+                .machine_state
+                .as_ref()
+                .unwrap()
+                .output_buffer
+                .is_empty(),
             "inserter is holding an item mid-swing"
         );
 
@@ -524,7 +617,14 @@ mod tests {
             tick_inserters(&mut grid, &mut buildings, &mut items);
         }
         assert!(
-            !buildings.get(ins).unwrap().machine_state.as_ref().unwrap().output_buffer.is_empty(),
+            !buildings
+                .get(ins)
+                .unwrap()
+                .machine_state
+                .as_ref()
+                .unwrap()
+                .output_buffer
+                .is_empty(),
             "inserter keeps the item in hand rather than delivering into a demolished target"
         );
     }
@@ -536,10 +636,16 @@ mod tests {
         let inserter_pos = GridPos::new(2, 1);
         let target = GridPos::new(3, 1);
         let furnace = buildings
-            .place(machine_building(source, Direction::East, BuildingKind::StoneFurnace), &mut grid)
+            .place(
+                machine_building(source, Direction::East, BuildingKind::StoneFurnace),
+                &mut grid,
+            )
             .unwrap();
         buildings
-            .place(machine_building(inserter_pos, Direction::East, BuildingKind::InserterRegular), &mut grid)
+            .place(
+                machine_building(inserter_pos, Direction::East, BuildingKind::InserterRegular),
+                &mut grid,
+            )
             .unwrap();
         buildings
             .place(belt_building(target, Direction::East), &mut grid)
@@ -553,6 +659,10 @@ mod tests {
         for _ in 0..5 {
             tick_inserters(&mut grid, &mut buildings, &mut items);
         }
-        assert_eq!(items.alive_ids().len(), 0, "no items spawned or picked from a removed source");
+        assert_eq!(
+            items.alive_ids().len(),
+            0,
+            "no items spawned or picked from a removed source"
+        );
     }
 }

@@ -156,8 +156,20 @@ mod tests {
         let (mut grid, mut buildings, mut items) = world();
         let a = GridPos::new(1, 1);
         let b = GridPos::new(2, 1);
-        place_belt(&mut grid, &mut buildings, a, Direction::East, BuildingKind::BeltYellow);
-        place_belt(&mut grid, &mut buildings, b, Direction::East, BuildingKind::BeltYellow);
+        place_belt(
+            &mut grid,
+            &mut buildings,
+            a,
+            Direction::East,
+            BuildingKind::BeltYellow,
+        );
+        place_belt(
+            &mut grid,
+            &mut buildings,
+            b,
+            Direction::East,
+            BuildingKind::BeltYellow,
+        );
         let id = place_item(&mut grid, &mut items, a, Resource::IronOre);
 
         // Yellow belt is 4 ticks/tile -> 0.25 progress per tick.
@@ -165,15 +177,29 @@ mod tests {
             tick_belts(&mut grid, &buildings, &mut items);
         }
         let item = items.get(id).unwrap();
-        assert_eq!(item.pos, a, "item should still be on the first tile after 3 ticks");
-        assert!((item.progress - 0.75).abs() < 1e-4, "progress={}", item.progress);
+        assert_eq!(
+            item.pos, a,
+            "item should still be on the first tile after 3 ticks"
+        );
+        assert!(
+            (item.progress - 0.75).abs() < 1e-4,
+            "progress={}",
+            item.progress
+        );
 
         // The 4th tick pushes progress to 1.0 and hands off to the next tile.
         tick_belts(&mut grid, &buildings, &mut items);
         let item = items.get(id).unwrap();
         assert_eq!(item.pos, b, "item should move to next belt on the 4th tick");
-        assert!(item.progress < 0.01, "progress resets after moving: {}", item.progress);
-        assert!(grid.items_at(a).is_empty(), "source tile spatial index cleared");
+        assert!(
+            item.progress < 0.01,
+            "progress resets after moving: {}",
+            item.progress
+        );
+        assert!(
+            grid.items_at(a).is_empty(),
+            "source tile spatial index cleared"
+        );
         assert_eq!(grid.items_at(b), &[id], "dest tile spatial index updated");
     }
 
@@ -182,8 +208,20 @@ mod tests {
         let (mut grid, mut buildings, mut items) = world();
         let a = GridPos::new(1, 1);
         let b = GridPos::new(2, 1);
-        place_belt(&mut grid, &mut buildings, a, Direction::East, BuildingKind::BeltBlue);
-        place_belt(&mut grid, &mut buildings, b, Direction::East, BuildingKind::BeltBlue);
+        place_belt(
+            &mut grid,
+            &mut buildings,
+            a,
+            Direction::East,
+            BuildingKind::BeltBlue,
+        );
+        place_belt(
+            &mut grid,
+            &mut buildings,
+            b,
+            Direction::East,
+            BuildingKind::BeltBlue,
+        );
         let id = place_item(&mut grid, &mut items, a, Resource::CopperOre);
 
         // Blue belt is 1 tick/tile -> full progress in a single tick.
@@ -196,15 +234,27 @@ mod tests {
         let (mut grid, mut buildings, mut items) = world();
         let a = GridPos::new(1, 1);
         // Only one belt; the tile ahead (2,1) has no belt, so the item cannot advance.
-        place_belt(&mut grid, &mut buildings, a, Direction::East, BuildingKind::BeltYellow);
+        place_belt(
+            &mut grid,
+            &mut buildings,
+            a,
+            Direction::East,
+            BuildingKind::BeltYellow,
+        );
         let id = place_item(&mut grid, &mut items, a, Resource::Coal);
 
         for _ in 0..10 {
             tick_belts(&mut grid, &buildings, &mut items);
         }
-        let item = items.get(id).expect("blocked item must remain alive, never dropped");
+        let item = items
+            .get(id)
+            .expect("blocked item must remain alive, never dropped");
         assert_eq!(item.pos, a, "blocked item stays put");
-        assert!((item.progress - 0.99).abs() < 1e-4, "clamped to 0.99: {}", item.progress);
+        assert!(
+            (item.progress - 0.99).abs() < 1e-4,
+            "clamped to 0.99: {}",
+            item.progress
+        );
         assert_eq!(items.alive_ids().len(), 1, "no item duplication or loss");
     }
 
@@ -215,8 +265,20 @@ mod tests {
         let b = GridPos::new(2, 1);
         // A -> B, but B's downstream (3,1) is not a belt, so B's item is stuck at B,
         // which in turn blocks A's item from advancing.
-        place_belt(&mut grid, &mut buildings, a, Direction::East, BuildingKind::BeltYellow);
-        place_belt(&mut grid, &mut buildings, b, Direction::East, BuildingKind::BeltYellow);
+        place_belt(
+            &mut grid,
+            &mut buildings,
+            a,
+            Direction::East,
+            BuildingKind::BeltYellow,
+        );
+        place_belt(
+            &mut grid,
+            &mut buildings,
+            b,
+            Direction::East,
+            BuildingKind::BeltYellow,
+        );
         let id_a = place_item(&mut grid, &mut items, a, Resource::IronOre);
         let id_b = place_item(&mut grid, &mut items, b, Resource::CopperOre);
 
@@ -228,7 +290,11 @@ mod tests {
         assert_eq!(items.get(id_b).unwrap().pos, b);
         assert_eq!(grid.items_at(a), &[id_a]);
         assert_eq!(grid.items_at(b), &[id_b]);
-        assert_eq!(items.alive_ids().len(), 2, "no duplication under back-pressure");
+        assert_eq!(
+            items.alive_ids().len(),
+            2,
+            "no duplication under back-pressure"
+        );
     }
 
     #[test]
@@ -237,7 +303,13 @@ mod tests {
         let a = GridPos::new(1, 1);
         let entry = GridPos::new(2, 1);
         let exit = GridPos::new(6, 1);
-        place_belt(&mut grid, &mut buildings, a, Direction::East, BuildingKind::BeltYellow);
+        place_belt(
+            &mut grid,
+            &mut buildings,
+            a,
+            Direction::East,
+            BuildingKind::BeltYellow,
+        );
         // Underground entry paired to a far exit tile.
         buildings
             .place(
@@ -252,7 +324,12 @@ mod tests {
             .expect("underground entry placement");
         buildings
             .place(
-                belt_building(exit, Direction::East, BuildingKind::UndergroundBeltYellow, None),
+                belt_building(
+                    exit,
+                    Direction::East,
+                    BuildingKind::UndergroundBeltYellow,
+                    None,
+                ),
                 &mut grid,
             )
             .expect("underground exit placement");
@@ -263,8 +340,14 @@ mod tests {
             tick_belts(&mut grid, &buildings, &mut items);
         }
         let item = items.get(id).unwrap();
-        assert_eq!(item.pos, exit, "item teleports to the paired exit, skipping the buried span");
-        assert!(grid.items_at(entry).is_empty(), "item never rests on the entry tile");
+        assert_eq!(
+            item.pos, exit,
+            "item teleports to the paired exit, skipping the buried span"
+        );
+        assert!(
+            grid.items_at(entry).is_empty(),
+            "item never rests on the entry tile"
+        );
         assert_eq!(grid.items_at(exit), &[id]);
     }
 
@@ -281,13 +364,27 @@ mod tests {
                 BuildingKind::BeltYellow,
             );
         }
-        place_item(&mut grid, &mut items, GridPos::new(1, 1), Resource::IronPlate);
-        place_item(&mut grid, &mut items, GridPos::new(3, 1), Resource::CopperPlate);
+        place_item(
+            &mut grid,
+            &mut items,
+            GridPos::new(1, 1),
+            Resource::IronPlate,
+        );
+        place_item(
+            &mut grid,
+            &mut items,
+            GridPos::new(3, 1),
+            Resource::CopperPlate,
+        );
 
         for _ in 0..40 {
             tick_belts(&mut grid, &buildings, &mut items);
         }
-        assert_eq!(items.alive_ids().len(), 2, "belt movement never creates or destroys items");
+        assert_eq!(
+            items.alive_ids().len(),
+            2,
+            "belt movement never creates or destroys items"
+        );
     }
 
     // --- Stale-id hardening: a downstream belt demolished (undo/demolition)
@@ -298,8 +395,20 @@ mod tests {
         let (mut grid, mut buildings, mut items) = world();
         let a = GridPos::new(1, 1);
         let b = GridPos::new(2, 1);
-        place_belt(&mut grid, &mut buildings, a, Direction::East, BuildingKind::BeltYellow);
-        let b_id = place_belt(&mut grid, &mut buildings, b, Direction::East, BuildingKind::BeltYellow);
+        place_belt(
+            &mut grid,
+            &mut buildings,
+            a,
+            Direction::East,
+            BuildingKind::BeltYellow,
+        );
+        let b_id = place_belt(
+            &mut grid,
+            &mut buildings,
+            b,
+            Direction::East,
+            BuildingKind::BeltYellow,
+        );
         let id = place_item(&mut grid, &mut items, a, Resource::Coal);
 
         // Advance almost to a full tile (yellow belt: 4 ticks/tile).
@@ -315,16 +424,31 @@ mod tests {
         for _ in 0..5 {
             tick_belts(&mut grid, &buildings, &mut items);
         }
-        let item = items.get(id).expect("item must survive a demolished downstream belt");
-        assert_eq!(item.pos, a, "item stays on its own tile once the target belt is gone");
-        assert!((item.progress - 0.99).abs() < 1e-4, "progress clamps instead of teleporting: {}", item.progress);
+        let item = items
+            .get(id)
+            .expect("item must survive a demolished downstream belt");
+        assert_eq!(
+            item.pos, a,
+            "item stays on its own tile once the target belt is gone"
+        );
+        assert!(
+            (item.progress - 0.99).abs() < 1e-4,
+            "progress clamps instead of teleporting: {}",
+            item.progress
+        );
     }
 
     #[test]
     fn tick_belts_survives_own_belt_demolished_between_ticks() {
         let (mut grid, mut buildings, mut items) = world();
         let a = GridPos::new(1, 1);
-        let a_id = place_belt(&mut grid, &mut buildings, a, Direction::East, BuildingKind::BeltYellow);
+        let a_id = place_belt(
+            &mut grid,
+            &mut buildings,
+            a,
+            Direction::East,
+            BuildingKind::BeltYellow,
+        );
         let id = place_item(&mut grid, &mut items, a, Resource::Stone);
 
         // Undo/demolition removes the belt the item is sitting on. The grid
@@ -336,7 +460,9 @@ mod tests {
         for _ in 0..5 {
             tick_belts(&mut grid, &buildings, &mut items);
         }
-        let item = items.get(id).expect("orphaned item must survive, never dropped");
+        let item = items
+            .get(id)
+            .expect("orphaned item must survive, never dropped");
         assert_eq!(item.pos, a);
     }
 }

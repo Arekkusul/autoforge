@@ -205,7 +205,10 @@ mod tests {
         let mut t = 0.0;
         while t < FULL_CYCLE_SECS {
             let sun = DayNightState { time: t }.sunlight();
-            assert!((0.3..=1.0).contains(&sun), "sunlight {sun} out of range at t={t}");
+            assert!(
+                (0.3..=1.0).contains(&sun),
+                "sunlight {sun} out of range at t={t}"
+            );
             t += 1.0;
         }
     }
@@ -249,6 +252,8 @@ mod tests {
     fn display_formats_minutes_and_seconds_with_phase() {
         assert_eq!(DayNightState { time: 125.0 }.display(), "Day 2:05");
         let midnight = DAY_DURATION_SECS + NIGHT_DURATION_SECS * 0.5;
-        assert!(DayNightState { time: midnight }.display().starts_with("Night "));
+        assert!(DayNightState { time: midnight }
+            .display()
+            .starts_with("Night "));
     }
 }

@@ -129,10 +129,10 @@ pub struct Enemies {
 }
 
 impl Enemies {
-/// Creates a new instance of `Enemies` with default values.
-pub fn new() -> Self {
-    Self::default()
-}
+    /// Creates a new instance of `Enemies` with default values.
+    pub fn new() -> Self {
+        Self::default()
+    }
 
     /// Spawns a wave of enemies at the given nest positions.
     pub fn spawn_wave(&mut self, nests: &[GridPos], evolution: f64) {
