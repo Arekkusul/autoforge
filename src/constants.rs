@@ -99,6 +99,10 @@ pub const SOLAR_PANEL_POWER: f32 = 60.0;
 /// in on all four cardinal sides is left at `1.0 - 4 * 0.2 = 0.2` (20%) output,
 /// modeling diffuse/ambient light rather than a full blackout.
 pub const SOLAR_SHADOW_PER_OBSTRUCTION: f32 = 0.2;
+/// Output multiplier for a solar panel facing directly away from the sun.
+pub const SOLAR_ORIENTATION_FACING_AWAY_FACTOR: f32 = 0.4;
+/// Output multiplier for a solar panel facing perpendicular to the sun.
+pub const SOLAR_ORIENTATION_SIDE_FACTOR: f32 = 0.7;
 /// Energy stored in one accumulator (kJ equivalent).
 pub const ACCUMULATOR_CAPACITY: f32 = 5000.0;
 /// Fraction of total accumulator capacity that can charge/discharge per tick.

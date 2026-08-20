@@ -7,6 +7,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::constants::*;
+use crate::types::Direction;
 
 /// Tracks the current time of day.
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -90,6 +91,21 @@ impl DayNightState {
             0.0
         } else {
             (sun - 0.3) / 0.7 // normalize to 0.0-1.0
+        }
+    }
+
+    /// Returns the cardinal direction sunlight is currently shining from.
+    ///
+    /// The sun rises in the east and crosses to the west at solar noon, so a
+    /// panel's facing direction (see [`crate::power::solar_orientation_factor`])
+    /// matters differently across the day rather than being a fixed constant.
+    /// The value is meaningless at night, but [`Self::solar_multiplier`] is
+    /// already zero then, so it has no effect on output.
+    pub fn sun_direction(&self) -> Direction {
+        if self.time <= DAY_DURATION_SECS * 0.5 {
+            Direction::East
+        } else {
+            Direction::West
         }
     }
 

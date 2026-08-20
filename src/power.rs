@@ -81,6 +81,26 @@ pub fn solar_shadow_factor(grid: &Grid, buildings: &Buildings, pos: GridPos) -> 
     (1.0 - obstructions as f32 * SOLAR_SHADOW_PER_OBSTRUCTION).clamp(0.0, 1.0)
 }
 
+/// Computes a solar panel's output multiplier from its facing direction
+/// relative to the sun.
+///
+/// A panel facing the sun catches direct light and runs at full rated
+/// output; one facing perpendicular catches it at a shallow angle; one
+/// facing directly away from the sun only picks up ambient/diffuse light.
+/// Previously every panel produced identical output regardless of the
+/// direction it was placed facing, as if the whole farm shared one
+/// orientation. Kept pure (no [`DayNightState`] dependency) so orientation
+/// and daylight can be tested independently.
+pub fn solar_orientation_factor(panel_direction: Direction, sun_direction: Direction) -> f32 {
+    if panel_direction == sun_direction {
+        1.0
+    } else if panel_direction == sun_direction.opposite() {
+        SOLAR_ORIENTATION_FACING_AWAY_FACTOR
+    } else {
+        SOLAR_ORIENTATION_SIDE_FACTOR
+    }
+}
+
 /// Recalculates power supply and demand.
 ///
 /// Call once per tick (or every few ticks — power changes slowly).
@@ -112,10 +132,13 @@ pub fn update_power(
                 }
             }
             BuildingKind::SolarPanel => {
-                // Solar output depends on daylight and on shadows cast by
-                // adjacent structures.
+                // Solar output depends on daylight, on shadows cast by
+                // adjacent structures, and on how the panel is oriented
+                // relative to the sun.
                 let shadow = solar_shadow_factor(grid, buildings, building.pos);
-                supply += SOLAR_PANEL_POWER * daynight.solar_multiplier() * shadow;
+                let orientation =
+                    solar_orientation_factor(building.direction, daynight.sun_direction());
+                supply += SOLAR_PANEL_POWER * daynight.solar_multiplier() * shadow * orientation;
             }
             BuildingKind::NuclearReactor => {
                 // Nuclear reactor produces massive power when fueled.
@@ -530,5 +553,83 @@ mod tests {
         // One unobstructed panel (100%) + one boxed on 2 of 4 sides (60%).
         let expected = SOLAR_PANEL_POWER + SOLAR_PANEL_POWER * 0.6;
         assert!((power.supply - expected).abs() < 1e-4);
+    }
+
+    // --- Solar panel power: orientation relative to the sun. ---
+
+    fn solar_building_facing(pos: GridPos, direction: Direction) -> Building {
+        Building {
+            direction,
+            ..solar_building(pos)
+        }
+    }
+
+    #[test]
+    fn solar_orientation_factor_is_full_when_panel_faces_the_sun() {
+        assert_eq!(
+            solar_orientation_factor(Direction::East, Direction::East),
+            1.0
+        );
+    }
+
+    #[test]
+    fn solar_orientation_factor_is_reduced_when_panel_faces_away_from_the_sun() {
+        assert_eq!(
+            solar_orientation_factor(Direction::West, Direction::East),
+            SOLAR_ORIENTATION_FACING_AWAY_FACTOR
+        );
+    }
+
+    #[test]
+    fn solar_orientation_factor_is_partial_when_panel_is_perpendicular_to_the_sun() {
+        assert_eq!(
+            solar_orientation_factor(Direction::North, Direction::East),
+            SOLAR_ORIENTATION_SIDE_FACTOR
+        );
+        assert_eq!(
+            solar_orientation_factor(Direction::South, Direction::East),
+            SOLAR_ORIENTATION_SIDE_FACTOR
+        );
+    }
+
+    #[test]
+    fn a_panel_facing_the_sun_outproduces_an_identical_panel_facing_away_from_it() {
+        let (mut grid, mut buildings) = world();
+        // At midday the sun is in the East (see `sun_direction`).
+        buildings
+            .place(
+                solar_building_facing(GridPos::new(2, 2), Direction::East),
+                &mut grid,
+            )
+            .unwrap();
+        buildings
+            .place(
+                solar_building_facing(GridPos::new(8, 8), Direction::West),
+                &mut grid,
+            )
+            .unwrap();
+
+        let mut power = PowerState::default();
+        let midday = DayNightState {
+            time: DAY_DURATION_SECS * 0.5,
+        };
+        update_power(&mut buildings, &mut power, &midday, &grid);
+
+        let expected =
+            SOLAR_PANEL_POWER * 1.0 + SOLAR_PANEL_POWER * SOLAR_ORIENTATION_FACING_AWAY_FACTOR;
+        assert!((power.supply - expected).abs() < 1e-4);
+    }
+
+    #[test]
+    fn sun_direction_switches_from_east_to_west_after_solar_noon() {
+        let morning = DayNightState {
+            time: DAY_DURATION_SECS * 0.25,
+        };
+        assert_eq!(morning.sun_direction(), Direction::East);
+
+        let afternoon = DayNightState {
+            time: DAY_DURATION_SECS * 0.75,
+        };
+        assert_eq!(afternoon.sun_direction(), Direction::West);
     }
 }
