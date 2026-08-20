@@ -64,17 +64,23 @@ pub fn apply_accumulators(
 ///
 /// Only the four cardinal neighbors are checked; each building there whose
 /// [`BuildingKind::casts_shadow`] is `true` blocks
-/// [`SOLAR_SHADOW_PER_OBSTRUCTION`] of the panel's output. Kept pure (no
+/// [`SOLAR_SHADOW_PER_OBSTRUCTION`] of the panel's output. A neighbor beyond
+/// the edge of the build zone is open sky, not a wall: it must never count as
+/// an obstruction, so panels along the map boundary aren't shortchanged
+/// relative to identical panels in the interior. Kept pure (no
 /// [`DayNightState`] dependency) so obstruction and daylight can be tested
 /// independently.
 pub fn solar_shadow_factor(grid: &Grid, buildings: &Buildings, pos: GridPos) -> f32 {
     let obstructions = Direction::all()
         .iter()
         .filter(|&&dir| {
-            grid.get_tile(pos.neighbor(dir))
-                .and_then(|tile| tile.building)
-                .and_then(|bid| buildings.get(bid))
-                .is_some_and(|b| b.kind.casts_shadow())
+            let neighbor = pos.neighbor(dir);
+            grid.in_bounds(neighbor)
+                && grid
+                    .get_tile(neighbor)
+                    .and_then(|tile| tile.building)
+                    .and_then(|bid| buildings.get(bid))
+                    .is_some_and(|b| b.kind.casts_shadow())
         })
         .count();
 
@@ -496,6 +502,72 @@ mod tests {
 
         let factor = solar_shadow_factor(&grid, &buildings, pos);
         assert!((factor - 0.2).abs() < 1e-6);
+    }
+
+    #[test]
+    fn solar_shadow_factor_is_full_for_a_panel_in_the_corner_of_the_build_zone() {
+        // A panel at (0, 0) has only two in-bounds neighbors (East, South) and
+        // two neighbors that fall off the edge of the grid (North, West). The
+        // off-grid neighbors must never be counted as obstructions.
+        let (grid, buildings) = world();
+        assert_eq!(
+            solar_shadow_factor(&grid, &buildings, GridPos::new(0, 0)),
+            1.0,
+            "a corner panel with no real neighbors should receive full sunlight"
+        );
+    }
+
+    #[test]
+    fn solar_shadow_factor_is_full_for_a_panel_on_the_far_edge_of_the_build_zone() {
+        let (grid, buildings) = world(); // 16x16 grid: valid coords are 0..=15
+        assert_eq!(
+            solar_shadow_factor(&grid, &buildings, GridPos::new(15, 15)),
+            1.0,
+            "a panel on the far (max-x, max-y) edge should receive full sunlight"
+        );
+    }
+
+    #[test]
+    fn solar_shadow_factor_only_counts_real_obstructions_for_an_edge_panel() {
+        // A panel at the left edge (x=0) only has three in-bounds neighbors;
+        // the fourth (West) is off the grid. Placing a real obstruction on one
+        // in-bounds neighbor should reduce output by exactly one increment,
+        // not two (as it would if the off-grid neighbor were also counted).
+        let (mut grid, mut buildings) = world();
+        let pos = GridPos::new(0, 5);
+        buildings
+            .place(
+                obstruction_building(pos.neighbor(Direction::East)),
+                &mut grid,
+            )
+            .unwrap();
+
+        let factor = solar_shadow_factor(&grid, &buildings, pos);
+        assert!((factor - 0.8).abs() < 1e-6);
+    }
+
+    #[test]
+    fn edge_panel_produces_the_same_power_as_an_identical_interior_panel() {
+        let (mut grid, mut buildings) = world();
+        let edge_pos = GridPos::new(0, 0);
+        let interior_pos = GridPos::new(8, 8);
+        buildings
+            .place(solar_building(edge_pos), &mut grid)
+            .unwrap();
+        buildings
+            .place(solar_building(interior_pos), &mut grid)
+            .unwrap();
+
+        let mut power = PowerState::default();
+        let midday = DayNightState {
+            time: DAY_DURATION_SECS * 0.5,
+        };
+        update_power(&mut buildings, &mut power, &midday, &grid);
+
+        // Both panels are unobstructed and facing the sun; the total must
+        // reflect two full-strength panels, not one shortchanged by the
+        // previously-missing edge-of-build-zone handling.
+        assert!((power.supply - SOLAR_PANEL_POWER * 2.0).abs() < 1e-4);
     }
 
     #[test]
