@@ -107,6 +107,23 @@ pub fn solar_orientation_factor(panel_direction: Direction, sun_direction: Direc
     }
 }
 
+/// Computes a solar panel's orientation factor from how far the sun has
+/// swept from east to west, blending smoothly instead of snapping at solar
+/// noon the way [`solar_orientation_factor`] alone would if fed a discrete
+/// [`Direction`].
+///
+/// `west_blend` is `0.0` at sunrise (sun fully east) and `1.0` at sunset
+/// (sun fully west) — see [`DayNightState::sun_east_to_west_blend`]. The
+/// result is a linear interpolation between the panel's east-facing and
+/// west-facing factors, so output tracks the sun's gradual sweep across the
+/// day rather than jumping between two fixed states. Kept pure (no
+/// [`DayNightState`] dependency) so it can be unit-tested directly.
+pub fn solar_orientation_blend_factor(panel_direction: Direction, west_blend: f32) -> f32 {
+    let east_factor = solar_orientation_factor(panel_direction, Direction::East);
+    let west_factor = solar_orientation_factor(panel_direction, Direction::West);
+    east_factor * (1.0 - west_blend) + west_factor * west_blend
+}
+
 /// Recalculates power supply and demand.
 ///
 /// Call once per tick (or every few ticks — power changes slowly).
@@ -142,8 +159,10 @@ pub fn update_power(
                 // adjacent structures, and on how the panel is oriented
                 // relative to the sun.
                 let shadow = solar_shadow_factor(grid, buildings, building.pos);
-                let orientation =
-                    solar_orientation_factor(building.direction, daynight.sun_direction());
+                let orientation = solar_orientation_blend_factor(
+                    building.direction,
+                    daynight.sun_east_to_west_blend(),
+                );
                 supply += SOLAR_PANEL_POWER * daynight.solar_multiplier() * shadow * orientation;
             }
             BuildingKind::NuclearReactor => {
@@ -456,8 +475,11 @@ mod tests {
         update_power(&mut buildings, &mut power, &midnight, &grid);
         assert_eq!(power.supply, 0.0, "no sunlight at night means no supply");
 
+        // Well within the full-day plateau, away from the solar-noon
+        // orientation blend window, so the default east-facing panel is at
+        // its unambiguous full-sun orientation.
         let midday = DayNightState {
-            time: DAY_DURATION_SECS * 0.5,
+            time: DAY_DURATION_SECS * 0.25,
         };
         update_power(&mut buildings, &mut power, &midday, &grid);
         assert_eq!(
@@ -559,8 +581,10 @@ mod tests {
             .unwrap();
 
         let mut power = PowerState::default();
+        // Away from the solar-noon orientation blend window, so both
+        // default east-facing panels are at full orientation.
         let midday = DayNightState {
-            time: DAY_DURATION_SECS * 0.5,
+            time: DAY_DURATION_SECS * 0.25,
         };
         update_power(&mut buildings, &mut power, &midday, &grid);
 
@@ -617,8 +641,10 @@ mod tests {
             .unwrap();
 
         let mut power = PowerState::default();
+        // Away from the solar-noon orientation blend window, so both
+        // default east-facing panels are at full orientation.
         let midday = DayNightState {
-            time: DAY_DURATION_SECS * 0.5,
+            time: DAY_DURATION_SECS * 0.25,
         };
         update_power(&mut buildings, &mut power, &midday, &grid);
 
@@ -667,7 +693,8 @@ mod tests {
     #[test]
     fn a_panel_facing_the_sun_outproduces_an_identical_panel_facing_away_from_it() {
         let (mut grid, mut buildings) = world();
-        // At midday the sun is in the East (see `sun_direction`).
+        // In the morning, well outside the solar-noon blend window, the sun
+        // is unambiguously in the East (see `sun_east_to_west_blend`).
         buildings
             .place(
                 solar_building_facing(GridPos::new(2, 2), Direction::East),
@@ -683,7 +710,7 @@ mod tests {
 
         let mut power = PowerState::default();
         let midday = DayNightState {
-            time: DAY_DURATION_SECS * 0.5,
+            time: DAY_DURATION_SECS * 0.25,
         };
         update_power(&mut buildings, &mut power, &midday, &grid);
 
@@ -693,15 +720,65 @@ mod tests {
     }
 
     #[test]
-    fn sun_direction_switches_from_east_to_west_after_solar_noon() {
-        let morning = DayNightState {
-            time: DAY_DURATION_SECS * 0.25,
-        };
-        assert_eq!(morning.sun_direction(), Direction::East);
+    fn solar_orientation_blend_factor_matches_pure_east_and_pure_west_at_the_extremes() {
+        assert_eq!(
+            solar_orientation_blend_factor(Direction::East, 0.0),
+            solar_orientation_factor(Direction::East, Direction::East)
+        );
+        assert_eq!(
+            solar_orientation_blend_factor(Direction::East, 1.0),
+            solar_orientation_factor(Direction::East, Direction::West)
+        );
+    }
 
-        let afternoon = DayNightState {
-            time: DAY_DURATION_SECS * 0.75,
-        };
-        assert_eq!(afternoon.sun_direction(), Direction::West);
+    #[test]
+    fn solar_orientation_blend_factor_is_the_midpoint_at_solar_noon() {
+        let east = solar_orientation_factor(Direction::East, Direction::East);
+        let west = solar_orientation_factor(Direction::East, Direction::West);
+        assert!(
+            (solar_orientation_blend_factor(Direction::East, 0.5) - (east + west) / 2.0).abs()
+                < 1e-6
+        );
+    }
+
+    #[test]
+    fn east_facing_panel_output_does_not_cliff_across_solar_noon() {
+        // Previously `sun_direction` flipped instantly from East to West at
+        // solar noon, so an east-facing panel's orientation factor snapped
+        // from 1.0 to `SOLAR_ORIENTATION_FACING_AWAY_FACTOR` (a ~60% output
+        // drop) in a single tick, in the middle of full daylight. The blend
+        // must keep a single tick's movement tiny instead.
+        let (mut grid, mut buildings) = world();
+        buildings
+            .place(
+                solar_building_facing(GridPos::new(5, 5), Direction::East),
+                &mut grid,
+            )
+            .unwrap();
+        let mut power = PowerState::default();
+
+        let noon = DAY_DURATION_SECS * 0.5;
+        let step = 1.0 / TICKS_PER_SECOND as f32;
+
+        update_power(
+            &mut buildings,
+            &mut power,
+            &DayNightState { time: noon - step },
+            &grid,
+        );
+        let before = power.supply;
+
+        update_power(
+            &mut buildings,
+            &mut power,
+            &DayNightState { time: noon + step },
+            &grid,
+        );
+        let after = power.supply;
+
+        assert!(
+            (after - before).abs() < SOLAR_PANEL_POWER * 0.05,
+            "output jumped from {before} to {after} across a single tick at solar noon"
+        );
     }
 }

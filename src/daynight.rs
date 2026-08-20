@@ -7,7 +7,6 @@
 use serde::{Deserialize, Serialize};
 
 use crate::constants::*;
-use crate::types::Direction;
 
 /// Tracks the current time of day.
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -94,19 +93,23 @@ impl DayNightState {
         }
     }
 
-    /// Returns the cardinal direction sunlight is currently shining from.
+    /// Returns how far the sun has swept from due-east toward due-west, as a
+    /// smooth `0.0` (fully east) to `1.0` (fully west) blend across the day.
     ///
-    /// The sun rises in the east and crosses to the west at solar noon, so a
-    /// panel's facing direction (see [`crate::power::solar_orientation_factor`])
-    /// matters differently across the day rather than being a fixed constant.
-    /// The value is meaningless at night, but [`Self::solar_multiplier`] is
-    /// already zero then, so it has no effect on output.
-    pub fn sun_direction(&self) -> Direction {
-        if self.time <= DAY_DURATION_SECS * 0.5 {
-            Direction::East
-        } else {
-            Direction::West
-        }
+    /// Solar noon falls in the middle of the full-daylight plateau (well
+    /// after the dawn ramp and well before the dusk ramp), where
+    /// [`Self::solar_multiplier`] is pinned at its peak. Without this, an
+    /// east/west-facing solar panel's orientation factor (see
+    /// [`crate::power::solar_orientation_factor`]) would cliff from full
+    /// output to [`crate::constants::SOLAR_ORIENTATION_FACING_AWAY_FACTOR`]
+    /// in a single tick right at noon — an abrupt, inconsistent power swing
+    /// in the middle of the day rather than at an actual day/night edge.
+    /// This blends linearly across a [`SOLAR_NOON_TRANSITION_SECS`]-wide
+    /// window centered on solar noon instead.
+    pub fn sun_east_to_west_blend(&self) -> f32 {
+        let noon = DAY_DURATION_SECS * 0.5;
+        let window_start = noon - SOLAR_NOON_TRANSITION_SECS * 0.5;
+        ((self.time - window_start) / SOLAR_NOON_TRANSITION_SECS).clamp(0.0, 1.0)
     }
 
     /// Returns the world ambient darkness level for rendering (0.0 = no darkening, 0.35 = night).
@@ -262,6 +265,53 @@ mod tests {
 
         let midnight = DAY_DURATION_SECS + NIGHT_DURATION_SECS * 0.5;
         assert!(!DayNightState { time: midnight }.is_day());
+    }
+
+    #[test]
+    fn sun_east_to_west_blend_is_pinned_outside_the_transition_window() {
+        let noon = DAY_DURATION_SECS * 0.5;
+        let half_window = SOLAR_NOON_TRANSITION_SECS * 0.5;
+        assert_eq!(
+            DayNightState {
+                time: noon - half_window
+            }
+            .sun_east_to_west_blend(),
+            0.0
+        );
+        assert_eq!(
+            DayNightState {
+                time: noon + half_window
+            }
+            .sun_east_to_west_blend(),
+            1.0
+        );
+        // Well outside the window (morning / evening) it stays pinned too.
+        assert_eq!(DayNightState { time: 0.0 }.sun_east_to_west_blend(), 0.0);
+        assert_eq!(
+            DayNightState {
+                time: DAY_DURATION_SECS
+            }
+            .sun_east_to_west_blend(),
+            1.0
+        );
+    }
+
+    #[test]
+    fn sun_east_to_west_blend_is_halfway_at_solar_noon() {
+        let noon = DAY_DURATION_SECS * 0.5;
+        assert!((DayNightState { time: noon }.sun_east_to_west_blend() - 0.5).abs() < 1e-6);
+    }
+
+    #[test]
+    fn sun_east_to_west_blend_changes_gradually_tick_by_tick_through_solar_noon() {
+        // A single tick's movement across a 30s-wide window must be a tiny
+        // fractional step, not the instant 0.0 -> 1.0 flip `sun_direction`
+        // alone would give at the same instant.
+        let noon = DAY_DURATION_SECS * 0.5;
+        let step = 1.0 / TICKS_PER_SECOND as f32;
+        let before = DayNightState { time: noon - step }.sun_east_to_west_blend();
+        let after = DayNightState { time: noon + step }.sun_east_to_west_blend();
+        assert!((after - before).abs() < 0.05);
     }
 
     #[test]

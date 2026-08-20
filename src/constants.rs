@@ -103,6 +103,11 @@ pub const SOLAR_SHADOW_PER_OBSTRUCTION: f32 = 0.2;
 pub const SOLAR_ORIENTATION_FACING_AWAY_FACTOR: f32 = 0.4;
 /// Output multiplier for a solar panel facing perpendicular to the sun.
 pub const SOLAR_ORIENTATION_SIDE_FACTOR: f32 = 0.7;
+/// Width (seconds) of the window, centered on solar noon, over which a solar
+/// panel's orientation factor blends from "sun in the east" to "sun in the
+/// west". Matches the dawn/dusk sunlight ramp duration so the sun's position
+/// changes gradually throughout the day, not just at sunrise/sunset.
+pub const SOLAR_NOON_TRANSITION_SECS: f32 = 30.0;
 /// Energy stored in one accumulator (kJ equivalent).
 pub const ACCUMULATOR_CAPACITY: f32 = 5000.0;
 /// Fraction of total accumulator capacity that can charge/discharge per tick.
